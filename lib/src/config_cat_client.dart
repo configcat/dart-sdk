@@ -34,7 +34,7 @@ class ConfigCatClient {
 }
 
 abstract class DataGovernance {
-  static const String url = '';
+  final String url = '';
 
   DataGovernance._();
 
@@ -44,10 +44,10 @@ abstract class DataGovernance {
 
 class DataGovernanceGlobal extends DataGovernance {
   DataGovernanceGlobal() : super._();
-  static const String url = _globalBaseUrl;
+  final String url = _globalBaseUrl;
 }
 
 class DataGovernanceGlobalEuOnly extends DataGovernance {
   DataGovernanceGlobalEuOnly() : super._();
-  static const String url = _euOnlyBaseUrl;
+  final String url = _euOnlyBaseUrl;
 }

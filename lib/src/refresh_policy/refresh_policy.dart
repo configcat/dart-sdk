@@ -1,4 +1,5 @@
 import 'package:logging/logging.dart';
+import 'package:http/http.dart' as http;
 
 import '../config_cache.dart';
 import '../config_fetcher.dart';
@@ -31,7 +32,7 @@ abstract class RefreshPolicy {
   Future<String> getConfiguration();
 
   Future<void> refresh() async {
-    final response = await fetcher.fetchConfigurationJson();
+    final response = await fetcher.fetchConfigurationJson(http.Client());
     if (response.isFetched) {
       writeCache(response.body);
     }
