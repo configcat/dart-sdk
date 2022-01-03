@@ -1,33 +1,17 @@
-import 'package:dart_sdk/src/polling_mode/polling_mode.dart';
-
-import '../config_cat_client.dart';
+import '../configcat_cache.dart';
+import '../config_fetcher.dart';
+import '../json/config.dart';
+import '../json/config_json_cache.dart';
+import '../log/configcat_logger.dart';
 import 'refresh_policy.dart';
 
-/// Unimplemented
-class ManualPollingPolicy extends RefreshPolicy {
-  late double autoPollIntervalInSeconds;
-  bool initialized = false;
-  ConfigChangedHandler? onConfigChanged;
-
-  ManualPollingPolicy({
-    required cache,
-    required fetcher,
-    required log,
-    required sdkKey,
-    required LazyLoadingMode config,
-  }) : super(
-          cache: cache,
-          fetcher: fetcher,
-          log: log,
-          sdkKey: sdkKey,
-        ) {
-    autoPollIntervalInSeconds = 0.0;
-    onConfigChanged = () => {};
-  }
+class ManualPollingPolicy extends DefaultRefreshPolicy {
+  ManualPollingPolicy(ConfigCatCache cache, Fetcher fetcher,
+      ConfigCatLogger logger, ConfigJsonCache jsonCache, String sdkKey)
+      : super(cache, fetcher, logger, jsonCache, sdkKey) {}
 
   @override
-  Future<String> getConfiguration() {
-    // TODO: implement getConfiguration
-    throw UnimplementedError();
+  Future<Config> getConfiguration() {
+    return readCache();
   }
 }

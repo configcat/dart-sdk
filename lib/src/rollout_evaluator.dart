@@ -1,356 +1,295 @@
 import 'dart:convert';
-import 'dart:developer';
-import 'dart:ffi';
 
 import 'package:crypto/crypto.dart';
-import 'package:logging/logging.dart';
-import 'package:tuple/tuple.dart';
-import 'package:version/version.dart';
+import 'package:pub_semver/pub_semver.dart';
 
-import 'config.dart';
-import 'config_cat_user.dart';
-
-extension VersionString on String {
-  Version? toVersion() {
-    try {
-      return Version.parse(this);
-    } catch (_) {
-      return null;
-    }
-  }
-}
+import 'configcat_user.dart';
+import 'json/setting.dart';
+import 'log/configcat_logger.dart';
 
 class RolloutEvaluator {
-  static const comparatorTexts = [
-    "IS ONE OF",
-    "IS NOT ONE OF",
-    "CONTAINS",
-    "DOES NOT CONTAIN",
-    "IS ONE OF (SemVer)",
-    "IS NOT ONE OF (SemVer)",
-    "< (SemVer)",
-    "<= (SemVer)",
-    "> (SemVer)",
-    ">= (SemVer)",
-    "= (Number)",
-    "<> (Number)",
-    "< (Number)",
-    "<= (Number)",
-    "> (Number)",
-    ">= (Number",
-    "IS ONE OF (Sensitive)",
-    "IS NOT ONE OF (Sensitive)",
+  static const _comparatorTexts = [
+    'IS ONE OF',
+    'IS NOT ONE OF',
+    'CONTAINS',
+    'DOES NOT CONTAIN',
+    'IS ONE OF (SemVer)',
+    'IS NOT ONE OF (SemVer)',
+    '< (SemVer)',
+    '<= (SemVer)',
+    '> (SemVer)',
+    '>= (SemVer)',
+    '= (Number)',
+    '<> (Number)',
+    '< (Number)',
+    '<= (Number)',
+    '> (Number)',
+    '>= (Number',
+    'IS ONE OF (Sensitive)',
+    'IS NOT ONE OF (Sensitive)',
   ];
 
-  final Logger logger;
+  final ConfigCatLogger _logger;
 
-  RolloutEvaluator({required this.logger});
+  RolloutEvaluator(this._logger);
 
-  Tuple2<Value, String>? evaluate<Value>(
-      Map<String, dynamic> json, String key, ConfigCatUser? user) {
-    final rolloutRules =
-        json[Config.rolloutRules] as List<Map<String, dynamic>>;
-    final rolloutPercentageItems =
-        json[Config.rolloutPercentageItems] as List<Map<String, dynamic>>;
+  MapEntry<Value, String> evaluate<Value>(
+      Setting setting, String key, ConfigCatUser? user) {
+    final logEntries = _LogEntries();
+    logEntries.add('Evaluating getValue($key)');
 
-    if (user == null) {
-      if (rolloutRules.length > 0 || rolloutPercentageItems.length > 0) {
-        logger.warning('''
-                    Evaluating getValue($key). UserObject missing!
-                    You should pass a UserObject to get_value(),
-                    in order to make targeting work properly.
-                    Read more: https://configcat.com/docs/advanced/user-object/
-                    ''');
-      }
-      return Tuple2(json[Config.value], json[Config.variationId]);
-    }
+    try {
+      if (user == null) {
+        if (setting.rolloutRules.length > 0 ||
+            setting.percentageItems.length > 0) {
+          _logger.warning(
+              'UserObject missing! You should pass a UserObject to getValue(), in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/');
+        }
 
-    logger.info('User object: $user');
-
-    for (final rule in rolloutRules) {
-      final comparisonAttribute = rule[Config.comparisonAttribute] as String;
-      final comparisonValue = rule[Config.comparisonValue] as String;
-      final comparator = rule[Config.comparator] as int;
-      final userValue = user.getAttribute(key: comparisonAttribute);
-
-      if (userValue == null) {
-        logger.info('userValue is null');
-        continue;
+        logEntries.add('Returning ${setting.value}');
+        return MapEntry(setting.value, setting.variationId);
       }
 
-      if ((comparisonValue.isEmpty || userValue.isEmpty)) {
-        logger.info(_formatNoMatchRule(
-            comparisonAttribute: comparisonAttribute,
-            userValue: userValue,
-            comparator: comparator,
-            comparisonValue: comparisonValue));
-        continue;
-      }
+      logEntries.add('User object: $user');
 
-      switch (comparator) {
-        // IS ONE OF
-        case 0:
-          final splitted =
-              comparisonValue.split(',').map((value) => value.trim());
-          if (splitted.contains(userValue)) {
-            final returnValue = rule[Config.value] as Value;
-            logger.info(_formatMatchRule(
-                comparisonAttribute: comparisonAttribute,
-                userValue: userValue,
-                comparator: comparator,
-                comparisonValue: comparisonValue,
-                value: returnValue));
-            return Tuple2(returnValue, rule[Config.variationId] as String);
-          }
-          break;
-        // IS NOT ONE OF
-        case 1:
-          final splitted =
-              comparisonValue.split(',').map((value) => value.trim());
-          if (!splitted.contains(userValue)) {
-            final returnValue = rule[Config.value] as Value;
-            logger.info(_formatMatchRule(
-                comparisonAttribute: comparisonAttribute,
-                userValue: userValue,
-                comparator: comparator,
-                comparisonValue: comparisonValue,
-                value: returnValue));
-            return Tuple2(returnValue, rule[Config.variationId] as String);
-          }
-          break;
-        // CONTAINS
-        case 2:
-          if (userValue.contains(comparisonValue)) {
-            final returnValue = rule[Config.value] as Value;
-            logger.info(_formatMatchRule(
-                comparisonAttribute: comparisonAttribute,
-                userValue: userValue,
-                comparator: comparator,
-                comparisonValue: comparisonValue,
-                value: returnValue));
-            return Tuple2(returnValue, rule[Config.variationId] as String);
-          }
-          break;
-        // DOES NOT CONTAIN
-        case 3:
-          if (!userValue.contains(comparisonValue)) {
-            final returnValue = rule[Config.value] as Value;
-            logger.info(_formatMatchRule(
-                comparisonAttribute: comparisonAttribute,
-                userValue: userValue,
-                comparator: comparator,
-                comparisonValue: comparisonValue,
-                value: returnValue));
-            return Tuple2(returnValue, rule[Config.variationId] as String);
-          }
-          break;
-        // IS ONE OF (Semantic version), IS NOT ONE OF (Semantic version)
-        case 4:
-        case 5:
-          final splitted = comparisonValue
-              .split(',')
-              .map((value) => value.trim())
-              .where((value) => !value.isEmpty);
+      for (final rule in setting.rolloutRules) {
+        final comparisonAttribute = rule.comparisonAttribute;
+        final comparisonValue = rule.comparisonValue;
+        final comparator = rule.comparator;
+        final userValue = user.getAttribute(comparisonAttribute);
+        final returnValue = rule.value as Value;
 
-          // The rule will be ignored if we found an invalid semantic version
-          final invalidVersion = splitted.firstWhere(
-              (value) => value.toVersion() == null,
-              orElse: () => '');
-          if (invalidVersion != '') {
-            logger.severe(_formatValidationErrorRule(
-                comparisonAttribute: comparisonAttribute,
-                userValue: userValue,
-                comparator: comparator,
-                comparisonValue: comparisonValue,
-                error: 'Invalid semantic version $invalidVersion'));
-            continue;
-          }
-
-          if (userValue.toVersion() == null) {
-            logger.severe(_formatValidationErrorRule(
-                comparisonAttribute: comparisonAttribute,
-                userValue: userValue,
-                comparator: comparator,
-                comparisonValue: comparisonValue,
-                error: 'Invalid semantic version $userValue'));
-            continue;
-          }
-
-          if (comparator == 4) {
-            // IS ONE OF
-            final userValueVersion = userValue.toVersion();
-            if (userValueVersion != null &&
-                splitted.contains(
-                    (value) => value.toVersion() == userValueVersion)) {
-              final returnValue = rule[Config.value] as Value;
-              logger.info(_formatMatchRule(
-                  comparisonAttribute: comparisonAttribute,
-                  userValue: userValue,
-                  comparator: comparator,
-                  comparisonValue: comparisonValue,
-                  value: returnValue));
-              return Tuple2(returnValue, rule[Config.variationId] as String);
-            }
-          } else {
-            // IS NOT ONE OF
-            final userValueVersion = userValue.toVersion();
-            if (userValueVersion != null) {
-              final returnValue = rule[Config.value] as Value;
-              logger.info(_formatMatchRule(
-                  comparisonAttribute: comparisonAttribute,
-                  userValue: userValue,
-                  comparator: comparator,
-                  comparisonValue: comparisonValue,
-                  value: returnValue));
-              return Tuple2(returnValue, rule[Config.variationId] as String);
-            }
-          }
-          break;
-        // LESS THAN, LESS THAN OR EQUALS TO, GREATER THAN, GREATER THAN OR EQUALS TO (Semantic version)
-        case 6:
-        case 7:
-        case 8:
-        case 9:
-          final userValueVersion = userValue.toVersion();
-          final comparison = comparisonValue.trim();
-          final comparisonVersion = comparison.toVersion();
-
-          if (userValueVersion == null) {
-            logger.severe(_formatValidationErrorRule(
-                comparisonAttribute: comparisonAttribute,
-                userValue: userValue,
-                comparator: comparator,
-                comparisonValue: comparisonValue,
-                error: 'Invalid semantic version $userValue'));
-            continue;
-          }
-
-          if (comparisonVersion == null) {
-            logger.severe(_formatValidationErrorRule(
-                comparisonAttribute: comparisonAttribute,
-                userValue: userValue,
-                comparator: comparator,
-                comparisonValue: comparisonValue,
-                error: 'Invalid semantic version $comparison'));
-            continue;
-          }
-
-          final userValueVersionWithoutMetadata = Version(
-              userValueVersion.major,
-              userValueVersion.minor,
-              userValueVersion.patch,
-              preRelease: userValueVersion.preRelease);
-          final comparisonValueVersionWithoutMetadata = Version(
-              comparisonVersion.major,
-              comparisonVersion.minor,
-              comparisonVersion.patch,
-              preRelease: comparisonVersion.preRelease);
-
-          if ((comparator == 6 && userValueVersionWithoutMetadata < comparisonValueVersionWithoutMetadata) ||
-              (comparator == 7 &&
-                  userValueVersionWithoutMetadata <=
-                      comparisonValueVersionWithoutMetadata) ||
-              (comparator == 8 &&
-                  userValueVersionWithoutMetadata >
-                      comparisonValueVersionWithoutMetadata) ||
-              (comparator == 9 &&
-                  userValueVersionWithoutMetadata >=
-                      comparisonValueVersionWithoutMetadata)) {
-            final returnValue = rule[Config.value] as Value;
-            logger.info(_formatMatchRule(
-                comparisonAttribute: comparisonAttribute,
-                userValue: userValue,
-                comparator: comparator,
-                comparisonValue: comparisonValue,
-                value: returnValue));
-            return Tuple2(returnValue, rule[Config.variationId] as String);
-          }
-          break;
-        case 10:
-        case 11:
-        case 12:
-        case 13:
-        case 14:
-        case 15:
-          final userValueDouble = double.parse(userValue.replaceAll(',', '.'));
-          final comparisonValueDouble =
-              double.parse(comparisonValue.replaceAll(',', '.'));
-          if ((comparator == 10 && userValueDouble == comparisonValueDouble) ||
-              (comparator == 11 && userValueDouble != comparisonValueDouble) ||
-              (comparator == 12 && userValueDouble < comparisonValueDouble) ||
-              (comparator == 13 && userValueDouble <= comparisonValueDouble) ||
-              (comparator == 14 && userValueDouble > comparisonValueDouble) ||
-              (comparator == 15 && userValueDouble >= comparisonValueDouble)) {
-            final returnValue = rule[Config.value] as Value;
-            logger.info(_formatMatchRule(
-                comparisonAttribute: comparisonAttribute,
-                userValue: userValue,
-                comparator: comparator,
-                comparisonValue: comparisonValue,
-                value: returnValue));
-            return Tuple2(returnValue, rule[Config.variationId] as String);
-          }
-          break;
-        // IS ONE OF (Sensitive)
-        case 16:
-          final splitted =
-              comparisonValue.split(',').map((value) => value.trim());
-          final userValueHash = sha1.convert(utf8.encode(userValue));
-          if (splitted.contains(userValueHash)) {
-            final returnValue = rule[Config.value] as Value;
-            logger.info(_formatMatchRule(
-                comparisonAttribute: comparisonAttribute,
-                userValue: userValue,
-                comparator: comparator,
-                comparisonValue: comparisonValue,
-                value: returnValue));
-            return Tuple2(returnValue, rule[Config.variationId] as String);
-          }
-          break;
-        // IS NOT ONE OF (Sensitive)
-        case 17:
-          final splitted =
-              comparisonValue.split(',').map((value) => value.trim());
-          final userValueHash = sha1.convert(utf8.encode(userValue));
-          if (!splitted.contains(userValueHash)) {
-            final returnValue = rule[Config.value] as Value;
-            logger.info(_formatMatchRule(
-                comparisonAttribute: comparisonAttribute,
-                userValue: userValue,
-                comparator: comparator,
-                comparisonValue: comparisonValue,
-                value: returnValue));
-            return Tuple2(returnValue, rule[Config.variationId] as String);
-          }
-          break;
-        default:
+        if (userValue == null || comparisonValue.isEmpty || userValue.isEmpty) {
+          logEntries.add(_formatNoMatchRule(
+              comparisonAttribute: comparisonAttribute,
+              userValue: userValue ?? '',
+              comparator: comparator,
+              comparisonValue: comparisonValue));
           continue;
-      }
-      logger.info(_formatNoMatchRule(
-          comparisonAttribute: comparisonAttribute,
-          userValue: userValue,
-          comparator: comparator,
-          comparisonValue: comparisonValue));
-    }
+        }
 
-    if (rolloutPercentageItems.length > 0) {
-      final hasCandidate = key + user.identifier;
-      final userValueHash = sha1.convert(utf8.encode(hasCandidate));
-      final hash = userValueHash.toString().substring(0, 8);
-      final num = int.parse(hash, radix: 16);
-      final scaled = num % 100;
-      int bucket = 0;
-      for (final rule in rolloutPercentageItems) {
-        final percentage = rule[Config.percentage] as int;
-        bucket += percentage;
-        if (scaled < bucket) {
-          logger.info('Evaluating %% options. Returning ${rule[Config.value] as String}');
-          return Tuple2(rule[Config.value] as Value, rule[Config.variationId] as String);
+        switch (comparator) {
+          // IS ONE OF
+          case 0:
+            final split =
+                comparisonValue.split(',').map((value) => value.trim());
+            if (split.contains(userValue)) {
+              logEntries.add(_formatMatchRule(
+                  comparisonAttribute: comparisonAttribute,
+                  userValue: userValue,
+                  comparator: comparator,
+                  comparisonValue: comparisonValue,
+                  value: returnValue));
+              return MapEntry(returnValue, rule.variationId);
+            }
+            break;
+          // IS NOT ONE OF
+          case 1:
+            final split =
+                comparisonValue.split(',').map((value) => value.trim());
+            if (!split.contains(userValue)) {
+              logEntries.add(_formatMatchRule(
+                  comparisonAttribute: comparisonAttribute,
+                  userValue: userValue,
+                  comparator: comparator,
+                  comparisonValue: comparisonValue,
+                  value: returnValue));
+              return MapEntry(returnValue, rule.variationId);
+            }
+            break;
+          // CONTAINS
+          case 2:
+            if (userValue.contains(comparisonValue)) {
+              logEntries.add(_formatMatchRule(
+                  comparisonAttribute: comparisonAttribute,
+                  userValue: userValue,
+                  comparator: comparator,
+                  comparisonValue: comparisonValue,
+                  value: returnValue));
+              return MapEntry(returnValue, rule.variationId);
+            }
+            break;
+          // DOES NOT CONTAIN
+          case 3:
+            if (!userValue.contains(comparisonValue)) {
+              logEntries.add(_formatMatchRule(
+                  comparisonAttribute: comparisonAttribute,
+                  userValue: userValue,
+                  comparator: comparator,
+                  comparisonValue: comparisonValue,
+                  value: returnValue));
+              return MapEntry(returnValue, rule.variationId);
+            }
+            break;
+          // IS ONE OF (Semantic version), IS NOT ONE OF (Semantic version)
+          case 4:
+          case 5:
+            final split = comparisonValue
+                .split(',')
+                .map((value) => value.trim())
+                .where((value) => !value.isEmpty);
+
+            try {
+              final userVersion = this._parseVersion(userValue);
+              var matched = false;
+              for (final value in split) {
+                matched = this._parseVersion(value) == userVersion || matched;
+              }
+
+              if ((matched && comparator == 4) ||
+                  (!matched && comparator == 5)) {
+                logEntries.add(_formatMatchRule(
+                    comparisonAttribute: comparisonAttribute,
+                    userValue: userValue,
+                    comparator: comparator,
+                    comparisonValue: comparisonValue,
+                    value: returnValue));
+                return MapEntry(returnValue, rule.variationId);
+              }
+            } catch (e) {
+              final message = _formatValidationErrorRule(
+                  comparisonAttribute: comparisonAttribute,
+                  userValue: userValue,
+                  comparator: comparator,
+                  comparisonValue: comparisonValue,
+                  error: e);
+              this._logger.warning(message);
+              logEntries.add(message);
+            }
+            break;
+          // LESS THAN, LESS THAN OR EQUALS TO, GREATER THAN, GREATER THAN OR EQUALS TO (Semantic version)
+          case 6:
+          case 7:
+          case 8:
+          case 9:
+            try {
+              final userValueVersion = this._parseVersion(userValue);
+              final comparisonVersion =
+                  this._parseVersion(comparisonValue.trim());
+
+              if ((comparator == 6 && userValueVersion < comparisonVersion) ||
+                  (comparator == 7 && userValueVersion <= comparisonVersion) ||
+                  (comparator == 8 && userValueVersion > comparisonVersion) ||
+                  (comparator == 9 && userValueVersion >= comparisonVersion)) {
+                logEntries.add(_formatMatchRule(
+                    comparisonAttribute: comparisonAttribute,
+                    userValue: userValue,
+                    comparator: comparator,
+                    comparisonValue: comparisonValue,
+                    value: returnValue));
+                return MapEntry(returnValue, rule.variationId);
+              }
+            } catch (e) {
+              final message = _formatValidationErrorRule(
+                  comparisonAttribute: comparisonAttribute,
+                  userValue: userValue,
+                  comparator: comparator,
+                  comparisonValue: comparisonValue,
+                  error: e);
+              this._logger.warning(message);
+              logEntries.add(message);
+            }
+            break;
+          case 10:
+          case 11:
+          case 12:
+          case 13:
+          case 14:
+          case 15:
+            try {
+              final uvDouble = double.parse(userValue.replaceAll(',', '.'));
+              final cvDouble =
+                  double.parse(comparisonValue.replaceAll(',', '.'));
+              if ((comparator == 10 && uvDouble == cvDouble) ||
+                  (comparator == 11 && uvDouble != cvDouble) ||
+                  (comparator == 12 && uvDouble < cvDouble) ||
+                  (comparator == 13 && uvDouble <= cvDouble) ||
+                  (comparator == 14 && uvDouble > cvDouble) ||
+                  (comparator == 15 && uvDouble >= cvDouble)) {
+                logEntries.add(_formatMatchRule(
+                    comparisonAttribute: comparisonAttribute,
+                    userValue: userValue,
+                    comparator: comparator,
+                    comparisonValue: comparisonValue,
+                    value: returnValue));
+                return MapEntry(returnValue, rule.variationId);
+              }
+            } catch (e) {
+              final message = _formatValidationErrorRule(
+                  comparisonAttribute: comparisonAttribute,
+                  userValue: userValue,
+                  comparator: comparator,
+                  comparisonValue: comparisonValue,
+                  error: e);
+              this._logger.warning(message);
+              logEntries.add(message);
+            }
+            break;
+          // IS ONE OF (Sensitive)
+          case 16:
+            final split = comparisonValue
+                .split(',')
+                .map((value) => value.trim())
+                .where((value) => !value.isEmpty);
+            final userValueHash =
+                sha1.convert(utf8.encode(userValue)).toString();
+            if (split.contains(userValueHash)) {
+              logEntries.add(_formatMatchRule(
+                  comparisonAttribute: comparisonAttribute,
+                  userValue: userValue,
+                  comparator: comparator,
+                  comparisonValue: comparisonValue,
+                  value: returnValue));
+              return MapEntry(returnValue, rule.variationId);
+            }
+            break;
+          // IS NOT ONE OF (Sensitive)
+          case 17:
+            final split = comparisonValue
+                .split(',')
+                .map((value) => value.trim())
+                .where((value) => !value.isEmpty);
+            final userValueHash =
+                sha1.convert(utf8.encode(userValue)).toString();
+            if (!split.contains(userValueHash)) {
+              logEntries.add(_formatMatchRule(
+                  comparisonAttribute: comparisonAttribute,
+                  userValue: userValue,
+                  comparator: comparator,
+                  comparisonValue: comparisonValue,
+                  value: returnValue));
+              return MapEntry(returnValue, rule.variationId);
+            }
+            break;
+          default:
+            logEntries.add(_formatNoMatchRule(
+                comparisonAttribute: comparisonAttribute,
+                userValue: userValue,
+                comparator: comparator,
+                comparisonValue: comparisonValue));
         }
       }
 
-      logger.info('Returning ${json[Config.value] as String}');
-      return Tuple2(json[Config.value] as Value, json[Config.variationId] as String);
+      if (setting.percentageItems.length > 0) {
+        final hashCandidate = key + user.identifier;
+        final userValueHash = sha1.convert(utf8.encode(hashCandidate));
+        final hash = userValueHash.toString().substring(0, 7);
+        final num = int.parse(hash, radix: 16);
+        final scaled = num % 100;
+        double bucket = 0;
+        for (final rule in setting.percentageItems) {
+          bucket += rule.percentage;
+          if (scaled < bucket) {
+            logEntries.add('Evaluating %% options. Returning ${rule.value}');
+            return MapEntry(rule.value as Value, rule.variationId);
+          }
+        }
+      }
+
+      logEntries.add('Returning ${setting.value}');
+      return MapEntry(setting.value as Value, setting.variationId);
+    } finally {
+      this._logger.info(logEntries);
     }
   }
 
@@ -360,7 +299,7 @@ class RolloutEvaluator {
       required int comparator,
       required String comparisonValue,
       required Value? value}) {
-    return 'Evaluating rule: [$comparisonAttribute:$userValue] [${RolloutEvaluator.comparatorTexts[comparator]}] [$comparisonValue] => match, returning: $value';
+    return 'Evaluating rule: [$comparisonAttribute:$userValue] [${RolloutEvaluator._comparatorTexts[comparator]}] [$comparisonValue] => match, returning: $value';
   }
 
   String _formatNoMatchRule(
@@ -368,7 +307,7 @@ class RolloutEvaluator {
       required String userValue,
       required int comparator,
       required String comparisonValue}) {
-    return 'Evaluating rule: [$comparisonAttribute:$userValue] [${RolloutEvaluator.comparatorTexts[comparator]}] [$comparisonValue] => no match';
+    return 'Evaluating rule: [$comparisonAttribute:$userValue] [${RolloutEvaluator._comparatorTexts[comparator]}] [$comparisonValue] => no match';
   }
 
   String _formatValidationErrorRule(
@@ -376,7 +315,27 @@ class RolloutEvaluator {
       required String userValue,
       required int comparator,
       required String comparisonValue,
-      required String error}) {
-    return 'Evaluating rule: [$comparisonAttribute:$userValue] [${RolloutEvaluator.comparatorTexts[comparator]}] [$comparisonValue] => Skip rule. Validation error: $error';
+      required dynamic error}) {
+    return 'Evaluating rule: [$comparisonAttribute:$userValue] [${RolloutEvaluator._comparatorTexts[comparator]}] [$comparisonValue] => Skip rule. Validation error: $error';
+  }
+
+  Version _parseVersion(String text) {
+    // remove build parts, we don't want to compare by them.
+    final buildCharPos = text.indexOf('+');
+    return Version.parse(
+        buildCharPos != -1 ? text.substring(0, buildCharPos) : text);
+  }
+}
+
+class _LogEntries {
+  final List<String> entries = [];
+
+  add(String entry) {
+    this.entries.add(entry);
+  }
+
+  @override
+  String toString() {
+    return this.entries.join('\n');
   }
 }

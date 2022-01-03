@@ -1,20 +1,25 @@
-name: dart_sdk
+name: configcat_client
 description: >-
-  Dart SDK for ConfigCat. ConfigCat is a hosted feature flag service: https://configcat.com. Manage feature toggles across frontend, backend, mobile, desktop apps. Alternative to LaunchDarkly. Management app + feature flag SDKs.
+  Dart (Flutter) SDK for ConfigCat. ConfigCat is a hosted feature flag service. Manage feature toggles across frontend, backend, mobile, desktop apps. Alternative to LaunchDarkly.
 version: 1.0.0
-homepage: https://github.com/configcat/dart-sdk
+homepage: https://configcat.com/docs/sdk-reference/dart
+repository: https://github.com/configcat/dart-sdk
+issue_tracker: https://github.com/configcat/dart-sdk/issues
 
 environment:
   sdk: ">=2.13.0 <3.0.0"
 
 dependencies:
   crypto: ^3.0.1
-  http: ^0.13.3
-  logging: ^1.0.1
-  tuple: ^2.0.0
-  version: ^2.0.0
+  dio: ^4.0.0
+  logger: ^1.1.0
+  pub_semver: ^2.1.0
+  json_annotation: ^4.4.0
 
 dev_dependencies:
   test: ^1.17.10
   mockito: ^5.0.15
   build_runner: ^2.1.1
+  json_serializable: ^6.1.3
+  http_mock_adapter: ^0.3.2
+  sprintf: ^6.0.0
