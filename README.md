@@ -27,7 +27,7 @@ import 'package:configcat_client/configcat_client.dart';
 
 ### 4. Create a *ConfigCat* client instance
 ```dart
-final client = ConfigCatClient('#YOUR-SDK-KEY#');
+final client = ConfigCatClient.get('#YOUR-SDK-KEY#');
 ```
 
 ### 5. Get your setting value
@@ -41,7 +41,7 @@ if (isMyAwesomeFeatureEnabled) {
 ```
 ### 6. Close the client on application exit
 ```dart
-client.close();
+ConfigCatClient.close();
 ```
 
 ## Getting user-specific setting values with Targeting

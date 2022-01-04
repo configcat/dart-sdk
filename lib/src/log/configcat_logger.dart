@@ -7,6 +7,7 @@ import 'logger.dart';
 class ConfigCatLogger {
   late final Logger _internal;
   late final LogLevel _globalLevel;
+  bool _isClosed = false;
 
   ConfigCatLogger({
     Logger? logger,
@@ -17,30 +18,31 @@ class ConfigCatLogger {
   }
 
   void debug(message, [dynamic error, StackTrace? stackTrace]) {
-    if (LogLevel.debug.index >= this._globalLevel.index) {
+    if (LogLevel.debug.index >= this._globalLevel.index && !this._isClosed) {
       this._internal.debug("ConfigCat - $message", error, stackTrace);
     }
   }
 
   void error(message, [dynamic error, StackTrace? stackTrace]) {
-    if (LogLevel.error.index >= this._globalLevel.index) {
+    if (LogLevel.error.index >= this._globalLevel.index && !this._isClosed) {
       this._internal.error("ConfigCat - $message", error, stackTrace);
     }
   }
 
   void info(message, [dynamic error, StackTrace? stackTrace]) {
-    if (LogLevel.info.index >= this._globalLevel.index) {
+    if (LogLevel.info.index >= this._globalLevel.index && !this._isClosed) {
       this._internal.info("ConfigCat - $message", error, stackTrace);
     }
   }
 
   void warning(message, [dynamic error, StackTrace? stackTrace]) {
-    if (LogLevel.warning.index >= this._globalLevel.index) {
+    if (LogLevel.warning.index >= this._globalLevel.index && !this._isClosed) {
       this._internal.warning("ConfigCat - $message", error, stackTrace);
     }
   }
 
   void close() {
+    this._isClosed = true;
     this._internal.close();
   }
 }

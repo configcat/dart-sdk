@@ -19,7 +19,7 @@ void main() {
     when(cache.read(any)).thenThrow(Exception());
 
     final client =
-        ConfigCatClient(testSdkKey, options: ConfigCatOptions(cache: cache));
+        ConfigCatClient.get(testSdkKey, options: ConfigCatOptions(cache: cache));
     final dioAdapter = DioAdapter(dio: client.client);
     dioAdapter
       ..onGet(getPath(), (server) {
@@ -31,6 +31,9 @@ void main() {
 
     // Assert
     expect(value, equals('test'));
+
+    // Cleanup
+    ConfigCatClient.close();
   });
 
   test('failing fetch, returns cached value', () async {
@@ -40,7 +43,7 @@ void main() {
         (_) => Future.value(jsonEncode(createTestConfig({'value': 'test'}))));
 
     final client =
-        ConfigCatClient(testSdkKey, options: ConfigCatOptions(cache: cache));
+      ConfigCatClient.get(testSdkKey, options: ConfigCatOptions(cache: cache));
     final dioAdapter = DioAdapter(dio: client.client);
     dioAdapter
       ..onGet(getPath(), (server) {
@@ -52,5 +55,8 @@ void main() {
 
     // Assert
     expect(value, equals('test'));
+
+    // Cleanup
+    ConfigCatClient.close();
   });
 }

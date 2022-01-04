@@ -13,12 +13,12 @@ void main() {
   late ConfigCatClient client;
   late DioAdapter dioAdapter;
   setUp(() {
-    client = ConfigCatClient(testSdkKey,
+    client = ConfigCatClient.get(testSdkKey,
         options: ConfigCatOptions(mode: PollingMode.manualPoll()));
     dioAdapter = DioAdapter(dio: client.client);
   });
   tearDown(() {
-    client.close();
+    ConfigCatClient.close();
     dioAdapter.close();
   });
 
@@ -305,6 +305,14 @@ void main() {
 
     // Assert
     expect(variationIds, equals(['testId1', 'testId2']));
+  });
+
+  test('ensure singleton per sdk key', () async {
+    // Act
+    final client2 = ConfigCatClient.get(testSdkKey);
+
+    // Assert
+    expect(client2, same(client));
   });
 }
 

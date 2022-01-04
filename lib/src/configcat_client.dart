@@ -21,13 +21,33 @@ class ConfigCatClient {
   late final RolloutEvaluator _rolloutEvaluator;
   late final Fetcher _fetcher;
   late final FlagOverride? _override;
+  static final Map<String, ConfigCatClient> _instanceRepository = Map();
 
-  ConfigCatClient(String sdkKey,
+  /// Creates a new or gets an already existing [ConfigCatClient] for the given [sdkKey].
+  factory ConfigCatClient.get(String sdkKey,
       {ConfigCatOptions options = const ConfigCatOptions()}) {
     if (sdkKey.isEmpty) {
-      throw ArgumentError('sdkKey cannot be empty');
+      throw ArgumentError('The SDK key cannot be empty.');
     }
 
+    var client = _instanceRepository[sdkKey];
+    if (client == null) {
+      client = _instanceRepository[sdkKey] = ConfigCatClient._(sdkKey, options: options);
+    }
+
+    return client;
+  }
+
+  /// Closes all [ConfigCatClient] instances.
+  static void close() {
+    for (final client in _instanceRepository.entries) {
+      client.value._close();
+    }
+    _instanceRepository.clear();
+  }
+
+  ConfigCatClient._(String sdkKey,
+      {ConfigCatOptions options = const ConfigCatOptions()}) {
     this._logger = options.logger ?? ConfigCatLogger();
     this._override = options.override;
 
@@ -228,7 +248,7 @@ class ConfigCatClient {
   }
 
   /// Closes the underlying resources.
-  void close() {
+  void _close() {
     this._refreshPolicy.close();
     this._logger.close();
   }

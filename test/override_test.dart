@@ -13,7 +13,7 @@ import 'helpers.dart';
 void main() {
   test('local only', () async {
     // Arrange
-    final client = ConfigCatClient('localhost',
+    final client = ConfigCatClient.get('localhost',
         options: ConfigCatOptions(
             override: FlagOverride({'enabled': true, 'local-only': true},
                 OverrideBehaviour.localOnly)));
@@ -38,12 +38,12 @@ void main() {
     expect(notFound, isNull);
 
     // Cleanup
-    client.close();
+    ConfigCatClient.close();
   });
 
   test('local over remote', () async {
     // Arrange
-    final client = ConfigCatClient(testSdkKey,
+    final client = ConfigCatClient.get(testSdkKey,
         options: ConfigCatOptions(
             override: FlagOverride({'enabled': true, 'local-only': true},
                 OverrideBehaviour.localOverRemote)));
@@ -68,12 +68,12 @@ void main() {
     expect(remote, equals('rem'));
 
     // Cleanup
-    client.close();
+    ConfigCatClient.close();
   });
 
   test('remote over local', () async {
     // Arrange
-    final client = ConfigCatClient(testSdkKey,
+    final client = ConfigCatClient.get(testSdkKey,
         options: ConfigCatOptions(
             override: FlagOverride({'enabled': true, 'local-only': true},
                 OverrideBehaviour.remoteOverLocal)));
@@ -98,7 +98,7 @@ void main() {
     expect(remote, equals('rem'));
 
     // Cleanup
-    client.close();
+    ConfigCatClient.close();
   });
 }
 

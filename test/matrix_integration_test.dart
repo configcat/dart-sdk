@@ -50,7 +50,7 @@ Future<void> _runTest(String fileName, String sdkKey, _Kind kind) async {
   final lines = await File(fileName).readAsLines();
   final headers = lines[0].split(';');
   final customKey = headers[3];
-  final client = ConfigCatClient(sdkKey,
+  final client = ConfigCatClient.get(sdkKey,
       options:
           ConfigCatOptions(logger: ConfigCatLogger(level: LogLevel.warning)));
 
