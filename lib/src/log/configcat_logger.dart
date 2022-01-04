@@ -18,31 +18,31 @@ class ConfigCatLogger {
   }
 
   void debug(message, [dynamic error, StackTrace? stackTrace]) {
-    if (LogLevel.debug.index >= this._globalLevel.index && !this._isClosed) {
-      this._internal.debug("ConfigCat - $message", error, stackTrace);
+    if (LogLevel.debug.index >= _globalLevel.index && !_isClosed) {
+      _internal.debug("ConfigCat - $message", error, stackTrace);
     }
   }
 
   void error(message, [dynamic error, StackTrace? stackTrace]) {
-    if (LogLevel.error.index >= this._globalLevel.index && !this._isClosed) {
-      this._internal.error("ConfigCat - $message", error, stackTrace);
+    if (LogLevel.error.index >= _globalLevel.index && !_isClosed) {
+      _internal.error("ConfigCat - $message", error, stackTrace);
     }
   }
 
   void info(message, [dynamic error, StackTrace? stackTrace]) {
-    if (LogLevel.info.index >= this._globalLevel.index && !this._isClosed) {
-      this._internal.info("ConfigCat - $message", error, stackTrace);
+    if (LogLevel.info.index >= _globalLevel.index && !_isClosed) {
+      _internal.info("ConfigCat - $message", error, stackTrace);
     }
   }
 
   void warning(message, [dynamic error, StackTrace? stackTrace]) {
-    if (LogLevel.warning.index >= this._globalLevel.index && !this._isClosed) {
-      this._internal.warning("ConfigCat - $message", error, stackTrace);
+    if (LogLevel.warning.index >= _globalLevel.index && !_isClosed) {
+      _internal.warning("ConfigCat - $message", error, stackTrace);
     }
   }
 
   void close() {
-    this._isClosed = true;
-    this._internal.close();
+    _isClosed = true;
+    _internal.close();
   }
 }

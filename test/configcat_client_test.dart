@@ -2,7 +2,6 @@ import 'package:configcat_client/configcat_client.dart';
 import 'package:configcat_client/src/config_fetcher.dart';
 import 'package:configcat_client/src/json/config.dart';
 import 'package:configcat_client/src/json/preferences.dart';
-import 'package:configcat_client/src/json/setting.dart';
 import 'package:dio/dio.dart';
 import 'package:http_mock_adapter/http_mock_adapter.dart';
 import 'package:test/test.dart';
@@ -25,10 +24,9 @@ void main() {
   test('get string', () async {
     // Arrange
     final body = createTestConfig({'stringValue': 'testValue'}).toJson();
-    dioAdapter
-      ..onGet(getPath(), (server) {
-        server.reply(200, body);
-      });
+    dioAdapter.onGet(getPath(), (server) {
+      server.reply(200, body);
+    });
 
     // Act
     await client.forceRefresh();
@@ -41,10 +39,9 @@ void main() {
   test('get int', () async {
     // Arrange
     final body = createTestConfig({'intValue': 42}).toJson();
-    dioAdapter
-      ..onGet(getPath(), (server) {
-        server.reply(200, body);
-      });
+    dioAdapter.onGet(getPath(), (server) {
+      server.reply(200, body);
+    });
 
     // Act
     await client.forceRefresh();
@@ -57,10 +54,9 @@ void main() {
   test('get double', () async {
     // Arrange
     final body = createTestConfig({'doubleValue': 3.14}).toJson();
-    dioAdapter
-      ..onGet(getPath(), (server) {
-        server.reply(200, body);
-      });
+    dioAdapter.onGet(getPath(), (server) {
+      server.reply(200, body);
+    });
 
     // Act
     await client.forceRefresh();
@@ -73,10 +69,9 @@ void main() {
   test('get bool', () async {
     // Arrange
     final body = createTestConfig({'boolValue': true}).toJson();
-    dioAdapter
-      ..onGet(getPath(), (server) {
-        server.reply(200, body);
-      });
+    dioAdapter.onGet(getPath(), (server) {
+      server.reply(200, body);
+    });
 
     // Act
     await client.forceRefresh();
@@ -88,10 +83,9 @@ void main() {
 
   test('get default on failure', () async {
     // Arrange
-    dioAdapter
-      ..onGet(getPath(), (server) {
-        server.reply(500, null);
-      });
+    dioAdapter.onGet(getPath(), (server) {
+      server.reply(500, null);
+    });
 
     // Act
     await client.forceRefresh();
@@ -103,10 +97,9 @@ void main() {
 
   test('get default on bad response', () async {
     // Arrange
-    dioAdapter
-      ..onGet(getPath(), (server) {
-        server.reply(200, null);
-      });
+    dioAdapter.onGet(getPath(), (server) {
+      server.reply(200, null);
+    });
 
     // Act
     await client.forceRefresh();
@@ -207,10 +200,9 @@ void main() {
   test('get all keys', () async {
     // Arrange
     final body = createTestConfig({'value1': true, 'value2': false}).toJson();
-    dioAdapter
-      ..onGet(getPath(), (server) {
-        server.reply(200, body);
-      });
+    dioAdapter.onGet(getPath(), (server) {
+      server.reply(200, body);
+    });
 
     // Act
     await client.forceRefresh();
@@ -223,10 +215,9 @@ void main() {
   test('get all values', () async {
     // Arrange
     final body = createTestConfig({'value1': true, 'value2': false}).toJson();
-    dioAdapter
-      ..onGet(getPath(), (server) {
-        server.reply(200, body);
-      });
+    dioAdapter.onGet(getPath(), (server) {
+      server.reply(200, body);
+    });
 
     // Act
     await client.forceRefresh();
@@ -241,10 +232,9 @@ void main() {
     final body = createTestConfigWithVariationId({
       'value': [42, 'test']
     }).toJson();
-    dioAdapter
-      ..onGet(getPath(), (server) {
-        server.reply(200, body);
-      });
+    dioAdapter.onGet(getPath(), (server) {
+      server.reply(200, body);
+    });
 
     // Act
     await client.forceRefresh();
@@ -260,10 +250,9 @@ void main() {
     final body = createTestConfigWithVariationId({
       'value': [42, 'test']
     }).toJson();
-    dioAdapter
-      ..onGet(getPath(), (server) {
-        server.reply(200, body);
-      });
+    dioAdapter.onGet(getPath(), (server) {
+      server.reply(200, body);
+    });
 
     // Act
     await client.forceRefresh();
@@ -275,10 +264,9 @@ void main() {
 
   test('variation id test default', () async {
     // Arrange
-    dioAdapter
-      ..onGet(getPath(), (server) {
-        server.reply(500, null);
-      });
+    dioAdapter.onGet(getPath(), (server) {
+      server.reply(500, null);
+    });
 
     // Act
     await client.forceRefresh();
@@ -294,10 +282,9 @@ void main() {
       'value1': [42, 'testId1'],
       'value2': [69, 'testId2']
     }).toJson();
-    dioAdapter
-      ..onGet(getPath(), (server) {
-        server.reply(200, body);
-      });
+    dioAdapter.onGet(getPath(), (server) {
+      server.reply(200, body);
+    });
 
     // Act
     await client.forceRefresh();

@@ -40,8 +40,8 @@ class RolloutEvaluator {
 
     try {
       if (user == null) {
-        if (setting.rolloutRules.length > 0 ||
-            setting.percentageItems.length > 0) {
+        if (setting.rolloutRules.isNotEmpty ||
+            setting.percentageItems.isNotEmpty) {
           _logger.warning(
               'UserObject missing! You should pass a UserObject to getValue(), in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/');
         }
@@ -127,13 +127,13 @@ class RolloutEvaluator {
             final split = comparisonValue
                 .split(',')
                 .map((value) => value.trim())
-                .where((value) => !value.isEmpty);
+                .where((value) => value.isNotEmpty);
 
             try {
-              final userVersion = this._parseVersion(userValue);
+              final userVersion = _parseVersion(userValue);
               var matched = false;
               for (final value in split) {
-                matched = this._parseVersion(value) == userVersion || matched;
+                matched = _parseVersion(value) == userVersion || matched;
               }
 
               if ((matched && comparator == 4) ||
@@ -153,7 +153,7 @@ class RolloutEvaluator {
                   comparator: comparator,
                   comparisonValue: comparisonValue,
                   error: e);
-              this._logger.warning(message);
+              _logger.warning(message);
               logEntries.add(message);
             }
             break;
@@ -163,9 +163,8 @@ class RolloutEvaluator {
           case 8:
           case 9:
             try {
-              final userValueVersion = this._parseVersion(userValue);
-              final comparisonVersion =
-                  this._parseVersion(comparisonValue.trim());
+              final userValueVersion = _parseVersion(userValue);
+              final comparisonVersion = _parseVersion(comparisonValue.trim());
 
               if ((comparator == 6 && userValueVersion < comparisonVersion) ||
                   (comparator == 7 && userValueVersion <= comparisonVersion) ||
@@ -186,7 +185,7 @@ class RolloutEvaluator {
                   comparator: comparator,
                   comparisonValue: comparisonValue,
                   error: e);
-              this._logger.warning(message);
+              _logger.warning(message);
               logEntries.add(message);
             }
             break;
@@ -221,7 +220,7 @@ class RolloutEvaluator {
                   comparator: comparator,
                   comparisonValue: comparisonValue,
                   error: e);
-              this._logger.warning(message);
+              _logger.warning(message);
               logEntries.add(message);
             }
             break;
@@ -230,7 +229,7 @@ class RolloutEvaluator {
             final split = comparisonValue
                 .split(',')
                 .map((value) => value.trim())
-                .where((value) => !value.isEmpty);
+                .where((value) => value.isNotEmpty);
             final userValueHash =
                 sha1.convert(utf8.encode(userValue)).toString();
             if (split.contains(userValueHash)) {
@@ -248,7 +247,7 @@ class RolloutEvaluator {
             final split = comparisonValue
                 .split(',')
                 .map((value) => value.trim())
-                .where((value) => !value.isEmpty);
+                .where((value) => value.isNotEmpty);
             final userValueHash =
                 sha1.convert(utf8.encode(userValue)).toString();
             if (!split.contains(userValueHash)) {
@@ -270,7 +269,7 @@ class RolloutEvaluator {
         }
       }
 
-      if (setting.percentageItems.length > 0) {
+      if (setting.percentageItems.isNotEmpty) {
         final hashCandidate = key + user.identifier;
         final userValueHash = sha1.convert(utf8.encode(hashCandidate));
         final hash = userValueHash.toString().substring(0, 7);
@@ -289,7 +288,7 @@ class RolloutEvaluator {
       logEntries.add('Returning ${setting.value}');
       return MapEntry(setting.value as Value, setting.variationId);
     } finally {
-      this._logger.info(logEntries);
+      _logger.info(logEntries);
     }
   }
 
@@ -331,11 +330,11 @@ class _LogEntries {
   final List<String> entries = [];
 
   add(String entry) {
-    this.entries.add(entry);
+    entries.add(entry);
   }
 
   @override
   String toString() {
-    return this.entries.join('\n');
+    return entries.join('\n');
   }
 }

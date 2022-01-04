@@ -8,7 +8,7 @@ import 'refresh_policy.dart';
 class ManualPollingPolicy extends DefaultRefreshPolicy {
   ManualPollingPolicy(ConfigCatCache cache, Fetcher fetcher,
       ConfigCatLogger logger, ConfigJsonCache jsonCache, String sdkKey)
-      : super(cache, fetcher, logger, jsonCache, sdkKey) {}
+      : super(cache, fetcher, logger, jsonCache, sdkKey);
 
   @override
   Future<Config> getConfiguration() {

@@ -19,8 +19,8 @@ void main() {
   late MockConfigCatCache cache;
   late MockFetcher fetcher;
   setUp(() {
-    cache = new MockConfigCatCache();
-    fetcher = new MockFetcher();
+    cache = MockConfigCatCache();
+    fetcher = MockFetcher();
   });
 
   group('Auto Polling Tests', () {

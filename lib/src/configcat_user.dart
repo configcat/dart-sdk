@@ -1,15 +1,15 @@
 /// An object containing attributes to properly identify a given user for variation evaluation.
 /// Its only mandatory attribute is the [identifier].
 class ConfigCatUser {
-  final Map<String, String> _attributes = Map<String, String>();
+  final Map<String, String> _attributes = <String, String>{};
   final String identifier;
 
   ConfigCatUser(
       {required this.identifier,
-      String? email = null,
-      String? country = null,
-      Map<String, String>? custom = null}) {
-    this._attributes['Identifier'] = identifier;
+      String? email,
+      String? country,
+      Map<String, String>? custom}) {
+    _attributes['Identifier'] = identifier;
     if (email != null) {
       _attributes['Email'] = email;
     }

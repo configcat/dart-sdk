@@ -15,17 +15,17 @@ class ConfigJsonCache {
     }
 
     try {
-      if (json == this.config?.jsonString) {
-        return this.config;
+      if (json == config?.jsonString) {
+        return config;
       }
 
       final decoded = jsonDecode(json);
-      this.config = Config.fromJson(decoded);
-      this.config!.jsonString = json;
+      config = Config.fromJson(decoded);
+      config!.jsonString = json;
 
-      return this.config;
+      return config;
     } catch (e, s) {
-      this.logger.error("Config JSON parsing failed.", e, s);
+      logger.error("Config JSON parsing failed.", e, s);
       return null;
     }
   }

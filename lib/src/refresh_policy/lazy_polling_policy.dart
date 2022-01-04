@@ -13,16 +13,15 @@ class LazyLoadingPolicy extends DefaultRefreshPolicy {
   LazyLoadingPolicy(this._config, ConfigCatCache cache, Fetcher fetcher,
       ConfigCatLogger logger, ConfigJsonCache jsonCache, String sdkKey)
       : super(cache, fetcher, logger, jsonCache, sdkKey) {
-    this._latestRefresh = DateTime.utc(1970, 01, 01);
+    _latestRefresh = DateTime.utc(1970, 01, 01);
   }
 
   @override
   Future<Config> getConfiguration() async {
     final current = DateTime.now();
-    if (current
-        .isAfter(this._latestRefresh.add(this._config.cacheRefreshInterval))) {
-      this.logger.debug('Cache expired, refreshing.');
-      final response = await this.fetcher.fetchConfiguration();
+    if (current.isAfter(_latestRefresh.add(_config.cacheRefreshInterval))) {
+      logger.debug('Cache expired, refreshing.');
+      final response = await fetcher.fetchConfiguration();
       final cached = await readCache();
 
       if (response.isFetched &&
@@ -31,7 +30,7 @@ class LazyLoadingPolicy extends DefaultRefreshPolicy {
       }
 
       if (!response.isFailed) {
-        this._latestRefresh = DateTime.now();
+        _latestRefresh = DateTime.now();
       }
 
       return response.isFetched ? response.config! : cached;

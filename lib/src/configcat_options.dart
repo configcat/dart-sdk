@@ -1,4 +1,4 @@
-import 'package:configcat_client/src/flag_overrides.dart';
+import 'package:configcat_client/src/override/flag_overrides.dart';
 import 'package:dio/dio.dart';
 
 import 'configcat_cache.dart';
@@ -18,20 +18,20 @@ class ConfigCatOptions {
   final PollingMode? mode;
   final ConfigCatCache? cache;
   final ConfigCatLogger? logger;
-  final FlagOverride? override;
+  final FlagOverrides? override;
   final HttpClientAdapter? httpClientAdapter;
 
   const ConfigCatOptions({
     this.baseUrl = '',
     this.dataGovernance = DataGovernance.global,
-    this.mode = null,
-    this.cache = null,
-    this.logger = null,
+    this.mode,
+    this.cache,
+    this.logger,
     this.connectTimeout = const Duration(seconds: 10),
     this.receiveTimeout = const Duration(seconds: 30),
     this.sendTimeout = const Duration(seconds: 30),
     this.proxyUrl = '',
-    this.httpClientAdapter = null,
-    this.override = null,
+    this.httpClientAdapter,
+    this.override,
   });
 }

@@ -1,9 +1,7 @@
 import 'package:configcat_client/configcat_client.dart';
 import 'package:configcat_client/src/config_fetcher.dart';
-import 'package:configcat_client/src/flag_overrides.dart';
 import 'package:configcat_client/src/json/config.dart';
 import 'package:configcat_client/src/json/preferences.dart';
-import 'package:configcat_client/src/json/setting.dart';
 import 'package:http_mock_adapter/http_mock_adapter.dart';
 import 'package:sprintf/sprintf.dart';
 import 'package:test/test.dart';
@@ -15,17 +13,17 @@ void main() {
     // Arrange
     final client = ConfigCatClient.get('localhost',
         options: ConfigCatOptions(
-            override: FlagOverride({'enabled': true, 'local-only': true},
+            override: FlagOverrides(
+                OverrideDataSource.map({'enabled': true, 'local-only': true}),
                 OverrideBehaviour.localOnly)));
     final dioAdapter = DioAdapter(dio: client.client);
     final body =
         _createTestConfig({'enabled': false, 'remote': 'rem'}).toJson();
     final path =
         sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, 'localhost']);
-    dioAdapter
-      ..onGet(path, (server) {
-        server.reply(200, body);
-      });
+    dioAdapter.onGet(path, (server) {
+      server.reply(200, body);
+    });
 
     // Act
     final found = await client.getValue('enabled', false);
@@ -45,17 +43,17 @@ void main() {
     // Arrange
     final client = ConfigCatClient.get(testSdkKey,
         options: ConfigCatOptions(
-            override: FlagOverride({'enabled': true, 'local-only': true},
+            override: FlagOverrides(
+                OverrideDataSource.map({'enabled': true, 'local-only': true}),
                 OverrideBehaviour.localOverRemote)));
     final dioAdapter = DioAdapter(dio: client.client);
     final body =
         _createTestConfig({'enabled': false, 'remote': 'rem'}).toJson();
     final path =
         sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
-    dioAdapter
-      ..onGet(path, (server) {
-        server.reply(200, body);
-      });
+    dioAdapter.onGet(path, (server) {
+      server.reply(200, body);
+    });
 
     // Act
     final enabled = await client.getValue('enabled', false);
@@ -75,17 +73,17 @@ void main() {
     // Arrange
     final client = ConfigCatClient.get(testSdkKey,
         options: ConfigCatOptions(
-            override: FlagOverride({'enabled': true, 'local-only': true},
+            override: FlagOverrides(
+                OverrideDataSource.map({'enabled': true, 'local-only': true}),
                 OverrideBehaviour.remoteOverLocal)));
     final dioAdapter = DioAdapter(dio: client.client);
     final body =
         _createTestConfig({'enabled': false, 'remote': 'rem'}).toJson();
     final path =
         sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
-    dioAdapter
-      ..onGet(path, (server) {
-        server.reply(200, body);
-      });
+    dioAdapter.onGet(path, (server) {
+      server.reply(200, body);
+    });
 
     // Act
     final enabled = await client.getValue('enabled', true);

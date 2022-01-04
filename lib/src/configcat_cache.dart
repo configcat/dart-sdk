@@ -16,7 +16,7 @@ abstract class ConfigCatCache {
 
 /// Represents an in-memory cache for configurations.
 class InMemoryConfigCatCache extends ConfigCatCache {
-  final _store = Map<String, String>();
+  final _store = <String, String>{};
 
   @override
   Future<String> read(String key) {

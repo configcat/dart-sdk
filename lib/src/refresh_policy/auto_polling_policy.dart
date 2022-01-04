@@ -17,43 +17,42 @@ class AutoPollingPolicy extends DefaultRefreshPolicy
   AutoPollingPolicy(this._config, ConfigCatCache cache, Fetcher fetcher,
       ConfigCatLogger logger, ConfigJsonCache jsonCache, String sdkKey)
       : super(cache, fetcher, logger, jsonCache, sdkKey) {
-    this._timer =
-        Timer.periodic(this._config.autoPollInterval, (Timer t) async {
-      await this._doRefresh();
+    _timer = Timer.periodic(_config.autoPollInterval, (Timer t) async {
+      await _doRefresh();
     });
 
     // execute immediately, because periodic waits for an interval amount of time before the first tick
     Timer.run(() async {
-      await this._doRefresh();
+      await _doRefresh();
     });
   }
 
   @override
   Future<Config> getConfiguration() {
     // await for the very first fetch
-    return syncFuture(() => this.readCache(), this._config.maxInitWaitTime,
+    return syncFuture(() => readCache(), _config.maxInitWaitTime,
         onTimeout: () {
-      this.logger.warning(
-          "Max init wait time for the very first fetch reached (${this._config.maxInitWaitTime.inSeconds}s). Reading cache.");
+      logger.warning(
+          "Max init wait time for the very first fetch reached (${_config.maxInitWaitTime.inSeconds}s). Reading cache.");
     });
   }
 
   @override
   void close() {
-    this._timer.cancel();
+    _timer.cancel();
     super.close();
   }
 
   Future<void> _doRefresh() async {
-    final response = await this.fetcher.fetchConfiguration();
-    final cached = await this.readCache();
+    final response = await fetcher.fetchConfiguration();
+    final cached = await readCache();
 
     if (response.isFetched &&
         response.config!.jsonString != cached.jsonString) {
       await writeCache(response.config!);
-      this._config.onConfigChanged?.call();
+      _config.onConfigChanged?.call();
     }
 
-    this.initialized();
+    initialized();
   }
 }

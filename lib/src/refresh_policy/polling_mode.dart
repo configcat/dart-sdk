@@ -1,40 +1,32 @@
 /// Represents the config changed callback.
 typedef ConfigChangedHandler = void Function();
 
-/**
- * The base class of a polling mode configuration.
- */
+/// The base class of a polling mode configuration.
 abstract class PollingMode {
   PollingMode._();
 
-  /**
-   * Creates a configured auto polling configuration.
-   *
-   * [autoPollInterval] sets at least how often this policy should fetch the latest configuration and refresh the cache.
-   * [maxInitWaitTime] sets the maximum waiting time between initialization and the first config acquisition in seconds.
-   * [listener] sets a configuration changed listener.
-   */
+  /// Creates a configured auto polling configuration.
+  ///
+  /// [autoPollInterval] sets at least how often this policy should fetch the latest configuration and refresh the cache.
+  /// [maxInitWaitTime] sets the maximum waiting time between initialization and the first config acquisition in seconds.
+  /// [listener] sets a configuration changed listener.
   factory PollingMode.autoPoll(
       {autoPollInterval = const Duration(seconds: 60),
       maxInitWaitTime = const Duration(seconds: 5),
-      onConfigChanged = null}) {
+      onConfigChanged}) {
     return AutoPollingMode._(
         autoPollInterval, maxInitWaitTime, onConfigChanged);
   }
 
-  /**
-   * Creates a configured lazy loading polling configuration.
-   *
-   * [cacheRefreshIntervalInSeconds] sets how long the cache will store its value before fetching the latest from the network again.
-   */
+  /// Creates a configured lazy loading polling configuration.
+  ///
+  /// [cacheRefreshIntervalInSeconds] sets how long the cache will store its value before fetching the latest from the network again.
   factory PollingMode.lazyLoad(
       {cacheRefreshIntervalInSeconds = const Duration(seconds: 60)}) {
     return LazyLoadingMode._(cacheRefreshIntervalInSeconds);
   }
 
-  /**
-   * Creates a configured manual polling configuration.
-   */
+  /// Creates a configured manual polling configuration.
   factory PollingMode.manualPoll() {
     return ManualPollingMode._();
   }

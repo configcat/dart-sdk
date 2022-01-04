@@ -283,10 +283,9 @@ void main() {
       // Arrange
       final path =
           sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
-      dioAdapter
-        ..onGet(path, (server) {
-          server.reply(500, null);
-        });
+      dioAdapter.onGet(path, (server) {
+        server.reply(500, null);
+      });
 
       // Act
       final fetchedResponse = await fetcher.fetchConfiguration();
@@ -307,17 +306,16 @@ void main() {
       // Arrange
       final path =
           sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
-      dioAdapter
-        ..onGet(path, (server) {
-          server.throws(
-            200,
-            DioError(
-              requestOptions: RequestOptions(
-                path: path,
-              ),
+      dioAdapter.onGet(path, (server) {
+        server.throws(
+          200,
+          DioError(
+            requestOptions: RequestOptions(
+              path: path,
             ),
-          );
-        });
+          ),
+        );
+      });
 
       // Act
       final fetchedResponse = await fetcher.fetchConfiguration();
@@ -339,13 +337,12 @@ void main() {
       final body = _createTestConfig(ConfigFetcher.globalBaseUrl, 0).toJson();
       final path =
           sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
-      dioAdapter
-        ..onGet(path, (server) {
-          server.reply(200, body);
-        });
+      dioAdapter.onGet(path, (server) {
+        server.reply(200, body);
+      });
 
-      var resp1 = null;
-      var resp2 = null;
+      String resp1 = '';
+      String resp2 = '';
 
       // Act
       final future1 = fetcher
@@ -407,5 +404,5 @@ ConfigFetcher _createFetcher(
 }
 
 Config _createTestConfig(String url, int redirectMode) {
-  return Config(Preferences(url, redirectMode), Map());
+  return Config(Preferences(url, redirectMode), {});
 }

@@ -18,13 +18,12 @@ void main() {
     when(cache.write(any, any)).thenThrow(Exception());
     when(cache.read(any)).thenThrow(Exception());
 
-    final client =
-        ConfigCatClient.get(testSdkKey, options: ConfigCatOptions(cache: cache));
+    final client = ConfigCatClient.get(testSdkKey,
+        options: ConfigCatOptions(cache: cache));
     final dioAdapter = DioAdapter(dio: client.client);
-    dioAdapter
-      ..onGet(getPath(), (server) {
-        server.reply(200, createTestConfig({'value': 'test'}).toJson());
-      });
+    dioAdapter.onGet(getPath(), (server) {
+      server.reply(200, createTestConfig({'value': 'test'}).toJson());
+    });
 
     // Act
     final value = await client.getValue('value', '');
@@ -42,13 +41,12 @@ void main() {
     when(cache.read(any)).thenAnswer(
         (_) => Future.value(jsonEncode(createTestConfig({'value': 'test'}))));
 
-    final client =
-      ConfigCatClient.get(testSdkKey, options: ConfigCatOptions(cache: cache));
+    final client = ConfigCatClient.get(testSdkKey,
+        options: ConfigCatOptions(cache: cache));
     final dioAdapter = DioAdapter(dio: client.client);
-    dioAdapter
-      ..onGet(getPath(), (server) {
-        server.reply(500, null);
-      });
+    dioAdapter.onGet(getPath(), (server) {
+      server.reply(500, null);
+    });
 
     // Act
     final value = await client.getValue('value', '');

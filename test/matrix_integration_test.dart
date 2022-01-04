@@ -36,12 +36,12 @@ void main() {
     ],
   };
 
-  testData.entries.forEach((element) {
+  for (var element in testData.entries) {
     test(element.key, () async {
       await _runTest('test/files/${element.key}', element.value[0] as String,
           element.value[1] as _Kind);
     });
-  });
+  }
 }
 
 enum _Kind { value, variation }
@@ -58,7 +58,7 @@ Future<void> _runTest(String fileName, String sdkKey, _Kind kind) async {
   final errors = List<String>.empty(growable: true);
   for (final line in lines.skip(1)) {
     final testObject = line.split(';');
-    ConfigCatUser? user = null;
+    ConfigCatUser? user;
     if (testObject[0] != "##null##") {
       final identifier = testObject[0];
       final email = testObject[1].isNotEmpty && testObject[1] != "##null##"
@@ -98,10 +98,10 @@ Future<void> _runTest(String fileName, String sdkKey, _Kind kind) async {
     }
   }
 
-  if (errors.length > 0) {
-    errors.forEach((element) {
+  if (errors.isNotEmpty) {
+    for (var element in errors) {
       stderr.writeln(element);
-    });
+    }
 
     fail("Errors found: ${errors.length}");
   }

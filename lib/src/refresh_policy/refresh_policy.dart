@@ -17,11 +17,11 @@ abstract class DefaultRefreshPolicy extends RefreshPolicy {
   final ConfigCatLogger logger;
   late final String _cacheKey;
   final ConfigJsonCache jsonCache;
-  Config _inMemoryValue = Config(null, new Map());
+  Config _inMemoryValue = Config(null, {});
 
   DefaultRefreshPolicy(
       this.cache, this.fetcher, this.logger, this.jsonCache, String sdkKey) {
-    this._cacheKey = 'dart_${sdkKey}_$configJsonName.json';
+    _cacheKey = 'dart_${sdkKey}_$configJsonName.json';
   }
 
   Future<void> writeCache(Config value) async {
@@ -29,27 +29,29 @@ abstract class DefaultRefreshPolicy extends RefreshPolicy {
       _inMemoryValue = value;
       await cache.write(_cacheKey, value.jsonString);
     } catch (e, s) {
-      this.logger.error('An error occurred during the cache write.', e, s);
+      logger.error('An error occurred during the cache write.', e, s);
     }
   }
 
   Future<Config> readCache() async {
     try {
-      final result =
-          this.jsonCache.getConfigFromJson(await cache.read(_cacheKey));
-      return result != null ? result : this._inMemoryValue;
+      final result = jsonCache.getConfigFromJson(await cache.read(_cacheKey));
+      return result ?? _inMemoryValue;
     } catch (e, s) {
-      this.logger.error('An error occurred during the cache read.', e, s);
-      return this._inMemoryValue;
+      logger.error('An error occurred during the cache read.', e, s);
+      return _inMemoryValue;
     }
   }
 
+  @override
   Future<Config> getConfiguration();
 
+  @override
   void close() {
-    this.fetcher.close();
+    fetcher.close();
   }
 
+  @override
   Future<void> refresh() async {
     final response = await fetcher.fetchConfiguration();
     if (response.isFetched) {
@@ -64,7 +66,7 @@ class NullRefreshPolicy implements RefreshPolicy {
 
   @override
   Future<Config> getConfiguration() {
-    return Future.value(Config(null, new Map()));
+    return Future.value(Config(null, {}));
   }
 
   @override

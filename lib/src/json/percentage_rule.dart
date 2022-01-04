@@ -4,12 +4,15 @@ part 'percentage_rule.g.dart';
 
 @JsonSerializable()
 class RolloutPercentageItem {
+  /// Value served when the rule is selected during evaluation.
   @JsonKey(name: 'v')
   final dynamic value;
 
+  /// The rule's percentage value.
   @JsonKey(name: 'p')
   final double percentage;
 
+  /// The rule's variation ID (for analytical purposes).
   @JsonKey(name: 'i', defaultValue: '')
   final String variationId;
 

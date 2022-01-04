@@ -17,26 +17,26 @@ class DefaultLogger implements Logger {
 
   @override
   void debug(message, [dynamic error, StackTrace? stackTrace]) {
-    this._internal.d(message, error, stackTrace);
+    _internal.d(message, error, stackTrace);
   }
 
   @override
   void error(message, [dynamic error, StackTrace? stackTrace]) {
-    this._internal.e(message, error, stackTrace);
+    _internal.e(message, error, stackTrace);
   }
 
   @override
   void info(message, [dynamic error, StackTrace? stackTrace]) {
-    this._internal.i(message, error, stackTrace);
+    _internal.i(message, error, stackTrace);
   }
 
   @override
   void warning(message, [dynamic error, StackTrace? stackTrace]) {
-    this._internal.w(message, error, stackTrace);
+    _internal.w(message, error, stackTrace);
   }
 
   @override
   void close() {
-    this._internal.close();
+    _internal.close();
   }
 }
