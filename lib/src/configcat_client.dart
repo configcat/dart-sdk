@@ -25,15 +25,15 @@ class ConfigCatClient {
   static final Map<String, ConfigCatClient> _instanceRepository = {};
 
   /// Creates a new or gets an already existing [ConfigCatClient] for the given [sdkKey].
-  factory ConfigCatClient.get(String sdkKey,
-      {ConfigCatOptions options = const ConfigCatOptions()}) {
+  factory ConfigCatClient.get(
+      {required String sdkKey,
+      ConfigCatOptions options = const ConfigCatOptions()}) {
     if (sdkKey.isEmpty) {
       throw ArgumentError('The SDK key cannot be empty.');
     }
 
     var client = _instanceRepository[sdkKey];
-    client ??= _instanceRepository[sdkKey] =
-        ConfigCatClient._(sdkKey, options: options);
+    client ??= _instanceRepository[sdkKey] = ConfigCatClient._(sdkKey, options);
 
     return client;
   }
@@ -46,8 +46,7 @@ class ConfigCatClient {
     _instanceRepository.clear();
   }
 
-  ConfigCatClient._(String sdkKey,
-      {ConfigCatOptions options = const ConfigCatOptions()}) {
+  ConfigCatClient._(String sdkKey, ConfigCatOptions options) {
     _logger = options.logger ?? ConfigCatLogger();
     _override = options.override;
 
@@ -56,7 +55,11 @@ class ConfigCatClient {
 
     _rolloutEvaluator = RolloutEvaluator(_logger);
     _fetcher = ConfigFetcher(
-        _logger, sdkKey, mode.getPollingIdentifier(), configJsonCache, options);
+        logger: _logger,
+        sdkKey: sdkKey,
+        mode: mode.getPollingIdentifier(),
+        jsonCache: configJsonCache,
+        options: options);
     _refreshPolicy =
         _override != null && _override!.behaviour == OverrideBehaviour.localOnly
             ? NullRefreshPolicy()
@@ -74,8 +77,11 @@ class ConfigCatClient {
   /// [key] is the identifier of the feature flag or setting.
   /// In case of any failure, [defaultValue] will be returned.
   /// [user] is the user object to identify the caller.
-  Future<T> getValue<T>(String key, T defaultValue,
-      {ConfigCatUser? user}) async {
+  Future<T> getValue<T>({
+    required String key,
+    required T defaultValue,
+    ConfigCatUser? user,
+  }) async {
     try {
       final settings = await _getSettings();
       if (settings.isEmpty) {
@@ -105,8 +111,11 @@ class ConfigCatClient {
   /// [key] is the identifier of the feature flag or setting.
   /// In case of any failure, [defaultVariationId] will be returned.
   /// [user] is the user object to identify the caller.
-  Future<String> getVariationId(String key, String defaultVariationId,
-      {ConfigCatUser? user}) async {
+  Future<String> getVariationId({
+    required String key,
+    required String defaultVariationId,
+    ConfigCatUser? user,
+  }) async {
     try {
       final settings = await _getSettings();
       if (settings.isEmpty) {
@@ -200,7 +209,8 @@ class ConfigCatClient {
   }
 
   /// Gets the key of a setting and its value identified by the given [variationId] (analytics).
-  Future<MapEntry<String, T>?> getKeyAndValue<T>(String variationId) async {
+  Future<MapEntry<String, T>?> getKeyAndValue<T>(
+      {required String variationId}) async {
     try {
       final settings = await _getSettings();
       if (settings.isEmpty) {
@@ -261,13 +271,27 @@ class ConfigCatClient {
       String sdkKey) {
     if (mode is AutoPollingMode) {
       return AutoPollingPolicy(
-          mode, cache, fetcher, logger, configJsonCache, sdkKey);
+          config: mode,
+          cache: cache,
+          fetcher: fetcher,
+          logger: logger,
+          jsonCache: configJsonCache,
+          sdkKey: sdkKey);
     } else if (mode is LazyLoadingMode) {
       return LazyLoadingPolicy(
-          mode, cache, fetcher, logger, configJsonCache, sdkKey);
+          config: mode,
+          cache: cache,
+          fetcher: fetcher,
+          logger: logger,
+          jsonCache: configJsonCache,
+          sdkKey: sdkKey);
     } else if (mode is ManualPollingMode) {
       return ManualPollingPolicy(
-          cache, fetcher, logger, configJsonCache, sdkKey);
+          cache: cache,
+          fetcher: fetcher,
+          logger: logger,
+          jsonCache: configJsonCache,
+          sdkKey: sdkKey);
     } else {
       throw ArgumentError('The polling mode option is invalid.');
     }
@@ -277,15 +301,15 @@ class ConfigCatClient {
     if (_override != null) {
       switch (_override!.behaviour) {
         case OverrideBehaviour.localOnly:
-          final local = await _override!.overrides.getOverrides();
+          final local = await _override!.dataSource.getOverrides();
           return local;
         case OverrideBehaviour.localOverRemote:
           final remote = await _refreshPolicy.getConfiguration();
-          final local = await _override!.overrides.getOverrides();
+          final local = await _override!.dataSource.getOverrides();
           return Map<String, Setting>.of(remote.entries)..addAll(local);
         case OverrideBehaviour.remoteOverLocal:
           final remote = await _refreshPolicy.getConfiguration();
-          final local = await _override!.overrides.getOverrides();
+          final local = await _override!.dataSource.getOverrides();
           return Map<String, Setting>.of(local)..addAll(remote.entries);
       }
     }

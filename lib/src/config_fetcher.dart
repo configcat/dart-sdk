@@ -19,21 +19,21 @@ class _RedirectMode {
 }
 
 class FetchResponse {
-  final _Status status;
-  final Config? config;
+  final _Status _status;
+  final Config config;
 
-  FetchResponse._(this.status, this.config);
+  FetchResponse._(this._status, this.config);
 
   bool get isFetched {
-    return status == _Status.fetched;
+    return _status == _Status.fetched;
   }
 
   bool get isNotModified {
-    return status == _Status.notModified;
+    return _status == _Status.notModified;
   }
 
   bool get isFailed {
-    return status == _Status.failure;
+    return _status == _Status.failure;
   }
 
   factory FetchResponse.success(Config config) {
@@ -41,11 +41,11 @@ class FetchResponse {
   }
 
   factory FetchResponse.failure() {
-    return FetchResponse._(_Status.failure, null);
+    return FetchResponse._(_Status.failure, Config.empty);
   }
 
   factory FetchResponse.notModified() {
-    return FetchResponse._(_Status.notModified, null);
+    return FetchResponse._(_Status.notModified, Config.empty);
   }
 }
 
@@ -67,23 +67,27 @@ class ConfigFetcher
   static const _etagHeaderName = 'Etag';
   static const _successStatusCodes = [200, 201, 202, 203, 204];
 
-  final ConfigCatLogger logger;
-  final ConfigJsonCache jsonCache;
-  final String mode;
-  final String sdkKey;
+  late final ConfigCatLogger _logger;
+  late final ConfigJsonCache _jsonCache;
+  late final String _mode;
+  late final String _sdkKey;
 
   late final bool _urlIsCustom;
   late final Dio _client;
   late String _etag = '';
   late String _url;
 
-  ConfigFetcher({
-    required this.logger, 
-    required this.sdkKey, 
-    required this.mode, 
-    required this.jsonCache
-    required ConfigCatOptions options,
-  })
+  ConfigFetcher(
+      {required ConfigCatLogger logger,
+      required String sdkKey,
+      required String mode,
+      required ConfigJsonCache jsonCache,
+      required ConfigCatOptions options}) {
+    _logger = logger;
+    _jsonCache = jsonCache;
+    _mode = mode;
+    _sdkKey = sdkKey;
+
     _urlIsCustom = options.baseUrl.isNotEmpty;
     _url = _urlIsCustom
         ? options.baseUrl
@@ -135,12 +139,12 @@ class ConfigFetcher
 
   Future<FetchResponse> _executeFetch(int executionCount) async {
     final response = await _doFetch();
-    if (!response.isFetched || response.config?.preferences == null) {
+    if (!response.isFetched || response.config.preferences == null) {
       return response;
     }
 
-    final preferences = response.config!.preferences!;
-    if (preferences.baseUrl == _url) {
+    final preferences = response.config.preferences;
+    if (!response.isFetched || preferences == null) {
       return response;
     }
 
@@ -154,7 +158,7 @@ class ConfigFetcher
       return response;
     } else {
       if (preferences.redirect == _RedirectMode.shouldRedirect) {
-        logger.warning(
+        _logger.warning(
             'Your \'dataGovernance\' parameter at ConfigCatClient initialization is not in sync with your preferences on the ConfigCat Dashboard: https://app.configcat.com/organization/data-governance. Only Organization Admins can access this preference.');
       }
 
@@ -163,43 +167,43 @@ class ConfigFetcher
       }
     }
 
-    logger.error(
+    _logger.error(
         'Redirect loop during config.json fetch. Please contact support@configcat.com.');
     return response;
   }
 
   Future<FetchResponse> _doFetch() async {
     Map<String, String> headers = {
-      _userAgentHeaderName: 'ConfigCat-Dart/$mode-$version',
+      _userAgentHeaderName: 'ConfigCat-Dart/$_mode-$version',
       if (_etag.isNotEmpty) _ifNoneMatchHeaderName: _etag
     };
 
     try {
       final response = await _client.get(
-        '$_url/configuration-files/$sdkKey/$configJsonName.json',
+        '$_url/configuration-files/$_sdkKey/$configJsonName.json',
         options: Options(headers: headers),
       );
 
       if (_successStatusCodes.contains(response.statusCode)) {
-        final config = jsonCache.getConfigFromJson(response.data.toString());
+        final config = _jsonCache.getConfigFromJson(response.data.toString());
         if (config == null) {
           return FetchResponse.failure();
         }
 
         _etag = response.headers.value(_etagHeaderName) ?? '';
 
-        logger.debug('Fetch was successful: new config fetched.');
+        _logger.debug('Fetch was successful: new config fetched.');
         return FetchResponse.success(config);
       } else if (response.statusCode == 304) {
-        logger.debug('Fetch was successful: config not modified.');
+        _logger.debug('Fetch was successful: config not modified.');
         return FetchResponse.notModified();
       } else {
-        logger.error(
+        _logger.error(
             'Double-check your API KEY at https://app.configcat.com/apikey. Received unexpected response: ${response.statusCode}');
         return FetchResponse.failure();
       }
     } catch (e, s) {
-      logger.error('Exception occurred during fetching.', e, s);
+      _logger.error('Exception occurred during fetching.', e, s);
       return FetchResponse.failure();
     }
   }

@@ -11,6 +11,10 @@ import 'helpers.dart';
 
 @GenerateMocks([ConfigCatCache])
 void main() {
+  tearDown(() {
+    ConfigCatClient.close();
+  });
+
   test('failing cache, returns memory-cached value', () async {
     // Arrange
     final cache = MockConfigCatCache();
@@ -18,21 +22,18 @@ void main() {
     when(cache.write(any, any)).thenThrow(Exception());
     when(cache.read(any)).thenThrow(Exception());
 
-    final client = ConfigCatClient.get(testSdkKey,
-        options: ConfigCatOptions(cache: cache));
+    final client = ConfigCatClient.get(
+        sdkKey: testSdkKey, options: ConfigCatOptions(cache: cache));
     final dioAdapter = DioAdapter(dio: client.client);
     dioAdapter.onGet(getPath(), (server) {
       server.reply(200, createTestConfig({'value': 'test'}).toJson());
     });
 
     // Act
-    final value = await client.getValue('value', '');
+    final value = await client.getValue(key: 'value', defaultValue: '');
 
     // Assert
     expect(value, equals('test'));
-
-    // Cleanup
-    ConfigCatClient.close();
   });
 
   test('failing fetch, returns cached value', () async {
@@ -41,20 +42,17 @@ void main() {
     when(cache.read(any)).thenAnswer(
         (_) => Future.value(jsonEncode(createTestConfig({'value': 'test'}))));
 
-    final client = ConfigCatClient.get(testSdkKey,
-        options: ConfigCatOptions(cache: cache));
+    final client = ConfigCatClient.get(
+        sdkKey: testSdkKey, options: ConfigCatOptions(cache: cache));
     final dioAdapter = DioAdapter(dio: client.client);
     dioAdapter.onGet(getPath(), (server) {
       server.reply(500, null);
     });
 
     // Act
-    final value = await client.getValue('value', '');
+    final value = await client.getValue(key: 'value', defaultValue: '');
 
     // Assert
     expect(value, equals('test'));
-
-    // Cleanup
-    ConfigCatClient.close();
   });
 }

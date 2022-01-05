@@ -7,13 +7,24 @@ import 'polling_mode.dart';
 import 'refresh_policy.dart';
 
 class LazyLoadingPolicy extends DefaultRefreshPolicy {
-  final LazyLoadingMode _config;
+  late final LazyLoadingMode _config;
   late DateTime _latestRefresh;
 
-  LazyLoadingPolicy(this._config, ConfigCatCache cache, Fetcher fetcher,
-      ConfigCatLogger logger, ConfigJsonCache jsonCache, String sdkKey)
-      : super(cache, fetcher, logger, jsonCache, sdkKey) {
+  LazyLoadingPolicy(
+      {required LazyLoadingMode config,
+      required ConfigCatCache cache,
+      required Fetcher fetcher,
+      required ConfigCatLogger logger,
+      required ConfigJsonCache jsonCache,
+      required String sdkKey})
+      : super(
+            cache: cache,
+            fetcher: fetcher,
+            logger: logger,
+            jsonCache: jsonCache,
+            sdkKey: sdkKey) {
     _latestRefresh = DateTime.utc(1970, 01, 01);
+    _config = config;
   }
 
   @override
@@ -25,15 +36,15 @@ class LazyLoadingPolicy extends DefaultRefreshPolicy {
       final cached = await readCache();
 
       if (response.isFetched &&
-          response.config!.jsonString != cached.jsonString) {
-        await writeCache(response.config!);
+          response.config.jsonString != cached.jsonString) {
+        await writeCache(response.config);
       }
 
       if (!response.isFailed) {
         _latestRefresh = DateTime.now();
       }
 
-      return response.isFetched ? response.config! : cached;
+      return response.isFetched ? response.config : cached;
     }
 
     return await readCache();

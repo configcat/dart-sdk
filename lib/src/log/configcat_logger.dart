@@ -10,11 +10,11 @@ class ConfigCatLogger {
   bool _isClosed = false;
 
   ConfigCatLogger({
-    Logger? logger,
+    Logger? internalLogger,
     LogLevel? level,
   }) {
     _globalLevel = level ?? LogLevel.warning;
-    _internal = logger ?? DefaultLogger();
+    _internal = internalLogger ?? DefaultLogger();
   }
 
   void debug(message, [dynamic error, StackTrace? stackTrace]) {

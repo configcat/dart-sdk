@@ -30,8 +30,13 @@ void main() {
           FetchResponse.success(createTestConfig({'test': 'value'}))));
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
 
-      final poll = AutoPollingPolicy(PollingMode.autoPoll() as AutoPollingMode,
-          cache, fetcher, logger, jsonCache, testSdkKey);
+      final poll = AutoPollingPolicy(
+          config: PollingMode.autoPoll() as AutoPollingMode,
+          cache: cache,
+          fetcher: fetcher,
+          logger: logger,
+          jsonCache: jsonCache,
+          sdkKey: testSdkKey);
 
       // Act
       await poll.refresh();
@@ -51,14 +56,14 @@ void main() {
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
       var onChanged = false;
       final poll = AutoPollingPolicy(
-          PollingMode.autoPoll(
+          config: PollingMode.autoPoll(
               autoPollInterval: Duration(milliseconds: 100),
               onConfigChanged: () => onChanged = true) as AutoPollingMode,
-          cache,
-          fetcher,
-          logger,
-          jsonCache,
-          testSdkKey);
+          cache: cache,
+          fetcher: fetcher,
+          logger: logger,
+          jsonCache: jsonCache,
+          sdkKey: testSdkKey);
 
       // Act
       await Future.delayed(Duration(milliseconds: 250));
@@ -80,13 +85,14 @@ void main() {
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
 
       final poll = AutoPollingPolicy(
-          PollingMode.autoPoll(maxInitWaitTime: Duration(milliseconds: 100))
-              as AutoPollingMode,
-          cache,
-          fetcher,
-          logger,
-          jsonCache,
-          testSdkKey);
+          config:
+              PollingMode.autoPoll(maxInitWaitTime: Duration(milliseconds: 100))
+                  as AutoPollingMode,
+          cache: cache,
+          fetcher: fetcher,
+          logger: logger,
+          jsonCache: jsonCache,
+          sdkKey: testSdkKey);
 
       // Act
       final current = DateTime.now();
@@ -108,8 +114,13 @@ void main() {
       when(fetcher.fetchConfiguration()).thenAnswer((_) => Future.value(
           FetchResponse.success(createTestConfig({'test': 'value'}))));
 
-      final poll = LazyLoadingPolicy(PollingMode.lazyLoad() as LazyLoadingMode,
-          cache, fetcher, logger, jsonCache, testSdkKey);
+      final poll = LazyLoadingPolicy(
+          config: PollingMode.lazyLoad() as LazyLoadingMode,
+          cache: cache,
+          fetcher: fetcher,
+          logger: logger,
+          jsonCache: jsonCache,
+          sdkKey: testSdkKey);
 
       // Act
       await poll.refresh();
@@ -129,14 +140,14 @@ void main() {
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
 
       final poll = LazyLoadingPolicy(
-          PollingMode.lazyLoad(
+          config: PollingMode.lazyLoad(
                   cacheRefreshIntervalInSeconds: Duration(milliseconds: 100))
               as LazyLoadingMode,
-          cache,
-          fetcher,
-          logger,
-          jsonCache,
-          testSdkKey);
+          cache: cache,
+          fetcher: fetcher,
+          logger: logger,
+          jsonCache: jsonCache,
+          sdkKey: testSdkKey);
 
       // Act
       await poll.getConfiguration();
@@ -160,8 +171,12 @@ void main() {
       when(fetcher.fetchConfiguration()).thenAnswer((_) => Future.value(
           FetchResponse.success(createTestConfig({'test': 'value'}))));
 
-      final poll =
-          ManualPollingPolicy(cache, fetcher, logger, jsonCache, testSdkKey);
+      final poll = ManualPollingPolicy(
+          cache: cache,
+          fetcher: fetcher,
+          logger: logger,
+          jsonCache: jsonCache,
+          sdkKey: testSdkKey);
 
       // Act
       await poll.refresh();
@@ -178,8 +193,12 @@ void main() {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
 
-      final poll =
-          ManualPollingPolicy(cache, fetcher, logger, jsonCache, testSdkKey);
+      final poll = ManualPollingPolicy(
+          cache: cache,
+          fetcher: fetcher,
+          logger: logger,
+          jsonCache: jsonCache,
+          sdkKey: testSdkKey);
 
       // Act
       await poll.getConfiguration();

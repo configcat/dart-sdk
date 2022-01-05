@@ -7,9 +7,9 @@ class DefaultLogger implements Logger {
   late final ext.Logger _internal;
 
   DefaultLogger({
-    ext.Logger? logger,
+    ext.Logger? internalLogger,
   }) {
-    _internal = logger ??
+    _internal = internalLogger ??
         ext.Logger(
             level: ext.Level.verbose,
             printer: ext.SimplePrinter(printTime: true));

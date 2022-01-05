@@ -15,12 +15,16 @@ abstract class DefaultRefreshPolicy extends RefreshPolicy {
   final ConfigCatCache cache;
   final Fetcher fetcher;
   final ConfigCatLogger logger;
-  late final String _cacheKey;
   final ConfigJsonCache jsonCache;
-  Config _inMemoryValue = Config(null, {});
+  late final String _cacheKey;
+  Config _inMemoryValue = Config.empty;
 
   DefaultRefreshPolicy(
-      this.cache, this.fetcher, this.logger, this.jsonCache, String sdkKey) {
+      {required this.cache,
+      required this.fetcher,
+      required this.logger,
+      required this.jsonCache,
+      required String sdkKey}) {
     _cacheKey = 'dart_${sdkKey}_$configJsonName.json';
   }
 
@@ -55,7 +59,7 @@ abstract class DefaultRefreshPolicy extends RefreshPolicy {
   Future<void> refresh() async {
     final response = await fetcher.fetchConfiguration();
     if (response.isFetched) {
-      await writeCache(response.config!);
+      await writeCache(response.config);
     }
   }
 }
@@ -66,7 +70,7 @@ class NullRefreshPolicy implements RefreshPolicy {
 
   @override
   Future<Config> getConfiguration() {
-    return Future.value(Config(null, {}));
+    return Future.value(Config.empty);
   }
 
   @override

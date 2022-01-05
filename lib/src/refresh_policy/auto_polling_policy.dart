@@ -11,12 +11,23 @@ import 'refresh_policy.dart';
 
 class AutoPollingPolicy extends DefaultRefreshPolicy
     with TimedInitializer<Config> {
-  final AutoPollingMode _config;
+  late final AutoPollingMode _config;
   late final Timer _timer;
 
-  AutoPollingPolicy(this._config, ConfigCatCache cache, Fetcher fetcher,
-      ConfigCatLogger logger, ConfigJsonCache jsonCache, String sdkKey)
-      : super(cache, fetcher, logger, jsonCache, sdkKey) {
+  AutoPollingPolicy(
+      {required AutoPollingMode config,
+      required ConfigCatCache cache,
+      required Fetcher fetcher,
+      required ConfigCatLogger logger,
+      required ConfigJsonCache jsonCache,
+      required String sdkKey})
+      : super(
+            cache: cache,
+            fetcher: fetcher,
+            logger: logger,
+            jsonCache: jsonCache,
+            sdkKey: sdkKey) {
+    _config = config;
     _timer = Timer.periodic(_config.autoPollInterval, (Timer t) async {
       await _doRefresh();
     });
@@ -47,9 +58,8 @@ class AutoPollingPolicy extends DefaultRefreshPolicy
     final response = await fetcher.fetchConfiguration();
     final cached = await readCache();
 
-    if (response.isFetched &&
-        response.config!.jsonString != cached.jsonString) {
-      await writeCache(response.config!);
+    if (response.isFetched && response.config.jsonString != cached.jsonString) {
+      await writeCache(response.config);
       _config.onConfigChanged?.call();
     }
 

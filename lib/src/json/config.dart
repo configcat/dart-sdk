@@ -21,4 +21,6 @@ class Config {
   factory Config.fromJson(Map<String, dynamic> json) => _$ConfigFromJson(json);
 
   Map<String, dynamic> toJson() => _$ConfigToJson(this);
+
+  static Config empty = Config(null, {});
 }

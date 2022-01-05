@@ -36,9 +36,13 @@ void main() {
     ],
   };
 
+  tearDown(() {
+    ConfigCatClient.close();
+  });
+
   for (var element in testData.entries) {
     test(element.key, () async {
-      await _runTest('test/files/${element.key}', element.value[0] as String,
+      await _runTest('test/fixtures/${element.key}', element.value[0] as String,
           element.value[1] as _Kind);
     });
   }
@@ -50,7 +54,8 @@ Future<void> _runTest(String fileName, String sdkKey, _Kind kind) async {
   final lines = await File(fileName).readAsLines();
   final headers = lines[0].split(';');
   final customKey = headers[3];
-  final client = ConfigCatClient.get(sdkKey,
+  final client = ConfigCatClient.get(
+      sdkKey: sdkKey,
       options:
           ConfigCatOptions(logger: ConfigCatLogger(level: LogLevel.warning)));
 
@@ -81,8 +86,10 @@ Future<void> _runTest(String fileName, String sdkKey, _Kind kind) async {
     int i = 0;
     for (final settingKey in settingKeys) {
       dynamic value = kind == _Kind.value
-          ? await client.getValue<dynamic>(settingKey, null, user: user)
-          : await client.getVariationId(settingKey, '', user: user);
+          ? await client.getValue<dynamic>(
+              key: settingKey, defaultValue: null, user: user)
+          : await client.getVariationId(
+              key: settingKey, defaultVariationId: '', user: user);
 
       if (value.toString().toLowerCase() != testObject[i + 4].toLowerCase()) {
         errors.add(sprintf(

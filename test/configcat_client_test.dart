@@ -12,7 +12,8 @@ void main() {
   late ConfigCatClient client;
   late DioAdapter dioAdapter;
   setUp(() {
-    client = ConfigCatClient.get(testSdkKey,
+    client = ConfigCatClient.get(
+        sdkKey: testSdkKey,
         options: ConfigCatOptions(mode: PollingMode.manualPoll()));
     dioAdapter = DioAdapter(dio: client.client);
   });
@@ -30,7 +31,7 @@ void main() {
 
     // Act
     await client.forceRefresh();
-    final value = await client.getValue('stringValue', '');
+    final value = await client.getValue(key: 'stringValue', defaultValue: '');
 
     // Assert
     expect(value, equals('testValue'));
@@ -45,7 +46,7 @@ void main() {
 
     // Act
     await client.forceRefresh();
-    final value = await client.getValue('intValue', 0);
+    final value = await client.getValue(key: 'intValue', defaultValue: 0);
 
     // Assert
     expect(value, equals(42));
@@ -60,7 +61,7 @@ void main() {
 
     // Act
     await client.forceRefresh();
-    final value = await client.getValue('doubleValue', 0.0);
+    final value = await client.getValue(key: 'doubleValue', defaultValue: 0.0);
 
     // Assert
     expect(value, equals(3.14));
@@ -75,7 +76,7 @@ void main() {
 
     // Act
     await client.forceRefresh();
-    final value = await client.getValue('boolValue', false);
+    final value = await client.getValue(key: 'boolValue', defaultValue: false);
 
     // Assert
     expect(value, isTrue);
@@ -89,7 +90,7 @@ void main() {
 
     // Act
     await client.forceRefresh();
-    final value = await client.getValue('boolValue', false);
+    final value = await client.getValue(key: 'boolValue', defaultValue: false);
 
     // Assert
     expect(value, isFalse);
@@ -103,7 +104,7 @@ void main() {
 
     // Act
     await client.forceRefresh();
-    final value = await client.getValue('boolValue', false);
+    final value = await client.getValue(key: 'boolValue', defaultValue: false);
 
     // Assert
     expect(value, isFalse);
@@ -126,14 +127,14 @@ void main() {
 
     // Act
     await client.forceRefresh();
-    final value1 = await client.getValue('value', 0);
+    final value1 = await client.getValue(key: 'value', defaultValue: 0);
 
     // Assert
     expect(value1, equals(42));
 
     // Act
     await client.forceRefresh();
-    final value2 = await client.getValue('value', 0);
+    final value2 = await client.getValue(key: 'value', defaultValue: 0);
 
     // Assert
     expect(value2, equals(69));
@@ -155,14 +156,14 @@ void main() {
 
     // Act
     await client.forceRefresh();
-    final value1 = await client.getValue('value', 0);
+    final value1 = await client.getValue(key: 'value', defaultValue: 0);
 
     // Assert
     expect(value1, equals(42));
 
     // Act
     await client.forceRefresh();
-    final value2 = await client.getValue('value', 0);
+    final value2 = await client.getValue(key: 'value', defaultValue: 0);
 
     // Assert
     expect(value2, equals(42));
@@ -184,14 +185,14 @@ void main() {
 
     // Act
     await client.forceRefresh();
-    final value1 = await client.getValue('value', 0);
+    final value1 = await client.getValue(key: 'value', defaultValue: 0);
 
     // Assert
     expect(value1, equals(42));
 
     // Act
     await client.forceRefresh();
-    final value2 = await client.getValue('value', 0);
+    final value2 = await client.getValue(key: 'value', defaultValue: 0);
 
     // Assert
     expect(value2, equals(42));
@@ -238,7 +239,7 @@ void main() {
 
     // Act
     await client.forceRefresh();
-    final keyValue = await client.getKeyAndValue('test');
+    final keyValue = await client.getKeyAndValue(variationId: 'test');
 
     // Assert
     expect(keyValue!.key, equals('value'));
@@ -256,7 +257,8 @@ void main() {
 
     // Act
     await client.forceRefresh();
-    final variationId = await client.getVariationId('value', '');
+    final variationId =
+        await client.getVariationId(key: 'value', defaultVariationId: '');
 
     // Assert
     expect(variationId, equals('test'));
@@ -270,7 +272,8 @@ void main() {
 
     // Act
     await client.forceRefresh();
-    final variationId = await client.getVariationId('value', '');
+    final variationId =
+        await client.getVariationId(key: 'value', defaultVariationId: '');
 
     // Assert
     expect(variationId, equals(''));
@@ -296,7 +299,7 @@ void main() {
 
   test('ensure singleton per sdk key', () async {
     // Act
-    final client2 = ConfigCatClient.get(testSdkKey);
+    final client2 = ConfigCatClient.get(sdkKey: testSdkKey);
 
     // Assert
     expect(client2, same(client));

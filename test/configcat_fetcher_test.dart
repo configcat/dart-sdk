@@ -30,7 +30,7 @@ void main() {
       final response = await fetcher.fetchConfiguration();
 
       // Assert
-      expect(response.config!.jsonString, equals(jsonEncode(body)));
+      expect(response.config.jsonString, equals(jsonEncode(body)));
 
       // Cleanup
       fetcher.close();
@@ -53,7 +53,7 @@ void main() {
       final response = await fetcher.fetchConfiguration();
 
       // Assert
-      expect(response.config!.jsonString, equals(jsonEncode(body)));
+      expect(response.config.jsonString, equals(jsonEncode(body)));
 
       // Cleanup
       fetcher.close();
@@ -76,7 +76,7 @@ void main() {
       final response = await fetcher.fetchConfiguration();
 
       // Assert
-      expect(response.config!.jsonString, equals(jsonEncode(body)));
+      expect(response.config.jsonString, equals(jsonEncode(body)));
 
       // Cleanup
       fetcher.close();
@@ -106,7 +106,7 @@ void main() {
       final response = await fetcher.fetchConfiguration();
 
       // Assert
-      expect(response.config!.jsonString, equals(jsonEncode(secondBody)));
+      expect(response.config.jsonString, equals(jsonEncode(secondBody)));
 
       // Cleanup
       fetcher.close();
@@ -136,7 +136,7 @@ void main() {
       final response = await fetcher.fetchConfiguration();
 
       // Assert
-      expect(response.config!.jsonString, equals(jsonEncode(secondBody)));
+      expect(response.config.jsonString, equals(jsonEncode(secondBody)));
 
       // Cleanup
       fetcher.close();
@@ -166,7 +166,7 @@ void main() {
       final response = await fetcher.fetchConfiguration();
 
       // Assert
-      expect(response.config!.jsonString, equals(jsonEncode(firstBody)));
+      expect(response.config.jsonString, equals(jsonEncode(firstBody)));
 
       // Cleanup
       fetcher.close();
@@ -197,7 +197,7 @@ void main() {
       final response = await fetcher.fetchConfiguration();
 
       // Assert
-      expect(response.config!.jsonString, equals(jsonEncode(secondBody)));
+      expect(response.config.jsonString, equals(jsonEncode(secondBody)));
 
       // Cleanup
       fetcher.close();
@@ -228,7 +228,7 @@ void main() {
       final response = await fetcher.fetchConfiguration();
 
       // Assert
-      expect(response.config!.jsonString, equals(jsonEncode(secondBody)));
+      expect(response.config.jsonString, equals(jsonEncode(secondBody)));
 
       // Cleanup
       fetcher.close();
@@ -262,14 +262,14 @@ void main() {
 
       // Assert
       expect(fetchedResponse.isFetched, isTrue);
-      expect(fetchedResponse.config, isNotNull);
+      expect(fetchedResponse.config, isNot(same(Config.empty)));
 
       // Act
       final notModifiedResponse = await fetcher.fetchConfiguration();
 
       // Assert
       expect(notModifiedResponse.isNotModified, isTrue);
-      expect(notModifiedResponse.config, isNull);
+      expect(notModifiedResponse.config, same(Config.empty));
 
       // Cleanup
       fetcher.close();
@@ -292,7 +292,7 @@ void main() {
 
       // Assert
       expect(fetchedResponse.isFailed, isTrue);
-      expect(fetchedResponse.config, isNull);
+      expect(fetchedResponse.config, same(Config.empty));
 
       // Cleanup
       fetcher.close();
@@ -322,7 +322,7 @@ void main() {
 
       // Assert
       expect(fetchedResponse.isFailed, isTrue);
-      expect(fetchedResponse.config, isNull);
+      expect(fetchedResponse.config, same(Config.empty));
 
       // Cleanup
       fetcher.close();
@@ -347,13 +347,13 @@ void main() {
       // Act
       final future1 = fetcher
           .fetchConfiguration()
-          .then((value) => value.config!.jsonString = 'test');
+          .then((value) => value.config.jsonString = 'test');
       final future2 = fetcher
           .fetchConfiguration()
-          .then((value) => resp1 = value.config!.jsonString);
+          .then((value) => resp1 = value.config.jsonString);
       final future3 = fetcher
           .fetchConfiguration()
-          .then((value) => resp2 = value.config!.jsonString);
+          .then((value) => resp2 = value.config.jsonString);
       await future1;
       await future2;
       await future3;
@@ -366,7 +366,7 @@ void main() {
       final result = await fetcher.fetchConfiguration();
 
       // Assert
-      expect(result.config!.jsonString, equals(jsonEncode(body)));
+      expect(result.config.jsonString, equals(jsonEncode(body)));
 
       // Cleanup
       fetcher.close();
@@ -400,7 +400,12 @@ ConfigFetcher _createFetcher(
     {ConfigCatOptions options = const ConfigCatOptions(),
     String sdkKey = testSdkKey}) {
   final logger = ConfigCatLogger();
-  return ConfigFetcher(logger, sdkKey, 'm', ConfigJsonCache(logger), options);
+  return ConfigFetcher(
+      logger: logger,
+      sdkKey: sdkKey,
+      mode: 'm',
+      jsonCache: ConfigJsonCache(logger),
+      options: options);
 }
 
 Config _createTestConfig(String url, int redirectMode) {

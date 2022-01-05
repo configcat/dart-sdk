@@ -10,7 +10,8 @@ void main() {
   test('logger debug level tests', () {
     // Arrange
     final internal = MockLogger();
-    final logger = ConfigCatLogger(logger: internal, level: LogLevel.debug);
+    final logger =
+        ConfigCatLogger(internalLogger: internal, level: LogLevel.debug);
 
     // Act
     logger.debug('debug');
@@ -28,7 +29,8 @@ void main() {
   test('logger info level tests', () {
     // Arrange
     final internal = MockLogger();
-    final logger = ConfigCatLogger(logger: internal, level: LogLevel.info);
+    final logger =
+        ConfigCatLogger(internalLogger: internal, level: LogLevel.info);
 
     // Act
     logger.debug('debug');
@@ -46,7 +48,8 @@ void main() {
   test('logger warning level tests', () {
     // Arrange
     final internal = MockLogger();
-    final logger = ConfigCatLogger(logger: internal, level: LogLevel.warning);
+    final logger =
+        ConfigCatLogger(internalLogger: internal, level: LogLevel.warning);
 
     // Act
     logger.debug('debug');
@@ -64,7 +67,8 @@ void main() {
   test('logger error level tests', () {
     // Arrange
     final internal = MockLogger();
-    final logger = ConfigCatLogger(logger: internal, level: LogLevel.error);
+    final logger =
+        ConfigCatLogger(internalLogger: internal, level: LogLevel.error);
 
     // Act
     logger.debug('debug');
@@ -82,7 +86,8 @@ void main() {
   test('logger nothing level tests', () {
     // Arrange
     final internal = MockLogger();
-    final logger = ConfigCatLogger(logger: internal, level: LogLevel.nothing);
+    final logger =
+        ConfigCatLogger(internalLogger: internal, level: LogLevel.nothing);
 
     // Act
     logger.debug('debug');
