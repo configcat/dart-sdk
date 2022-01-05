@@ -139,9 +139,6 @@ class ConfigFetcher
 
   Future<FetchResponse> _executeFetch(int executionCount) async {
     final response = await _doFetch();
-    if (!response.isFetched || response.config.preferences == null) {
-      return response;
-    }
 
     final preferences = response.config.preferences;
     if (!response.isFetched || preferences == null) {
