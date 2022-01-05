@@ -77,8 +77,13 @@ class ConfigFetcher
   late String _etag = '';
   late String _url;
 
-  ConfigFetcher(this.logger, this.sdkKey, this.mode, this.jsonCache,
-      ConfigCatOptions options) {
+  ConfigFetcher({
+    required this.logger, 
+    required this.sdkKey, 
+    required this.mode, 
+    required this.jsonCache
+    required ConfigCatOptions options,
+  })
     _urlIsCustom = options.baseUrl.isNotEmpty;
     _url = _urlIsCustom
         ? options.baseUrl

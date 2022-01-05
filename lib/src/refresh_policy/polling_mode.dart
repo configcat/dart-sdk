@@ -57,7 +57,7 @@ class ManualPollingMode extends PollingMode {
   ManualPollingMode._() : super._();
 
   @override
-  getPollingIdentifier() {
+  String getPollingIdentifier() {
     return 'm';
   }
 }
