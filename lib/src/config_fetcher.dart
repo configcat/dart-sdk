@@ -1,82 +1,207 @@
-import 'package:logging/logging.dart';
-import 'package:http/http.dart' as http;
+import 'dart:async';
+import 'package:dio/adapter.dart';
+import 'package:dio/dio.dart';
 
-import 'config_cat_client.dart';
+import 'data_governance.dart';
+import 'configcat_options.dart';
+import 'mixins.dart';
+import 'json/config.dart';
+import 'json/config_json_cache.dart';
+import 'constants.dart';
+import 'log/configcat_logger.dart';
 
-const configJsonName = 'config_v5';
+enum _Status { fetched, notModified, failure }
 
-enum Status { fetched, notModified, failure }
-enum RedirectMode { noRedirect, shouldRedirect, forceRedirect }
+class _RedirectMode {
+  static const int noRedirect = 0;
+  static const int shouldRedirect = 1;
+  static const int forceRedirect = 2;
+}
 
 class FetchResponse {
-  late Status status;
-  final String body;
+  final _Status _status;
+  final Config config;
 
-  FetchResponse(int statusCode, this.body) {
-    if (statusCode >=200 && statusCode < 300) {
-      this.status = Status.fetched;
-    } else if (statusCode == 304) {
-      this.status = Status.notModified;
-    } else {
-      this.status = Status.failure;
-    }
-  }
+  FetchResponse._(this._status, this.config);
 
   bool get isFetched {
-    return status == Status.fetched;
+    return _status == _Status.fetched;
   }
 
   bool get isNotModified {
-    return status == Status.notModified;
+    return _status == _Status.notModified;
   }
 
   bool get isFailed {
-    return status == Status.failure;
+    return _status == _Status.failure;
+  }
+
+  factory FetchResponse.success(Config config) {
+    return FetchResponse._(_Status.fetched, config);
+  }
+
+  factory FetchResponse.failure() {
+    return FetchResponse._(_Status.failure, Config.empty);
+  }
+
+  factory FetchResponse.notModified() {
+    return FetchResponse._(_Status.notModified, Config.empty);
   }
 }
 
-class ConfigFetcher {
-  static const _version = "7.2.0";
-  final Logger log;
-  late String etag = "";
-  final String mode;
-  final String sdkKey;
-  late final bool urlIsCustom;
-  late final String url;
+abstract class Fetcher {
+  Dio get client;
 
-  ConfigFetcher({
-    required this.log,
-    required this.sdkKey,
-    required this.mode,
-    required DataGovernance dataGovernance,
-    baseUrl = "",
-  }) {
-    this.urlIsCustom = !baseUrl.isEmpty;
-    this.url = baseUrl.isEmpty ? dataGovernance.url : baseUrl;
+  Future<FetchResponse> fetchConfiguration();
+
+  void close();
+}
+
+class ConfigFetcher
+    with ContinuousFutureSynchronizer<FetchResponse>
+    implements Fetcher {
+  static const globalBaseUrl = 'https://cdn-global.configcat.com';
+  static const euOnlyBaseUrl = 'https://cdn-eu.configcat.com';
+  static const _userAgentHeaderName = 'X-ConfigCat-UserAgent';
+  static const _ifNoneMatchHeaderName = 'If-None-Match';
+  static const _etagHeaderName = 'Etag';
+  static const _successStatusCodes = [200, 201, 202, 203, 204];
+
+  late final ConfigCatLogger _logger;
+  late final ConfigJsonCache _jsonCache;
+  late final String _mode;
+  late final String _sdkKey;
+
+  late final bool _urlIsCustom;
+  late final Dio _client;
+  late String _etag = '';
+  late String _url;
+
+  ConfigFetcher(
+      {required ConfigCatLogger logger,
+      required String sdkKey,
+      required String mode,
+      required ConfigJsonCache jsonCache,
+      required ConfigCatOptions options}) {
+    _logger = logger;
+    _jsonCache = jsonCache;
+    _mode = mode;
+    _sdkKey = sdkKey;
+
+    _urlIsCustom = options.baseUrl.isNotEmpty;
+    _url = _urlIsCustom
+        ? options.baseUrl
+        : options.dataGovernance == DataGovernance.global
+            ? globalBaseUrl
+            : euOnlyBaseUrl;
+
+    _client = Dio(BaseOptions(
+        connectTimeout: options.connectTimeout.inMilliseconds,
+        receiveTimeout: options.receiveTimeout.inMilliseconds,
+        sendTimeout: options.sendTimeout.inMilliseconds,
+        responseType: ResponseType.plain,
+        validateStatus: (status) =>
+            status != null && (status >= 200 && status < 600)));
+
+    if (options.httpClientAdapter != null) {
+      _client.httpClientAdapter = options.httpClientAdapter!;
+    }
+
+    if (options.proxyUrl.isNotEmpty &&
+        _client.httpClientAdapter is DefaultHttpClientAdapter) {
+      (_client.httpClientAdapter as DefaultHttpClientAdapter)
+          .onHttpClientCreate = (client) {
+        client.findProxy = (uri) {
+          return 'PROXY ${options.proxyUrl}';
+        };
+      };
+    }
   }
 
-  Future<FetchResponse> fetchConfigurationJson(http.Client client) {
-    return _executeFetch(client, executionCount: 2);
+  /// Gets the underlying [Dio] client.
+  @override
+  Dio get client {
+    return _client;
   }
 
-  Future<FetchResponse> _executeFetch(http.Client client, {int executionCount = 1}) async {
+  /// Fetches the current ConfigCat configuration json.
+  @override
+  Future<FetchResponse> fetchConfiguration() {
+    // ensure fetch requests are not initiated simultaneously
+    return syncFuture(() => _executeFetch(2));
+  }
+
+  /// Closes the underlying http connection.
+  @override
+  void close() {
+    _client.close();
+  }
+
+  Future<FetchResponse> _executeFetch(int executionCount) async {
+    final response = await _doFetch();
+
+    final preferences = response.config.preferences;
+    if (!response.isFetched || preferences == null) {
+      return response;
+    }
+
+    if (_urlIsCustom && preferences.redirect != _RedirectMode.forceRedirect) {
+      return response;
+    }
+
+    _url = preferences.baseUrl;
+
+    if (preferences.redirect == _RedirectMode.noRedirect) {
+      return response;
+    } else {
+      if (preferences.redirect == _RedirectMode.shouldRedirect) {
+        _logger.warning(
+            'Your \'dataGovernance\' parameter at ConfigCatClient initialization is not in sync with your preferences on the ConfigCat Dashboard: https://app.configcat.com/organization/data-governance. Only Organization Admins can access this preference.');
+      }
+
+      if (executionCount > 0) {
+        return await _executeFetch(executionCount - 1);
+      }
+    }
+
+    _logger.error(
+        'Redirect loop during config.json fetch. Please contact support@configcat.com.');
+    return response;
+  }
+
+  Future<FetchResponse> _doFetch() async {
     Map<String, String> headers = {
-      'X-ConfigCat-UserAgent': 'ConfigCat-Dart/$mode-$_version',
+      _userAgentHeaderName: 'ConfigCat-Dart/$_mode-$version',
+      if (_etag.isNotEmpty) _ifNoneMatchHeaderName: _etag
     };
 
-    if (!etag.isEmpty) {
-      headers['If-None-Match'] = etag;
+    try {
+      final response = await _client.get(
+        '$_url/configuration-files/$_sdkKey/$configJsonName.json',
+        options: Options(headers: headers),
+      );
+
+      if (_successStatusCodes.contains(response.statusCode)) {
+        final config = _jsonCache.getConfigFromJson(response.data.toString());
+        if (config == null) {
+          return FetchResponse.failure();
+        }
+
+        _etag = response.headers.value(_etagHeaderName) ?? '';
+
+        _logger.debug('Fetch was successful: new config fetched.');
+        return FetchResponse.success(config);
+      } else if (response.statusCode == 304) {
+        _logger.debug('Fetch was successful: config not modified.');
+        return FetchResponse.notModified();
+      } else {
+        _logger.error(
+            'Double-check your API KEY at https://app.configcat.com/apikey. Received unexpected response: ${response.statusCode}');
+        return FetchResponse.failure();
+      }
+    } catch (e, s) {
+      _logger.error('Exception occurred during fetching.', e, s);
+      return FetchResponse.failure();
     }
-
-    final response = await client.get(
-      Uri.parse('$url/configuration-files/$sdkKey/$configJsonName.json'),
-      headers: headers,
-    );
-
-    if (response.headers['Etag'] != null) {
-      etag = response.headers['Etag']!;
-    }
-
-    return FetchResponse(response.statusCode, response.body);
   }
 }
