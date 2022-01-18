@@ -1,5 +1,5 @@
 # ConfigCat SDK for Dart (Flutter) [WIP]
-**This project is work in progress. Some links might be broken.**
+**This project is work in progress. Some links might be broken and the library is not published yet.**
 
 https://configcat.com
 
