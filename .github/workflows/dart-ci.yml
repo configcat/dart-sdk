@@ -51,6 +51,7 @@ jobs:
         run: dart test
 
   publish-dry-run:
+    needs: [analyze-format, test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
