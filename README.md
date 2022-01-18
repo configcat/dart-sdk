@@ -77,7 +77,7 @@ If you need help using this SDK, feel free to contact the ConfigCat Staff at [ht
 Contributions are welcome. For more info please read the [Contribution Guideline](CONTRIBUTING.md).
 
 ## Contributors
-Special thanks to @augustorsouza and @miguelspe from @quintoandar who made available the initial project.
+Special thanks to [@augustorsouza](https://github.com/augustorsouza) and [@miguelspe](https://github.com/miguelspe) from [@quintoandar](https://github.com/quintoandar) who made available the initial project.
 
 ## About ConfigCat
 - [Official ConfigCat SDKs for other platforms](https://github.com/configcat)
