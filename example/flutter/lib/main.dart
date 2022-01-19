@@ -1,11 +1,12 @@
 import 'package:configcat_client/configcat_client.dart';
 import 'package:flutter/material.dart';
 
-final client = ConfigCatClient.get(sdkKey: 'PKDVCLf-Hq-h-kCzMp-L7Q/HhOWfwVtZ0mb30i9wi17GQ',
+final client = ConfigCatClient.get(
+    sdkKey: 'PKDVCLf-Hq-h-kCzMp-L7Q/HhOWfwVtZ0mb30i9wi17GQ',
     options: ConfigCatOptions(
         logger: ConfigCatLogger(
-          // Info level logging helps to inspect the feature flag evaluation process.
-          // Use the default Warning level to avoid too detailed logging in your application.
+            // Info level logging helps to inspect the feature flag evaluation process.
+            // Use the default Warning level to avoid too detailed logging in your application.
             level: LogLevel.info)));
 
 void main() {
@@ -62,7 +63,8 @@ class _MyHomePageState extends State<MyHomePage> {
     final user = ConfigCatUser(
         identifier: '#SOME-USER-ID#', email: 'configcat@example.com');
 
-    final value = await client.getValue(key: 'isPOCFeatureEnabled', defaultValue: false, user: user);
+    final value = await client.getValue(
+        key: 'isPOCFeatureEnabled', defaultValue: false, user: user);
     setState(() {
       _value = value;
     });
@@ -102,7 +104,8 @@ class _MyHomePageState extends State<MyHomePage> {
           // horizontal).
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            const Padding(padding: EdgeInsets.all(20),
+            const Padding(
+              padding: EdgeInsets.all(20),
               child: Text(
                 'Value of isPOCFeatureEnabled:',
                 style: TextStyle(fontSize: 20),
@@ -112,17 +115,17 @@ class _MyHomePageState extends State<MyHomePage> {
               '$_value',
               style: Theme.of(context).textTheme.headline4,
             ),
-            Padding(padding: const EdgeInsets.all(50),
+            Padding(
+              padding: const EdgeInsets.all(50),
               child: TextButton(
-                  onPressed: () async { await _getFeatureFlagValue(); },
+                  onPressed: () async {
+                    await _getFeatureFlagValue();
+                  },
                   style: TextButton.styleFrom(
                       padding: const EdgeInsets.all(20),
-                      textStyle: const TextStyle(fontSize: 30)
-                  ),
-                  child: const Text('Get Value')
-              ),
+                      textStyle: const TextStyle(fontSize: 30)),
+                  child: const Text('Get Value')),
             ),
-
           ],
         ),
       ), // This trailing comma makes auto-formatting nicer for build methods.
