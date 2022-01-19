@@ -27,7 +27,8 @@ void main() {
       final response = await fetcher.fetchConfiguration();
 
       // Assert
-      expect(response.config.preferences!.baseUrl, equals(ConfigFetcher.globalBaseUrl));
+      expect(response.config.preferences!.baseUrl,
+          equals(ConfigFetcher.globalBaseUrl));
       expect(response.config.preferences!.redirect, equals(0));
 
       // Cleanup
@@ -51,7 +52,8 @@ void main() {
       final response = await fetcher.fetchConfiguration();
 
       // Assert
-      expect(response.config.preferences!.baseUrl, equals(ConfigFetcher.globalBaseUrl));
+      expect(response.config.preferences!.baseUrl,
+          equals(ConfigFetcher.globalBaseUrl));
       expect(response.config.preferences!.redirect, equals(1));
 
       // Cleanup
@@ -75,7 +77,8 @@ void main() {
       final response = await fetcher.fetchConfiguration();
 
       // Assert
-      expect(response.config.preferences!.baseUrl, equals(ConfigFetcher.globalBaseUrl));
+      expect(response.config.preferences!.baseUrl,
+          equals(ConfigFetcher.globalBaseUrl));
       expect(response.config.preferences!.redirect, equals(2));
 
       // Cleanup
@@ -106,7 +109,8 @@ void main() {
       final response = await fetcher.fetchConfiguration();
 
       // Assert
-      expect(response.config.preferences!.baseUrl, equals(ConfigFetcher.euOnlyBaseUrl));
+      expect(response.config.preferences!.baseUrl,
+          equals(ConfigFetcher.euOnlyBaseUrl));
       expect(response.config.preferences!.redirect, equals(0));
 
       // Cleanup
@@ -137,7 +141,8 @@ void main() {
       final response = await fetcher.fetchConfiguration();
 
       // Assert
-      expect(response.config.preferences!.baseUrl, equals(ConfigFetcher.euOnlyBaseUrl));
+      expect(response.config.preferences!.baseUrl,
+          equals(ConfigFetcher.euOnlyBaseUrl));
       expect(response.config.preferences!.redirect, equals(0));
 
       // Cleanup
@@ -168,7 +173,8 @@ void main() {
       final response = await fetcher.fetchConfiguration();
 
       // Assert
-      expect(response.config.preferences!.baseUrl, equals(ConfigFetcher.euOnlyBaseUrl));
+      expect(response.config.preferences!.baseUrl,
+          equals(ConfigFetcher.euOnlyBaseUrl));
       expect(response.config.preferences!.redirect, equals(1));
 
       // Cleanup
@@ -232,7 +238,8 @@ void main() {
       final response = await fetcher.fetchConfiguration();
 
       // Assert
-      expect(response.config.preferences!.baseUrl, equals(ConfigFetcher.globalBaseUrl));
+      expect(response.config.preferences!.baseUrl,
+          equals(ConfigFetcher.globalBaseUrl));
       expect(response.config.preferences!.redirect, equals(0));
 
       // Cleanup
@@ -244,7 +251,10 @@ void main() {
   group('Fetcher Tests', () {
     test('etag works', () async {
       final etag = 'test-etag';
-      final cache = ConfigJsonCache(logger: ConfigCatLogger(), cache: NullConfigCatCache(), sdkKey: testSdkKey);
+      final cache = ConfigJsonCache(
+          logger: ConfigCatLogger(),
+          cache: NullConfigCatCache(),
+          sdkKey: testSdkKey);
       final fetcher = _createFetcher(cache: cache);
       final dioAdapter = DioAdapter(dio: fetcher.client);
 
@@ -373,7 +383,8 @@ void main() {
       final result = await fetcher.fetchConfiguration();
 
       // Assert
-      expect(result.config.preferences!.baseUrl, equals(ConfigFetcher.globalBaseUrl));
+      expect(result.config.preferences!.baseUrl,
+          equals(ConfigFetcher.globalBaseUrl));
       expect(result.config.preferences!.redirect, equals(0));
 
       // Cleanup
@@ -383,7 +394,10 @@ void main() {
 
     test('real fetch', () async {
       // Arrange
-      final cache = ConfigJsonCache(logger: ConfigCatLogger(), cache: NullConfigCatCache(), sdkKey: testSdkKey);
+      final cache = ConfigJsonCache(
+          logger: ConfigCatLogger(),
+          cache: NullConfigCatCache(),
+          sdkKey: testSdkKey);
       final fetcher = _createFetcher(
           cache: cache,
           sdkKey: 'PKDVCLf-Hq-h-kCzMp-L7Q/PaDVCFk9EpmD6sLpGLltTA');
@@ -408,15 +422,17 @@ void main() {
 }
 
 ConfigFetcher _createFetcher(
-     {ConfigJsonCache? cache,
-      ConfigCatOptions options = const ConfigCatOptions(),
-      String sdkKey = testSdkKey}) {
+    {ConfigJsonCache? cache,
+    ConfigCatOptions options = const ConfigCatOptions(),
+    String sdkKey = testSdkKey}) {
   final logger = ConfigCatLogger();
   return ConfigFetcher(
       logger: logger,
       sdkKey: sdkKey,
       mode: 'm',
-      jsonCache: cache ?? ConfigJsonCache(logger: logger, cache: NullConfigCatCache(), sdkKey: sdkKey),
+      jsonCache: cache ??
+          ConfigJsonCache(
+              logger: logger, cache: NullConfigCatCache(), sdkKey: sdkKey),
       options: options);
 }
 

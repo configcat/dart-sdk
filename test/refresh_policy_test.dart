@@ -21,7 +21,8 @@ void main() {
   setUp(() {
     cache = MockConfigCatCache();
     fetcher = MockFetcher();
-    jsonCache = ConfigJsonCache(logger: logger, cache: cache, sdkKey: testSdkKey);
+    jsonCache =
+        ConfigJsonCache(logger: logger, cache: cache, sdkKey: testSdkKey);
   });
 
   group('Auto Polling Tests', () {
@@ -163,9 +164,10 @@ void main() {
           FetchResponse.success(createTestConfig({'test': 'value'}))));
 
       final poll = ManualPollingPolicy(
-          fetcher: fetcher,
-          logger: logger,
-          jsonCache: jsonCache,);
+        fetcher: fetcher,
+        logger: logger,
+        jsonCache: jsonCache,
+      );
 
       // Act
       await poll.refresh();
@@ -183,9 +185,7 @@ void main() {
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
 
       final poll = ManualPollingPolicy(
-          fetcher: fetcher,
-          logger: logger,
-          jsonCache: jsonCache);
+          fetcher: fetcher, logger: logger, jsonCache: jsonCache);
 
       // Act
       await poll.getConfiguration();

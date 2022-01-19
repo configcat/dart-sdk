@@ -51,7 +51,9 @@ class FetchResponse {
 
 abstract class Fetcher {
   Dio get client;
+
   Future<FetchResponse> fetchConfiguration();
+
   void close();
 }
 
@@ -181,8 +183,8 @@ class ConfigFetcher
 
       if (_successStatusCodes.contains(response.statusCode)) {
         final eTag = response.headers.value(_eTagHeaderName) ?? '';
-        final config = await _jsonCache
-            .readFromJson(response.data.toString(), eTag);
+        final config =
+            await _jsonCache.readFromJson(response.data.toString(), eTag);
         if (config == Config.empty) {
           return FetchResponse.failure();
         }

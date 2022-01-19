@@ -15,13 +15,13 @@ class ConfigJsonCache {
   late final String _cacheKey;
 
   ConfigJsonCache(
-    {required ConfigCatLogger logger,
-    required ConfigCatCache cache,
-    required String sdkKey}) {
+      {required ConfigCatLogger logger,
+      required ConfigCatCache cache,
+      required String sdkKey}) {
     _logger = logger;
     _cache = cache;
-    _cacheKey = sha1.convert(utf8.encode('dart_${configJsonName}_$sdkKey'))
-            .toString();
+    _cacheKey =
+        sha1.convert(utf8.encode('dart_${configJsonName}_$sdkKey')).toString();
   }
 
   Future<Config> readFromJson(String json, String eTag) async {

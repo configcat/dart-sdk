@@ -14,10 +14,7 @@ class LazyLoadingPolicy extends DefaultRefreshPolicy {
       required Fetcher fetcher,
       required ConfigCatLogger logger,
       required ConfigJsonCache jsonCache})
-      : super(
-            fetcher: fetcher,
-            logger: logger,
-            jsonCache: jsonCache) {
+      : super(fetcher: fetcher, logger: logger, jsonCache: jsonCache) {
     _latestRefresh = DateTime.utc(1970, 01, 01);
     _config = config;
   }

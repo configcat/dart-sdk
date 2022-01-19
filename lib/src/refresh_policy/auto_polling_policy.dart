@@ -18,10 +18,7 @@ class AutoPollingPolicy extends DefaultRefreshPolicy
       required Fetcher fetcher,
       required ConfigCatLogger logger,
       required ConfigJsonCache jsonCache})
-      : super(
-            fetcher: fetcher,
-            logger: logger,
-            jsonCache: jsonCache) {
+      : super(fetcher: fetcher, logger: logger, jsonCache: jsonCache) {
     _config = config;
     _timer = Timer.periodic(_config.autoPollInterval, (Timer t) async {
       await _doRefresh();

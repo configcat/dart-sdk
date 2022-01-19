@@ -5,7 +5,9 @@ import '../log/configcat_logger.dart';
 
 abstract class RefreshPolicy {
   Future<Config> getConfiguration();
+
   void close();
+
   Future<void> refresh();
 }
 
@@ -15,9 +17,7 @@ abstract class DefaultRefreshPolicy extends RefreshPolicy {
   final ConfigJsonCache jsonCache;
 
   DefaultRefreshPolicy(
-      {required this.fetcher,
-      required this.logger,
-      required this.jsonCache});
+      {required this.fetcher, required this.logger, required this.jsonCache});
 
   @override
   Future<Config> getConfiguration();

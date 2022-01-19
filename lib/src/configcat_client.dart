@@ -52,10 +52,8 @@ class ConfigCatClient {
 
     final cache = options.cache ?? NullConfigCatCache();
     final mode = options.mode ?? PollingMode.autoPoll();
-    final configJsonCache = ConfigJsonCache(
-        logger: _logger,
-        cache: cache,
-        sdkKey: sdkKey);
+    final configJsonCache =
+        ConfigJsonCache(logger: _logger, cache: cache, sdkKey: sdkKey);
 
     _rolloutEvaluator = RolloutEvaluator(_logger);
     _fetcher = ConfigFetcher(
@@ -67,11 +65,7 @@ class ConfigCatClient {
     _refreshPolicy =
         _override != null && _override!.behaviour == OverrideBehaviour.localOnly
             ? NullRefreshPolicy()
-            : _produceRefreshPolicy(
-                mode,
-                _fetcher,
-                _logger,
-                configJsonCache);
+            : _produceRefreshPolicy(mode, _fetcher, _logger, configJsonCache);
   }
 
   /// Gets the value of a feature flag or setting as [T] identified by the given [key].
@@ -264,11 +258,8 @@ class ConfigCatClient {
     _logger.close();
   }
 
-  RefreshPolicy _produceRefreshPolicy(
-      PollingMode mode,
-      Fetcher fetcher,
-      ConfigCatLogger logger,
-      ConfigJsonCache configJsonCache) {
+  RefreshPolicy _produceRefreshPolicy(PollingMode mode, Fetcher fetcher,
+      ConfigCatLogger logger, ConfigJsonCache configJsonCache) {
     if (mode is AutoPollingMode) {
       return AutoPollingPolicy(
           config: mode,
@@ -283,9 +274,7 @@ class ConfigCatClient {
           jsonCache: configJsonCache);
     } else if (mode is ManualPollingMode) {
       return ManualPollingPolicy(
-          fetcher: fetcher,
-          logger: logger,
-          jsonCache: configJsonCache);
+          fetcher: fetcher, logger: logger, jsonCache: configJsonCache);
     } else {
       throw ArgumentError('The polling mode option is invalid.');
     }
