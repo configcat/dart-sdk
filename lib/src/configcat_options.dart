@@ -14,7 +14,6 @@ class ConfigCatOptions {
   final Duration connectTimeout;
   final Duration receiveTimeout;
   final Duration sendTimeout;
-  final String proxyUrl;
   final PollingMode? mode;
   final ConfigCatCache? cache;
   final ConfigCatLogger? logger;
@@ -30,7 +29,6 @@ class ConfigCatOptions {
     this.connectTimeout = const Duration(seconds: 10),
     this.receiveTimeout = const Duration(seconds: 30),
     this.sendTimeout = const Duration(seconds: 30),
-    this.proxyUrl = '',
     this.httpClientAdapter,
     this.override,
   });

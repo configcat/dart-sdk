@@ -5,7 +5,7 @@ https://configcat.com
 
 ConfigCat SDK for Dart provides easy integration for your application to ConfigCat.
 
-ConfigCat is a feature flag and configuration management service that lets you separate feature releases from code deployments. You can turn features ON or OFF using the <a href="http://app.configcat.com" target="_blank">ConfigCat Dashboard</a> even after they are deployed. ConfigCat lets you target specific groups of users based on region, email, or any other custom user attribute.
+ConfigCat is a feature flag and configuration management service that lets you separate feature releases from code deployments. You can turn features ON or OFF using the <a href="https://app.configcat.com" target="_blank">ConfigCat Dashboard</a> even after they are deployed. ConfigCat lets you target specific groups of users based on region, email, or any other custom user attribute.
 
 ConfigCat is a <a href="https://configcat.com" target="_blank">hosted feature flag service</a> that lets you manage feature toggles across frontend, backend, mobile, and desktop apps. <a href="https://configcat.com" target="_blank">Alternative to LaunchDarkly</a>. Management app + feature flag SDKs.
 
@@ -65,7 +65,8 @@ if (isMyAwesomeFeatureEnabled) {
 ```
 
 ## Sample/Demo app
-*TODO*
+* [Dart sample](https://github.com/ConfigCat/dart-sdk/tree/master/example/lib)
+* [Flutter sample](https://github.com/ConfigCat/java-sdk/tree/master/example/flutter)
 
 ## Polling Modes
 The ConfigCat SDK supports three different polling mechanisms to acquire the setting values from ConfigCat. After the latest setting values are downloaded, they are stored in an internal cache . After that, all requests are served from the cache. Read more about Polling Modes and how to use them at [ConfigCat Dart Docs](https://configcat.com/docs/sdk-reference/dart/).

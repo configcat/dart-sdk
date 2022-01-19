@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:dio/adapter.dart';
 import 'package:dio/dio.dart';
 
 import 'data_governance.dart';
@@ -104,16 +103,6 @@ class ConfigFetcher
 
     if (options.httpClientAdapter != null) {
       _client.httpClientAdapter = options.httpClientAdapter!;
-    }
-
-    if (options.proxyUrl.isNotEmpty &&
-        _client.httpClientAdapter is DefaultHttpClientAdapter) {
-      (_client.httpClientAdapter as DefaultHttpClientAdapter)
-          .onHttpClientCreate = (client) {
-        client.findProxy = (uri) {
-          return 'PROXY ${options.proxyUrl}';
-        };
-      };
     }
   }
 
