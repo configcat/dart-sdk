@@ -14,18 +14,15 @@ abstract class ConfigCatCache {
   Future<void> write(String key, String value);
 }
 
-/// Represents an in-memory cache for configurations.
-class InMemoryConfigCatCache extends ConfigCatCache {
-  final _store = <String, String>{};
-
+/// Represents a null cache.
+class NullConfigCatCache extends ConfigCatCache {
   @override
   Future<String> read(String key) {
-    return Future.value(_store[key] ?? '');
+    return Future.value('');
   }
 
   @override
   Future<void> write(String key, String value) {
-    _store[key] = value;
     return Future.value();
   }
 }

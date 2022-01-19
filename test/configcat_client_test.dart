@@ -310,5 +310,5 @@ Config createTestConfigWithVariationId(Map<String, List<Object>> map) {
   return Config(
       Preferences(ConfigFetcher.globalBaseUrl, 0),
       map.map((key, value) =>
-          MapEntry(key, Setting(value[0], 0, [], [], value[1].toString()))));
+          MapEntry(key, Setting(value[0], 0, [], [], value[1].toString()))), "", 0);
 }

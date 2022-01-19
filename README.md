@@ -27,12 +27,12 @@ import 'package:configcat_client/configcat_client.dart';
 
 ### 4. Create a *ConfigCat* client instance
 ```dart
-final client = ConfigCatClient.get('#YOUR-SDK-KEY#');
+final client = ConfigCatClient.get(sdkKey: '#YOUR-SDK-KEY#');
 ```
 
 ### 5. Get your setting value
 ```dart
-final isMyAwesomeFeatureEnabled = await client.getValue('isMyAwesomeFeatureEnabled', false);
+final isMyAwesomeFeatureEnabled = await client.getValue(key: 'isMyAwesomeFeatureEnabled', defaultValue: false);
 if (isMyAwesomeFeatureEnabled) {
     doTheNewThing();
 } else {
@@ -56,7 +56,7 @@ The user object must be created with a **mandatory** identifier parameter which 
 ```dart
 final user = ConfigCatUser(identifier: '#USER-IDENTIFIER#');
 
-final isMyAwesomeFeatureEnabled = await client.getValue('isMyAwesomeFeatureEnabled', false, user: user);
+final isMyAwesomeFeatureEnabled = await client.getValue(key: 'isMyAwesomeFeatureEnabled', defaultValue: false, user: user);
 if (isMyAwesomeFeatureEnabled) {
   doTheNewThing();
 } else {

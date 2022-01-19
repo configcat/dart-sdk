@@ -15,12 +15,13 @@ import 'refresh_policy_test.mocks.dart';
 @GenerateMocks([Fetcher])
 void main() {
   final ConfigCatLogger logger = ConfigCatLogger();
-  final ConfigJsonCache jsonCache = ConfigJsonCache(logger);
+  late ConfigJsonCache jsonCache;
   late MockConfigCatCache cache;
   late MockFetcher fetcher;
   setUp(() {
     cache = MockConfigCatCache();
     fetcher = MockFetcher();
+    jsonCache = ConfigJsonCache(logger: logger, cache: cache, sdkKey: testSdkKey);
   });
 
   group('Auto Polling Tests', () {
@@ -32,11 +33,9 @@ void main() {
 
       final poll = AutoPollingPolicy(
           config: PollingMode.autoPoll() as AutoPollingMode,
-          cache: cache,
           fetcher: fetcher,
           logger: logger,
-          jsonCache: jsonCache,
-          sdkKey: testSdkKey);
+          jsonCache: jsonCache);
 
       // Act
       await poll.refresh();
@@ -59,18 +58,16 @@ void main() {
           config: PollingMode.autoPoll(
               autoPollInterval: Duration(milliseconds: 100),
               onConfigChanged: () => onChanged = true) as AutoPollingMode,
-          cache: cache,
           fetcher: fetcher,
           logger: logger,
-          jsonCache: jsonCache,
-          sdkKey: testSdkKey);
+          jsonCache: jsonCache);
 
       // Act
       await Future.delayed(Duration(milliseconds: 250));
 
       // Assert
       verify(fetcher.fetchConfiguration()).called(greaterThanOrEqualTo(3));
-      verify(cache.write(any, any)).called(1);
+      verify(cache.write(any, any)).called(greaterThanOrEqualTo(3));
       expect(onChanged, isTrue);
 
       // Cleanup
@@ -88,11 +85,9 @@ void main() {
           config:
               PollingMode.autoPoll(maxInitWaitTime: Duration(milliseconds: 100))
                   as AutoPollingMode,
-          cache: cache,
           fetcher: fetcher,
           logger: logger,
-          jsonCache: jsonCache,
-          sdkKey: testSdkKey);
+          jsonCache: jsonCache);
 
       // Act
       final current = DateTime.now();
@@ -116,11 +111,9 @@ void main() {
 
       final poll = LazyLoadingPolicy(
           config: PollingMode.lazyLoad() as LazyLoadingMode,
-          cache: cache,
           fetcher: fetcher,
           logger: logger,
-          jsonCache: jsonCache,
-          sdkKey: testSdkKey);
+          jsonCache: jsonCache);
 
       // Act
       await poll.refresh();
@@ -143,11 +136,9 @@ void main() {
           config: PollingMode.lazyLoad(
                   cacheRefreshIntervalInSeconds: Duration(milliseconds: 100))
               as LazyLoadingMode,
-          cache: cache,
           fetcher: fetcher,
           logger: logger,
-          jsonCache: jsonCache,
-          sdkKey: testSdkKey);
+          jsonCache: jsonCache);
 
       // Act
       await poll.getConfiguration();
@@ -158,7 +149,7 @@ void main() {
 
       // Assert
       verify(fetcher.fetchConfiguration()).called(2);
-      verify(cache.write(any, any)).called(1);
+      verify(cache.write(any, any)).called(2);
 
       // Cleanup
       poll.close();
@@ -172,11 +163,9 @@ void main() {
           FetchResponse.success(createTestConfig({'test': 'value'}))));
 
       final poll = ManualPollingPolicy(
-          cache: cache,
           fetcher: fetcher,
           logger: logger,
-          jsonCache: jsonCache,
-          sdkKey: testSdkKey);
+          jsonCache: jsonCache,);
 
       // Act
       await poll.refresh();
@@ -194,11 +183,9 @@ void main() {
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
 
       final poll = ManualPollingPolicy(
-          cache: cache,
           fetcher: fetcher,
           logger: logger,
-          jsonCache: jsonCache,
-          sdkKey: testSdkKey);
+          jsonCache: jsonCache);
 
       // Act
       await poll.getConfiguration();

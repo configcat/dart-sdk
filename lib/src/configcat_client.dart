@@ -50,8 +50,12 @@ class ConfigCatClient {
     _logger = options.logger ?? ConfigCatLogger();
     _override = options.override;
 
+    final cache = options.cache ?? NullConfigCatCache();
     final mode = options.mode ?? PollingMode.autoPoll();
-    final configJsonCache = ConfigJsonCache(_logger);
+    final configJsonCache = ConfigJsonCache(
+        logger: _logger,
+        cache: cache,
+        sdkKey: sdkKey);
 
     _rolloutEvaluator = RolloutEvaluator(_logger);
     _fetcher = ConfigFetcher(
@@ -65,11 +69,9 @@ class ConfigCatClient {
             ? NullRefreshPolicy()
             : _produceRefreshPolicy(
                 mode,
-                options.cache ?? InMemoryConfigCatCache(),
                 _fetcher,
                 _logger,
-                configJsonCache,
-                sdkKey);
+                configJsonCache);
   }
 
   /// Gets the value of a feature flag or setting as [T] identified by the given [key].
@@ -264,34 +266,26 @@ class ConfigCatClient {
 
   RefreshPolicy _produceRefreshPolicy(
       PollingMode mode,
-      ConfigCatCache cache,
       Fetcher fetcher,
       ConfigCatLogger logger,
-      ConfigJsonCache configJsonCache,
-      String sdkKey) {
+      ConfigJsonCache configJsonCache) {
     if (mode is AutoPollingMode) {
       return AutoPollingPolicy(
           config: mode,
-          cache: cache,
           fetcher: fetcher,
           logger: logger,
-          jsonCache: configJsonCache,
-          sdkKey: sdkKey);
+          jsonCache: configJsonCache);
     } else if (mode is LazyLoadingMode) {
       return LazyLoadingPolicy(
           config: mode,
-          cache: cache,
           fetcher: fetcher,
           logger: logger,
-          jsonCache: configJsonCache,
-          sdkKey: sdkKey);
+          jsonCache: configJsonCache);
     } else if (mode is ManualPollingMode) {
       return ManualPollingPolicy(
-          cache: cache,
           fetcher: fetcher,
           logger: logger,
-          jsonCache: configJsonCache,
-          sdkKey: sdkKey);
+          jsonCache: configJsonCache);
     } else {
       throw ArgumentError('The polling mode option is invalid.');
     }

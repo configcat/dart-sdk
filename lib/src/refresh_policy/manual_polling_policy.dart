@@ -1,4 +1,3 @@
-import '../configcat_cache.dart';
 import '../config_fetcher.dart';
 import '../json/config.dart';
 import '../json/config_json_cache.dart';
@@ -7,20 +6,16 @@ import 'refresh_policy.dart';
 
 class ManualPollingPolicy extends DefaultRefreshPolicy {
   ManualPollingPolicy(
-      {required ConfigCatCache cache,
-      required Fetcher fetcher,
+      {required Fetcher fetcher,
       required ConfigCatLogger logger,
-      required ConfigJsonCache jsonCache,
-      required String sdkKey})
+      required ConfigJsonCache jsonCache})
       : super(
-            cache: cache,
             fetcher: fetcher,
             logger: logger,
-            jsonCache: jsonCache,
-            sdkKey: sdkKey);
+            jsonCache: jsonCache);
 
   @override
   Future<Config> getConfiguration() {
-    return readCache();
+    return jsonCache.readCache();
   }
 }

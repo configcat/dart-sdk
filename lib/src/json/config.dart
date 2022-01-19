@@ -7,20 +7,23 @@ part 'config.g.dart';
 
 @JsonSerializable()
 class Config {
-  @JsonKey(ignore: true)
-  String jsonString = '';
-
   @JsonKey(name: 'p')
   final Preferences? preferences;
 
   @JsonKey(name: 'f')
   final Map<String, Setting> entries;
 
-  Config(this.preferences, this.entries);
+  @JsonKey(name: 'e', defaultValue: '')
+  String eTag;
+
+  @JsonKey(name: 't', defaultValue: -1)
+  int timeStamp;
+
+  Config(this.preferences, this.entries, this.eTag, this.timeStamp);
 
   factory Config.fromJson(Map<String, dynamic> json) => _$ConfigFromJson(json);
 
   Map<String, dynamic> toJson() => _$ConfigToJson(this);
 
-  static Config empty = Config(null, {});
+  static Config empty = Config(null, {}, '', -1);
 }

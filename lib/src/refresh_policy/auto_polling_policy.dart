@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import '../configcat_cache.dart';
 import '../config_fetcher.dart';
 import '../json/config.dart';
 import '../json/config_json_cache.dart';
@@ -16,17 +15,13 @@ class AutoPollingPolicy extends DefaultRefreshPolicy
 
   AutoPollingPolicy(
       {required AutoPollingMode config,
-      required ConfigCatCache cache,
       required Fetcher fetcher,
       required ConfigCatLogger logger,
-      required ConfigJsonCache jsonCache,
-      required String sdkKey})
+      required ConfigJsonCache jsonCache})
       : super(
-            cache: cache,
             fetcher: fetcher,
             logger: logger,
-            jsonCache: jsonCache,
-            sdkKey: sdkKey) {
+            jsonCache: jsonCache) {
     _config = config;
     _timer = Timer.periodic(_config.autoPollInterval, (Timer t) async {
       await _doRefresh();
@@ -41,10 +36,10 @@ class AutoPollingPolicy extends DefaultRefreshPolicy
   @override
   Future<Config> getConfiguration() {
     // await for the very first fetch
-    return syncFuture(() => readCache(), _config.maxInitWaitTime,
+    return syncFuture(() => jsonCache.readCache(), _config.maxInitWaitTime,
         onTimeout: () {
       logger.warning(
-          "Max init wait time for the very first fetch reached (${_config.maxInitWaitTime.inSeconds}s). Reading cache.");
+          'Max init wait time for the very first fetch reached (${_config.maxInitWaitTime.inSeconds}s). Reading cache.');
     });
   }
 
@@ -56,10 +51,8 @@ class AutoPollingPolicy extends DefaultRefreshPolicy
 
   Future<void> _doRefresh() async {
     final response = await fetcher.fetchConfiguration();
-    final cached = await readCache();
-
-    if (response.isFetched && response.config.jsonString != cached.jsonString) {
-      await writeCache(response.config);
+    if (response.isFetched) {
+      await jsonCache.writeCache(response.config);
       _config.onConfigChanged?.call();
     }
 

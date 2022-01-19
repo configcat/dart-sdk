@@ -51,9 +51,7 @@ class FetchResponse {
 
 abstract class Fetcher {
   Dio get client;
-
   Future<FetchResponse> fetchConfiguration();
-
   void close();
 }
 
@@ -64,7 +62,7 @@ class ConfigFetcher
   static const euOnlyBaseUrl = 'https://cdn-eu.configcat.com';
   static const _userAgentHeaderName = 'X-ConfigCat-UserAgent';
   static const _ifNoneMatchHeaderName = 'If-None-Match';
-  static const _etagHeaderName = 'Etag';
+  static const _eTagHeaderName = 'Etag';
   static const _successStatusCodes = [200, 201, 202, 203, 204];
 
   late final ConfigCatLogger _logger;
@@ -74,7 +72,6 @@ class ConfigFetcher
 
   late final bool _urlIsCustom;
   late final Dio _client;
-  late String _etag = '';
   late String _url;
 
   ConfigFetcher(
@@ -170,24 +167,25 @@ class ConfigFetcher
   }
 
   Future<FetchResponse> _doFetch() async {
+    final cache = await _jsonCache.readCache();
     Map<String, String> headers = {
       _userAgentHeaderName: 'ConfigCat-Dart/$_mode-$version',
-      if (_etag.isNotEmpty) _ifNoneMatchHeaderName: _etag
+      if (cache.eTag.isNotEmpty) _ifNoneMatchHeaderName: cache.eTag
     };
 
     try {
       final response = await _client.get(
-        '$_url/configuration-files/$_sdkKey/$configJsonName.json',
+        '$_url/configuration-files/$_sdkKey/$configJsonName',
         options: Options(headers: headers),
       );
 
       if (_successStatusCodes.contains(response.statusCode)) {
-        final config = _jsonCache.getConfigFromJson(response.data.toString());
-        if (config == null) {
+        final eTag = response.headers.value(_eTagHeaderName) ?? '';
+        final config = await _jsonCache
+            .readFromJson(response.data.toString(), eTag);
+        if (config == Config.empty) {
           return FetchResponse.failure();
         }
-
-        _etag = response.headers.value(_etagHeaderName) ?? '';
 
         _logger.debug('Fetch was successful: new config fetched.');
         return FetchResponse.success(config);

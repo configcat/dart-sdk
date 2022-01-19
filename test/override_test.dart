@@ -106,5 +106,5 @@ void main() {
 
 Config _createTestConfig(Map<String, Object> map) {
   return Config(Preferences(ConfigFetcher.globalBaseUrl, 0),
-      map.map((key, value) => MapEntry(key, Setting(value, 0, [], [], ''))));
+      map.map((key, value) => MapEntry(key, Setting(value, 0, [], [], ''))), '', 0);
 }
