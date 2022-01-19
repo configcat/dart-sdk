@@ -12,6 +12,7 @@ class DefaultLogger implements Logger {
     _internal = internalLogger ??
         ext.Logger(
             level: ext.Level.verbose,
+            filter: ext.ProductionFilter(),
             printer: ext.SimplePrinter(printTime: true));
   }
 
