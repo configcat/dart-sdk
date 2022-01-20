@@ -12,6 +12,15 @@ ConfigCat is a <a href="https://configcat.com" target="_blank">hosted feature fl
 ## Getting started
 
 ### 1. Install the ConfigCat SDK
+With Dart:
+```bash
+dart pub add configcat_client
+```
+With Flutter:
+```bash
+dart pub add configcat_client
+```
+Or put the following directly to your `pubspec.yml` and run `dart pub get` or `flutter pub get`.
 ```yaml
 dependencies:
   configcat_client: ^1.0.0
