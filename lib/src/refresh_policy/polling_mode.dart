@@ -20,10 +20,10 @@ abstract class PollingMode {
 
   /// Creates a configured lazy loading polling configuration.
   ///
-  /// [cacheRefreshIntervalInSeconds] sets how long the cache will store its value before fetching the latest from the network again.
+  /// [cacheRefreshInterval] sets how long the cache will store its value before fetching the latest from the network again.
   factory PollingMode.lazyLoad(
-      {cacheRefreshIntervalInSeconds = const Duration(seconds: 60)}) {
-    return LazyLoadingMode._(cacheRefreshIntervalInSeconds);
+      {cacheRefreshInterval = const Duration(seconds: 60)}) {
+    return LazyLoadingMode._(cacheRefreshInterval);
   }
 
   /// Creates a configured manual polling configuration.

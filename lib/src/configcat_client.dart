@@ -252,9 +252,9 @@ class ConfigCatClient {
     }
   }
 
-  /// Gets the underlying [Dio] client.
-  Dio get client {
-    return _fetcher.client;
+  /// Gets the underlying [Dio] HTTP client.
+  Dio get httpClient {
+    return _fetcher.httpClient;
   }
 
   /// Initiates a force refresh on the cached configuration.

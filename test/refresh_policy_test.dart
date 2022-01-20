@@ -135,7 +135,7 @@ void main() {
 
       final poll = LazyLoadingPolicy(
           config: PollingMode.lazyLoad(
-                  cacheRefreshIntervalInSeconds: Duration(milliseconds: 100))
+                  cacheRefreshInterval: Duration(milliseconds: 100))
               as LazyLoadingMode,
           fetcher: fetcher,
           logger: logger,

@@ -22,7 +22,7 @@ void main() {
                 dataSource: OverrideDataSource.map(
                     {'enabled': true, 'local-only': true}),
                 behaviour: OverrideBehaviour.localOnly)));
-    final dioAdapter = DioAdapter(dio: client.client);
+    final dioAdapter = DioAdapter(dio: client.httpClient);
     final body =
         _createTestConfig({'enabled': false, 'remote': 'rem'}).toJson();
     final path =
@@ -52,7 +52,7 @@ void main() {
                 dataSource: OverrideDataSource.map(
                     {'enabled': true, 'local-only': true}),
                 behaviour: OverrideBehaviour.localOverRemote)));
-    final dioAdapter = DioAdapter(dio: client.client);
+    final dioAdapter = DioAdapter(dio: client.httpClient);
     final body =
         _createTestConfig({'enabled': false, 'remote': 'rem'}).toJson();
     final path =
@@ -82,7 +82,7 @@ void main() {
                 dataSource: OverrideDataSource.map(
                     {'enabled': true, 'local-only': true}),
                 behaviour: OverrideBehaviour.remoteOverLocal)));
-    final dioAdapter = DioAdapter(dio: client.client);
+    final dioAdapter = DioAdapter(dio: client.httpClient);
     final body =
         _createTestConfig({'enabled': false, 'remote': 'rem'}).toJson();
     final path =

@@ -15,7 +15,7 @@ void main() {
     client = ConfigCatClient.get(
         sdkKey: testSdkKey,
         options: ConfigCatOptions(mode: PollingMode.manualPoll()));
-    dioAdapter = DioAdapter(dio: client.client);
+    dioAdapter = DioAdapter(dio: client.httpClient);
   });
   tearDown(() {
     ConfigCatClient.close();

@@ -13,7 +13,7 @@ void main() {
   group('Data Governance Tests', () {
     test('should stay on given url', () async {
       final fetcher = _createFetcher();
-      final dioAdapter = DioAdapter(dio: fetcher.client);
+      final dioAdapter = DioAdapter(dio: fetcher.httpClient);
 
       // Arrange
       final body = _createTestConfig(ConfigFetcher.globalBaseUrl, 0);
@@ -38,7 +38,7 @@ void main() {
 
     test('should stay on same url', () async {
       final fetcher = _createFetcher();
-      final dioAdapter = DioAdapter(dio: fetcher.client);
+      final dioAdapter = DioAdapter(dio: fetcher.httpClient);
 
       // Arrange
       final body = _createTestConfig(ConfigFetcher.globalBaseUrl, 1);
@@ -63,7 +63,7 @@ void main() {
 
     test('should stay on same url even with force', () async {
       final fetcher = _createFetcher();
-      final dioAdapter = DioAdapter(dio: fetcher.client);
+      final dioAdapter = DioAdapter(dio: fetcher.httpClient);
 
       // Arrange
       final body = _createTestConfig(ConfigFetcher.globalBaseUrl, 2);
@@ -88,7 +88,7 @@ void main() {
 
     test('should redirect to another', () async {
       final fetcher = _createFetcher();
-      final dioAdapter = DioAdapter(dio: fetcher.client);
+      final dioAdapter = DioAdapter(dio: fetcher.httpClient);
 
       // Arrange
       final firstBody = _createTestConfig(ConfigFetcher.euOnlyBaseUrl, 1);
@@ -120,7 +120,7 @@ void main() {
 
     test('should redirect to another when forced', () async {
       final fetcher = _createFetcher();
-      final dioAdapter = DioAdapter(dio: fetcher.client);
+      final dioAdapter = DioAdapter(dio: fetcher.httpClient);
 
       // Arrange
       final firstBody = _createTestConfig(ConfigFetcher.euOnlyBaseUrl, 2);
@@ -152,7 +152,7 @@ void main() {
 
     test('should break redirect loop', () async {
       final fetcher = _createFetcher();
-      final dioAdapter = DioAdapter(dio: fetcher.client);
+      final dioAdapter = DioAdapter(dio: fetcher.httpClient);
 
       // Arrange
       final firstBody = _createTestConfig(ConfigFetcher.euOnlyBaseUrl, 1);
@@ -186,7 +186,7 @@ void main() {
       final customUrl = "https://custom";
       final fetcher =
           _createFetcher(options: ConfigCatOptions(baseUrl: customUrl));
-      final dioAdapter = DioAdapter(dio: fetcher.client);
+      final dioAdapter = DioAdapter(dio: fetcher.httpClient);
 
       // Arrange
       final firstBody = _createTestConfig(ConfigFetcher.globalBaseUrl, 1);
@@ -218,7 +218,7 @@ void main() {
       final customUrl = "https://custom";
       final fetcher =
           _createFetcher(options: ConfigCatOptions(baseUrl: customUrl));
-      final dioAdapter = DioAdapter(dio: fetcher.client);
+      final dioAdapter = DioAdapter(dio: fetcher.httpClient);
 
       // Arrange
       final firstBody = _createTestConfig(ConfigFetcher.globalBaseUrl, 2);
@@ -256,7 +256,7 @@ void main() {
           cache: NullConfigCatCache(),
           sdkKey: testSdkKey);
       final fetcher = _createFetcher(cache: cache);
-      final dioAdapter = DioAdapter(dio: fetcher.client);
+      final dioAdapter = DioAdapter(dio: fetcher.httpClient);
 
       // Arrange
       final body = _createTestConfig(ConfigFetcher.globalBaseUrl, 0).toJson();
@@ -295,7 +295,7 @@ void main() {
 
     test('failed fetch response', () async {
       final fetcher = _createFetcher();
-      final dioAdapter = DioAdapter(dio: fetcher.client);
+      final dioAdapter = DioAdapter(dio: fetcher.httpClient);
 
       // Arrange
       final path =
@@ -318,7 +318,7 @@ void main() {
 
     test('exception on fetch', () async {
       final fetcher = _createFetcher();
-      final dioAdapter = DioAdapter(dio: fetcher.client);
+      final dioAdapter = DioAdapter(dio: fetcher.httpClient);
 
       // Arrange
       final path =
@@ -348,7 +348,7 @@ void main() {
 
     test('return with same future on simultaneous calls', () async {
       final fetcher = _createFetcher();
-      final dioAdapter = DioAdapter(dio: fetcher.client);
+      final dioAdapter = DioAdapter(dio: fetcher.httpClient);
 
       // Arrange
       final body = _createTestConfig(ConfigFetcher.globalBaseUrl, 0).toJson();

@@ -30,7 +30,7 @@ class MockFetcher extends _i1.Mock implements _i3.Fetcher {
   }
 
   @override
-  _i2.Dio get client =>
+  _i2.Dio get httpClient =>
       (super.noSuchMethod(Invocation.getter(#client), returnValue: _FakeDio_0())
           as _i2.Dio);
   @override

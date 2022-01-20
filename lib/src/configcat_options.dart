@@ -27,8 +27,8 @@ class ConfigCatOptions {
     this.cache,
     this.logger,
     this.connectTimeout = const Duration(seconds: 10),
-    this.receiveTimeout = const Duration(seconds: 30),
-    this.sendTimeout = const Duration(seconds: 30),
+    this.receiveTimeout = const Duration(seconds: 20),
+    this.sendTimeout = const Duration(seconds: 20),
     this.httpClientAdapter,
     this.override,
   });

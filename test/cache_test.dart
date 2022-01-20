@@ -24,7 +24,7 @@ void main() {
 
     final client = ConfigCatClient.get(
         sdkKey: testSdkKey, options: ConfigCatOptions(cache: cache));
-    final dioAdapter = DioAdapter(dio: client.client);
+    final dioAdapter = DioAdapter(dio: client.httpClient);
     dioAdapter.onGet(getPath(), (server) {
       server.reply(200, createTestConfig({'value': 'test'}).toJson());
     });
@@ -44,7 +44,7 @@ void main() {
 
     final client = ConfigCatClient.get(
         sdkKey: testSdkKey, options: ConfigCatOptions(cache: cache));
-    final dioAdapter = DioAdapter(dio: client.client);
+    final dioAdapter = DioAdapter(dio: client.httpClient);
     dioAdapter.onGet(getPath(), (server) {
       server.reply(500, null);
     });

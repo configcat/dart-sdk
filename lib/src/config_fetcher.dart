@@ -49,7 +49,7 @@ class FetchResponse {
 }
 
 abstract class Fetcher {
-  Dio get client;
+  Dio get httpClient;
 
   Future<FetchResponse> fetchConfiguration();
 
@@ -72,7 +72,7 @@ class ConfigFetcher
   late final String _sdkKey;
 
   late final bool _urlIsCustom;
-  late final Dio _client;
+  late final Dio _httpClient;
   late String _url;
 
   ConfigFetcher(
@@ -93,7 +93,7 @@ class ConfigFetcher
             ? globalBaseUrl
             : euOnlyBaseUrl;
 
-    _client = Dio(BaseOptions(
+    _httpClient = Dio(BaseOptions(
         connectTimeout: options.connectTimeout.inMilliseconds,
         receiveTimeout: options.receiveTimeout.inMilliseconds,
         sendTimeout: options.sendTimeout.inMilliseconds,
@@ -102,14 +102,14 @@ class ConfigFetcher
             status != null && (status >= 200 && status < 600)));
 
     if (options.httpClientAdapter != null) {
-      _client.httpClientAdapter = options.httpClientAdapter!;
+      _httpClient.httpClientAdapter = options.httpClientAdapter!;
     }
   }
 
-  /// Gets the underlying [Dio] client.
+  /// Gets the underlying [Dio] HTTP client.
   @override
-  Dio get client {
-    return _client;
+  Dio get httpClient {
+    return _httpClient;
   }
 
   /// Fetches the current ConfigCat configuration json.
@@ -122,7 +122,7 @@ class ConfigFetcher
   /// Closes the underlying http connection.
   @override
   void close() {
-    _client.close();
+    _httpClient.close();
   }
 
   Future<FetchResponse> _executeFetch(int executionCount) async {
@@ -165,7 +165,7 @@ class ConfigFetcher
     };
 
     try {
-      final response = await _client.get(
+      final response = await _httpClient.get(
         '$_url/configuration-files/$_sdkKey/$configJsonName',
         options: Options(headers: headers),
       );
