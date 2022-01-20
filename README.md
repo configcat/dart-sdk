@@ -65,8 +65,8 @@ if (isMyAwesomeFeatureEnabled) {
 ```
 
 ## Sample/Demo app
-* [Dart sample](https://github.com/ConfigCat/dart-sdk/tree/main/example/lib)
-* [Flutter sample](https://github.com/ConfigCat/dart-sdk/tree/main/example/flutter)
+* [Sample Console app](https://github.com/ConfigCat/dart-sdk/tree/main/example/lib)
+* [Sample Flutter app](https://github.com/ConfigCat/dart-sdk/tree/main/example/flutter)
 
 ## Polling Modes
 The ConfigCat SDK supports three different polling mechanisms to acquire the setting values from ConfigCat. After the latest setting values are downloaded, they are stored in an internal cache . After that, all requests are served from the cache. Read more about Polling Modes and how to use them at [ConfigCat Dart Docs](https://configcat.com/docs/sdk-reference/dart/).
@@ -78,7 +78,7 @@ If you need help using this SDK, feel free to contact the ConfigCat Staff at [ht
 Contributions are welcome. For more info please read the [Contribution Guideline](CONTRIBUTING.md).
 
 ## Contributors
-Special thanks to [@augustorsouza](https://github.com/augustorsouza) and [@miguelspe](https://github.com/miguelspe) from [@quintoandar](https://github.com/quintoandar) who made available the initial project.
+Special thanks to [@augustorsouza](https://github.com/augustorsouza), [@miguelspe](https://github.com/miguelspe), and [@mugbug](https://github.com/mugbug) from [@quintoandar](https://github.com/quintoandar) who made available the initial project.
 
 ## About ConfigCat
 - [Official ConfigCat SDKs for other platforms](https://github.com/configcat)
