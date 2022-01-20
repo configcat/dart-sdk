@@ -16,6 +16,7 @@ import 'refresh_policy/polling_mode.dart';
 import 'json/setting.dart';
 import 'log/configcat_logger.dart';
 
+/// ConfigCat SDK client.
 class ConfigCatClient {
   late final ConfigCatLogger _logger;
   late final RefreshPolicy _refreshPolicy;
