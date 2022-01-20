@@ -38,8 +38,17 @@ class ConfigCatClient {
     return client;
   }
 
-  /// Closes all [ConfigCatClient] instances.
-  static void close() {
+  /// Closes an individual or all [ConfigCatClient] instances.
+  ///
+  /// If [client] is not set, all underlying [ConfigCatClient]
+  /// instances will be closed, otherwise only the given [client] will be closed.
+  static void close({ConfigCatClient? client}) {
+    if (client != null) {
+      client._close();
+      _instanceRepository.removeWhere((key, value) => value == client);
+      return;
+    }
+
     for (final client in _instanceRepository.entries) {
       client.value._close();
     }

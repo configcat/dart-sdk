@@ -1,15 +1,17 @@
 import 'package:configcat_client/configcat_client.dart';
 import 'package:flutter/material.dart';
-
-final client = ConfigCatClient.get(
-    sdkKey: 'PKDVCLf-Hq-h-kCzMp-L7Q/HhOWfwVtZ0mb30i9wi17GQ',
-    options: ConfigCatOptions(
-        logger: ConfigCatLogger(
-            // Info level logging helps to inspect the feature flag evaluation process.
-            // Use the default Warning level to avoid too detailed logging in your application.
-            level: LogLevel.info)));
+import 'package:get_it/get_it.dart';
 
 void main() {
+  GetIt.I.registerSingleton<ConfigCatClient>(
+      ConfigCatClient.get(
+          sdkKey: 'PKDVCLf-Hq-h-kCzMp-L7Q/HhOWfwVtZ0mb30i9wi17GQ',
+          options: ConfigCatOptions(
+              logger: ConfigCatLogger(
+                  // Info level logging helps to inspect the feature flag evaluation process.
+                  // Use the default Warning level to avoid too detailed logging in your application.
+                  level: LogLevel.info))),
+      dispose: (client) => ConfigCatClient.close(client: client));
   runApp(const MyApp());
 }
 
@@ -60,6 +62,7 @@ class _MyHomePageState extends State<MyHomePage> {
   bool _value = false;
 
   Future<void> _getFeatureFlagValue() async {
+    final client = GetIt.I<ConfigCatClient>();
     final user = ConfigCatUser(
         identifier: '#SOME-USER-ID#', email: 'configcat@example.com');
 

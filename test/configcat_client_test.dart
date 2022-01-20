@@ -304,6 +304,29 @@ void main() {
     // Assert
     expect(client2, same(client));
   });
+
+  test('ensure close works', () async {
+    // Act
+    final client = ConfigCatClient.get(sdkKey: "another");
+    final client2 = ConfigCatClient.get(sdkKey: "another");
+
+    // Assert
+    expect(client2, same(client));
+
+    // Act
+    ConfigCatClient.close(client: client2);
+    final client3 = ConfigCatClient.get(sdkKey: "another");
+
+    // Assert
+    expect(client3, isNot(same(client2)));
+
+    // Act
+    ConfigCatClient.close();
+    final client4 = ConfigCatClient.get(sdkKey: "another");
+
+    // Assert
+    expect(client4, isNot(same(client3)));
+  });
 }
 
 Config createTestConfigWithVariationId(Map<String, List<Object>> map) {
