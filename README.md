@@ -18,7 +18,7 @@ dart pub add configcat_client
 ```
 With Flutter:
 ```bash
-dart pub add configcat_client
+flutter pub add configcat_client
 ```
 Or put the following directly to your `pubspec.yml` and run `dart pub get` or `flutter pub get`.
 ```yaml
