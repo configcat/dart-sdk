@@ -1,5 +1,7 @@
-# ConfigCat SDK for Dart (Flutter) [WIP]
-**This project is work in progress. Some links might be broken and the library is not published yet.**
+# ConfigCat SDK for Dart (Flutter)
+
+[![pub package](https://img.shields.io/pub/v/configcat_client.svg)](https://pub.dev/packages/configcat_client)
+[![Java CI](https://github.com/configcat/dart-sdk/actions/workflows/dart-ci.yml/badge.svg?branch=main)](https://github.com/configcat/dart-sdk/actions/workflows/dart-ci.yml)
 
 https://configcat.com
 

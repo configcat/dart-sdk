@@ -2,3 +2,4 @@ media
 .github
 build
 example/flutter
+example/lib/*.md
