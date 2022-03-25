@@ -1,13 +1,14 @@
 import 'dart:async';
+
 import 'package:dio/dio.dart';
 
-import 'data_governance.dart';
 import 'configcat_options.dart';
-import 'mixins.dart';
+import 'constants.dart';
+import 'data_governance.dart';
 import 'json/config.dart';
 import 'json/config_json_cache.dart';
-import 'constants.dart';
 import 'log/configcat_logger.dart';
+import 'mixins.dart';
 
 enum _Status { fetched, notModified, failure }
 
@@ -75,16 +76,20 @@ class ConfigFetcher
   late final Dio _httpClient;
   late String _url;
 
-  ConfigFetcher(
-      {required ConfigCatLogger logger,
-      required String sdkKey,
-      required String mode,
-      required ConfigJsonCache jsonCache,
-      required ConfigCatOptions options}) {
+  ConfigChangedHandler? _onConfigChanged;
+
+  ConfigFetcher({
+    required ConfigCatLogger logger,
+    required String sdkKey,
+    required String mode,
+    required ConfigJsonCache jsonCache,
+    required ConfigCatOptions options,
+  }) {
     _logger = logger;
     _jsonCache = jsonCache;
     _mode = mode;
     _sdkKey = sdkKey;
+    _onConfigChanged = options.onConfigChanged;
 
     _urlIsCustom = options.baseUrl.isNotEmpty;
     _url = _urlIsCustom
@@ -179,6 +184,7 @@ class ConfigFetcher
         }
 
         _logger.debug('Fetch was successful: new config fetched.');
+        _onConfigChanged?.call();
         return FetchResponse.success(config);
       } else if (response.statusCode == 304) {
         _logger.debug('Fetch was successful: config not modified.');
