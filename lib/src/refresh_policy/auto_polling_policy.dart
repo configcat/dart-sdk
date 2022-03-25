@@ -3,8 +3,8 @@ import 'dart:async';
 import '../config_fetcher.dart';
 import '../json/config.dart';
 import '../json/config_json_cache.dart';
-import '../mixins.dart';
 import '../log/configcat_logger.dart';
+import '../mixins.dart';
 import 'polling_mode.dart';
 import 'refresh_policy.dart';
 
@@ -50,7 +50,6 @@ class AutoPollingPolicy extends DefaultRefreshPolicy
     final response = await fetcher.fetchConfiguration();
     if (response.isFetched) {
       await jsonCache.writeCache(response.config);
-      _config.onConfigChanged?.call();
     }
 
     initialized();

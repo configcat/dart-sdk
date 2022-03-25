@@ -1,6 +1,3 @@
-/// Represents the config changed callback.
-typedef ConfigChangedHandler = void Function();
-
 /// The base class of a polling mode configuration.
 abstract class PollingMode {
   PollingMode._();
@@ -10,12 +7,14 @@ abstract class PollingMode {
   /// [autoPollInterval] sets at least how often this policy should fetch the latest configuration and refresh the cache.
   /// [maxInitWaitTime] sets the maximum waiting time between initialization and the first config acquisition in seconds.
   /// [listener] sets a configuration changed listener.
-  factory PollingMode.autoPoll(
-      {autoPollInterval = const Duration(seconds: 60),
-      maxInitWaitTime = const Duration(seconds: 5),
-      onConfigChanged}) {
+  factory PollingMode.autoPoll({
+    autoPollInterval = const Duration(seconds: 60),
+    maxInitWaitTime = const Duration(seconds: 5),
+  }) {
     return AutoPollingMode._(
-        autoPollInterval, maxInitWaitTime, onConfigChanged);
+      autoPollInterval,
+      maxInitWaitTime,
+    );
   }
 
   /// Creates a configured lazy loading polling configuration.
@@ -40,11 +39,8 @@ abstract class PollingMode {
 class AutoPollingMode extends PollingMode {
   final Duration autoPollInterval;
   final Duration maxInitWaitTime;
-  final ConfigChangedHandler? onConfigChanged;
 
-  AutoPollingMode._(
-      this.autoPollInterval, this.maxInitWaitTime, this.onConfigChanged)
-      : super._();
+  AutoPollingMode._(this.autoPollInterval, this.maxInitWaitTime) : super._();
 
   @override
   String getPollingIdentifier() {
