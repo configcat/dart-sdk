@@ -2,10 +2,13 @@ import 'package:configcat_client/src/override/flag_overrides.dart';
 import 'package:dio/dio.dart';
 
 import 'configcat_cache.dart';
+import 'configcat_client.dart';
 import 'data_governance.dart';
 import 'log/configcat_logger.dart';
 import 'refresh_policy/polling_mode.dart';
-import 'configcat_client.dart';
+
+/// Represents the config changed callback.
+typedef ConfigChangedHandler = void Function();
 
 /// Configuration options for [ConfigCatClient].
 class ConfigCatOptions {
@@ -19,6 +22,7 @@ class ConfigCatOptions {
   final ConfigCatLogger? logger;
   final FlagOverrides? override;
   final HttpClientAdapter? httpClientAdapter;
+  final ConfigChangedHandler? onConfigChanged;
 
   const ConfigCatOptions({
     this.baseUrl = '',
@@ -31,5 +35,6 @@ class ConfigCatOptions {
     this.sendTimeout = const Duration(seconds: 20),
     this.httpClientAdapter,
     this.override,
+    this.onConfigChanged,
   });
 }
