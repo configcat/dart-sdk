@@ -7,6 +7,7 @@ import 'package:dio/dio.dart';
 import 'package:http_mock_adapter/http_mock_adapter.dart';
 import 'package:sprintf/sprintf.dart';
 import 'package:test/test.dart';
+
 import 'helpers.dart';
 
 void main() {
@@ -393,14 +394,19 @@ void main() {
     });
 
     test('real fetch', () async {
+      bool configChanged = false;
       // Arrange
       final cache = ConfigJsonCache(
           logger: ConfigCatLogger(),
           cache: NullConfigCatCache(),
           sdkKey: testSdkKey);
       final fetcher = _createFetcher(
-          cache: cache,
-          sdkKey: 'PKDVCLf-Hq-h-kCzMp-L7Q/PaDVCFk9EpmD6sLpGLltTA');
+        cache: cache,
+        sdkKey: 'PKDVCLf-Hq-h-kCzMp-L7Q/PaDVCFk9EpmD6sLpGLltTA',
+        options: ConfigCatOptions(
+          onConfigChanged: () => configChanged = true,
+        ),
+      );
 
       // Act
       final fetchedResponse = await fetcher.fetchConfiguration();
@@ -408,12 +414,15 @@ void main() {
 
       // Assert
       expect(fetchedResponse.isFetched, isTrue);
+      expect(configChanged, isTrue);
 
+      configChanged = false;
       // Act
       final notModifiedResponse = await fetcher.fetchConfiguration();
 
       // Assert
       expect(notModifiedResponse.isNotModified, isTrue);
+      expect(configChanged, isFalse);
 
       // Cleanup
       fetcher.close();
