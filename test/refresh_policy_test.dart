@@ -54,11 +54,11 @@ void main() {
       when(fetcher.fetchConfiguration()).thenAnswer((_) => Future.value(
           FetchResponse.success(createTestConfig({'test': 'value'}))));
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
-      var onChanged = false;
+
       final poll = AutoPollingPolicy(
           config: PollingMode.autoPoll(
-              autoPollInterval: Duration(milliseconds: 100),
-              onConfigChanged: () => onChanged = true) as AutoPollingMode,
+            autoPollInterval: Duration(milliseconds: 100),
+          ) as AutoPollingMode,
           fetcher: fetcher,
           logger: logger,
           jsonCache: jsonCache);
@@ -69,7 +69,6 @@ void main() {
       // Assert
       verify(fetcher.fetchConfiguration()).called(greaterThanOrEqualTo(3));
       verify(cache.write(any, any)).called(greaterThanOrEqualTo(3));
-      expect(onChanged, isTrue);
 
       // Cleanup
       poll.close();
