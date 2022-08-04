@@ -133,6 +133,10 @@ class ConfigFetcher
       return response;
     }
 
+    if (preferences.baseUrl.isNotEmpty && _url == preferences.baseUrl) {
+      return response;
+    }
+    
     if (_urlIsCustom && preferences.redirect != _RedirectMode.forceRedirect) {
       return response;
     }
