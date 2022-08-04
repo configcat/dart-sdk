@@ -10,9 +10,18 @@ import 'package:test/test.dart';
 import 'helpers.dart';
 
 void main() {
+  late RequestCounterInterceptor interceptor;
+  setUp(() {
+    interceptor = RequestCounterInterceptor();
+  });
+  tearDown(() {
+    interceptor.clear();
+  });
+
   group('Data Governance Tests', () {
     test('should stay on given url', () async {
       final fetcher = _createFetcher();
+      fetcher.httpClient.interceptors.add(interceptor);
       final dioAdapter = DioAdapter(dio: fetcher.httpClient);
 
       // Arrange
@@ -30,6 +39,7 @@ void main() {
       expect(response.config.preferences!.baseUrl,
           equals(ConfigFetcher.globalBaseUrl));
       expect(response.config.preferences!.redirect, equals(0));
+      expect(interceptor.requests[path], 1);
 
       // Cleanup
       fetcher.close();
@@ -38,6 +48,7 @@ void main() {
 
     test('should stay on same url', () async {
       final fetcher = _createFetcher();
+      fetcher.httpClient.interceptors.add(interceptor);
       final dioAdapter = DioAdapter(dio: fetcher.httpClient);
 
       // Arrange
@@ -55,6 +66,7 @@ void main() {
       expect(response.config.preferences!.baseUrl,
           equals(ConfigFetcher.globalBaseUrl));
       expect(response.config.preferences!.redirect, equals(1));
+      expect(interceptor.requests[path], 1);
 
       // Cleanup
       fetcher.close();
@@ -63,6 +75,7 @@ void main() {
 
     test('should stay on same url even with force', () async {
       final fetcher = _createFetcher();
+      fetcher.httpClient.interceptors.add(interceptor);
       final dioAdapter = DioAdapter(dio: fetcher.httpClient);
 
       // Arrange
@@ -80,6 +93,7 @@ void main() {
       expect(response.config.preferences!.baseUrl,
           equals(ConfigFetcher.globalBaseUrl));
       expect(response.config.preferences!.redirect, equals(2));
+      expect(interceptor.requests[path], 1);
 
       // Cleanup
       fetcher.close();
@@ -88,6 +102,7 @@ void main() {
 
     test('should redirect to another', () async {
       final fetcher = _createFetcher();
+      fetcher.httpClient.interceptors.add(interceptor);
       final dioAdapter = DioAdapter(dio: fetcher.httpClient);
 
       // Arrange
@@ -112,6 +127,8 @@ void main() {
       expect(response.config.preferences!.baseUrl,
           equals(ConfigFetcher.euOnlyBaseUrl));
       expect(response.config.preferences!.redirect, equals(0));
+      expect(interceptor.requests[firstPath], 1);
+      expect(interceptor.requests[secondPath], 1);
 
       // Cleanup
       fetcher.close();
@@ -120,6 +137,7 @@ void main() {
 
     test('should redirect to another when forced', () async {
       final fetcher = _createFetcher();
+      fetcher.httpClient.interceptors.add(interceptor);
       final dioAdapter = DioAdapter(dio: fetcher.httpClient);
 
       // Arrange
@@ -144,6 +162,8 @@ void main() {
       expect(response.config.preferences!.baseUrl,
           equals(ConfigFetcher.euOnlyBaseUrl));
       expect(response.config.preferences!.redirect, equals(0));
+      expect(interceptor.requests[firstPath], 1);
+      expect(interceptor.requests[secondPath], 1);
 
       // Cleanup
       fetcher.close();
@@ -152,6 +172,7 @@ void main() {
 
     test('should break redirect loop', () async {
       final fetcher = _createFetcher();
+      fetcher.httpClient.interceptors.add(interceptor);
       final dioAdapter = DioAdapter(dio: fetcher.httpClient);
 
       // Arrange
@@ -176,6 +197,8 @@ void main() {
       expect(response.config.preferences!.baseUrl,
           equals(ConfigFetcher.euOnlyBaseUrl));
       expect(response.config.preferences!.redirect, equals(1));
+      expect(interceptor.requests[firstPath], 2);
+      expect(interceptor.requests[secondPath], 1);
 
       // Cleanup
       fetcher.close();
@@ -186,6 +209,7 @@ void main() {
       final customUrl = "https://custom";
       final fetcher =
           _createFetcher(options: ConfigCatOptions(baseUrl: customUrl));
+      fetcher.httpClient.interceptors.add(interceptor);
       final dioAdapter = DioAdapter(dio: fetcher.httpClient);
 
       // Arrange
@@ -208,6 +232,8 @@ void main() {
       // Assert
       expect(response.config.preferences!.baseUrl, equals(customUrl));
       expect(response.config.preferences!.redirect, equals(0));
+      expect(interceptor.requests[firstPath], null);
+      expect(interceptor.requests[secondPath], 1);
 
       // Cleanup
       fetcher.close();
@@ -218,6 +244,7 @@ void main() {
       final customUrl = "https://custom";
       final fetcher =
           _createFetcher(options: ConfigCatOptions(baseUrl: customUrl));
+      fetcher.httpClient.interceptors.add(interceptor);
       final dioAdapter = DioAdapter(dio: fetcher.httpClient);
 
       // Arrange
@@ -241,6 +268,8 @@ void main() {
       expect(response.config.preferences!.baseUrl,
           equals(ConfigFetcher.globalBaseUrl));
       expect(response.config.preferences!.redirect, equals(0));
+      expect(interceptor.requests[firstPath], 1);
+      expect(interceptor.requests[secondPath], 1);
 
       // Cleanup
       fetcher.close();
@@ -438,4 +467,35 @@ ConfigFetcher _createFetcher(
 
 Config _createTestConfig(String url, int redirectMode) {
   return Config(Preferences(url, redirectMode), {}, '', 0);
+}
+
+class RequestCounterInterceptor extends Interceptor {
+  final requests = <String, int>{};
+
+  RequestCounterInterceptor();
+
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    final count = requests[options.path];
+    if (count != null) {
+      requests[options.path] = count + 1;
+    } else {
+      requests[options.path] = 1;
+    }
+    handler.next(options);
+  }
+
+  @override
+  void onError(DioError err, ErrorInterceptorHandler handler) {
+    handler.next(err);
+  }
+
+  @override
+  void onResponse(Response response, ResponseInterceptorHandler handler) {
+    handler.next(response);
+  }
+
+  void clear() {
+    requests.clear();
+  }
 }
