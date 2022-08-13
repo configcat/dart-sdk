@@ -13,13 +13,9 @@ Config _$ConfigFromJson(Map<String, dynamic> json) => Config(
       (json['f'] as Map<String, dynamic>).map(
         (k, e) => MapEntry(k, Setting.fromJson(e as Map<String, dynamic>)),
       ),
-      json['e'] as String? ?? '',
-      json['t'] as int? ?? -1,
     );
 
 Map<String, dynamic> _$ConfigToJson(Config instance) => <String, dynamic>{
       'p': instance.preferences,
       'f': instance.entries,
-      'e': instance.eTag,
-      't': instance.timeStamp,
     };

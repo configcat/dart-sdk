@@ -1,25 +1,21 @@
+import 'package:configcat_client/src/fetch/config_service.dart';
 import 'package:dio/dio.dart';
 
-import 'config_fetcher.dart';
+import 'fetch/config_fetcher.dart';
 import 'configcat_options.dart';
 import 'configcat_user.dart';
-import 'json/config_json_cache.dart';
 import 'override/behaviour.dart';
 import 'override/flag_overrides.dart';
-import 'refresh_policy/auto_polling_policy.dart';
-import 'refresh_policy/lazy_polling_policy.dart';
-import 'refresh_policy/manual_polling_policy.dart';
-import 'refresh_policy/refresh_policy.dart';
 import 'rollout_evaluator.dart';
 import 'configcat_cache.dart';
-import 'refresh_policy/polling_mode.dart';
+import 'polling_mode.dart';
 import 'json/setting.dart';
 import 'log/configcat_logger.dart';
 
 /// ConfigCat SDK client.
 class ConfigCatClient {
   late final ConfigCatLogger _logger;
-  late final RefreshPolicy _refreshPolicy;
+  late final ConfigService? _configService;
   late final RolloutEvaluator _rolloutEvaluator;
   late final Fetcher _fetcher;
   late final FlagOverrides? _override;
@@ -62,20 +58,17 @@ class ConfigCatClient {
 
     final cache = options.cache ?? NullConfigCatCache();
     final mode = options.mode ?? PollingMode.autoPoll();
-    final configJsonCache =
-        ConfigJsonCache(logger: _logger, cache: cache, sdkKey: sdkKey);
 
     _rolloutEvaluator = RolloutEvaluator(_logger);
     _fetcher = ConfigFetcher(
         logger: _logger,
         sdkKey: sdkKey,
         mode: mode.getPollingIdentifier(),
-        jsonCache: configJsonCache,
         options: options);
-    _refreshPolicy =
+    _configService =
         _override != null && _override!.behaviour == OverrideBehaviour.localOnly
-            ? NullRefreshPolicy()
-            : _produceRefreshPolicy(mode, _fetcher, _logger, configJsonCache);
+            ? null
+            : ConfigService(sdkKey: sdkKey, mode: mode, fetcher: _fetcher, logger: _logger, cache: cache);
   }
 
   /// Gets the value of a feature flag or setting as [T] identified by the given [key].
@@ -259,35 +252,14 @@ class ConfigCatClient {
 
   /// Initiates a force refresh on the cached configuration.
   Future<void> forceRefresh() {
-    return _refreshPolicy.refresh();
+    return _configService?.refresh() ?? Future.value(null);
   }
 
   /// Closes the underlying resources.
   void _close() {
-    _refreshPolicy.close();
+    _configService?.close();
+    _fetcher.close();
     _logger.close();
-  }
-
-  RefreshPolicy _produceRefreshPolicy(PollingMode mode, Fetcher fetcher,
-      ConfigCatLogger logger, ConfigJsonCache configJsonCache) {
-    if (mode is AutoPollingMode) {
-      return AutoPollingPolicy(
-          config: mode,
-          fetcher: fetcher,
-          logger: logger,
-          jsonCache: configJsonCache);
-    } else if (mode is LazyLoadingMode) {
-      return LazyLoadingPolicy(
-          config: mode,
-          fetcher: fetcher,
-          logger: logger,
-          jsonCache: configJsonCache);
-    } else if (mode is ManualPollingMode) {
-      return ManualPollingPolicy(
-          fetcher: fetcher, logger: logger, jsonCache: configJsonCache);
-    } else {
-      throw ArgumentError('The polling mode option is invalid.');
-    }
   }
 
   Future<Map<String, Setting>> _getSettings() async {
@@ -297,17 +269,16 @@ class ConfigCatClient {
           final local = await _override!.dataSource.getOverrides();
           return local;
         case OverrideBehaviour.localOverRemote:
-          final remote = await _refreshPolicy.getConfiguration();
+          final remote = await _configService?.getSettings() ?? {};
           final local = await _override!.dataSource.getOverrides();
-          return Map<String, Setting>.of(remote.entries)..addAll(local);
+          return Map<String, Setting>.of(remote)..addAll(local);
         case OverrideBehaviour.remoteOverLocal:
-          final remote = await _refreshPolicy.getConfiguration();
+          final remote = await _configService?.getSettings() ?? {};
           final local = await _override!.dataSource.getOverrides();
-          return Map<String, Setting>.of(local)..addAll(remote.entries);
+          return Map<String, Setting>.of(local)..addAll(remote);
       }
     }
 
-    final config = await _refreshPolicy.getConfiguration();
-    return config.entries;
+    return await _configService?.getSettings() ?? {};
   }
 }

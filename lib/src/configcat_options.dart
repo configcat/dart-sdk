@@ -4,7 +4,7 @@ import 'package:dio/dio.dart';
 import 'configcat_cache.dart';
 import 'data_governance.dart';
 import 'log/configcat_logger.dart';
-import 'refresh_policy/polling_mode.dart';
+import 'polling_mode.dart';
 import 'configcat_client.dart';
 
 /// Configuration options for [ConfigCatClient].

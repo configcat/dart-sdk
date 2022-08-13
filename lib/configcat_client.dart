@@ -10,7 +10,7 @@ export 'src/log/default_logger.dart';
 export 'src/log/configcat_logger.dart';
 
 // polling modes
-export 'src/refresh_policy/polling_mode.dart';
+export 'src/polling_mode.dart';
 
 // core
 export 'src/configcat_cache.dart';

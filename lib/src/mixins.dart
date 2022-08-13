@@ -1,4 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
+
+import 'json/config.dart';
+import 'log/configcat_logger.dart';
 
 /// This mixin can be used to ensure that an asynchronous operation couldn't be
 /// initiated multiple times simultaneously. Each caller will wait for the
@@ -31,42 +35,16 @@ mixin ContinuousFutureSynchronizer<T> {
   }
 }
 
-/// This mixin can be used to set a one time timeout before invoking a
-/// given operation.
-mixin TimedInitializer<T> {
-  final Completer<void> _initial = Completer();
-  Future<void>? _timeoutFuture;
-
-  /// Invokes [futureToSync] after [initialized] is called or
-  /// when the given [timeout] expires.
-  Future<T> syncFuture(Future<T> Function() futureToSync, Duration timeout,
-      {Function()? onTimeout}) async {
-    // if the result we waited for is completed or timed out, simply
-    // invoke the given operation.
-    if (_initial.isCompleted) {
-      return futureToSync();
-    }
-
-    // if we are still waiting for the result, set the current caller to wait
-    if (_timeoutFuture != null) {
-      await _timeoutFuture;
-      return futureToSync();
-    }
-
-    // very first call, set timeout
-    _timeoutFuture = _initial.future.timeout(timeout, onTimeout: () {
-      onTimeout?.call();
-      return null;
-    });
-
-    // very first call, await for result or time-out
-    await _timeoutFuture;
-    return futureToSync();
-  }
-
-  void initialized() {
-    if (!_initial.isCompleted) {
-      _initial.complete(null);
+/// This mixin is used to deserialize [Config] from JSON.
+mixin ConfigJsonParser {
+  /// Parse [Config] from JSON.
+  Config parseConfigFromJson(String json, ConfigCatLogger logger) {
+    try {
+      final decoded = jsonDecode(json);
+      return Config.fromJson(decoded);
+    } catch (e, s) {
+      logger.error('Config JSON parsing failed.', e, s);
+      return Config.empty;
     }
   }
 }

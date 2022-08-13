@@ -1,7 +1,6 @@
 import 'package:configcat_client/configcat_client.dart';
-import 'package:configcat_client/src/config_fetcher.dart';
+import 'package:configcat_client/src/fetch/config_fetcher.dart';
 import 'package:configcat_client/src/json/config.dart';
-import 'package:configcat_client/src/json/config_json_cache.dart';
 import 'package:configcat_client/src/json/preferences.dart';
 import 'package:dio/dio.dart';
 import 'package:http_mock_adapter/http_mock_adapter.dart';
@@ -33,12 +32,12 @@ void main() {
       });
 
       // Act
-      final response = await fetcher.fetchConfiguration();
+      final response = await fetcher.fetchConfiguration('');
 
       // Assert
-      expect(response.config.preferences!.baseUrl,
+      expect(response.entry.config.preferences!.baseUrl,
           equals(ConfigFetcher.globalBaseUrl));
-      expect(response.config.preferences!.redirect, equals(0));
+      expect(response.entry.config.preferences!.redirect, equals(0));
       expect(interceptor.requests[path], 1);
 
       // Cleanup
@@ -60,12 +59,12 @@ void main() {
       });
 
       // Act
-      final response = await fetcher.fetchConfiguration();
+      final response = await fetcher.fetchConfiguration('');
 
       // Assert
-      expect(response.config.preferences!.baseUrl,
+      expect(response.entry.config.preferences!.baseUrl,
           equals(ConfigFetcher.globalBaseUrl));
-      expect(response.config.preferences!.redirect, equals(1));
+      expect(response.entry.config.preferences!.redirect, equals(1));
       expect(interceptor.requests[path], 1);
 
       // Cleanup
@@ -87,12 +86,12 @@ void main() {
       });
 
       // Act
-      final response = await fetcher.fetchConfiguration();
+      final response = await fetcher.fetchConfiguration('');
 
       // Assert
-      expect(response.config.preferences!.baseUrl,
+      expect(response.entry.config.preferences!.baseUrl,
           equals(ConfigFetcher.globalBaseUrl));
-      expect(response.config.preferences!.redirect, equals(2));
+      expect(response.entry.config.preferences!.redirect, equals(2));
       expect(interceptor.requests[path], 1);
 
       // Cleanup
@@ -121,12 +120,12 @@ void main() {
         });
 
       // Act
-      final response = await fetcher.fetchConfiguration();
+      final response = await fetcher.fetchConfiguration('');
 
       // Assert
-      expect(response.config.preferences!.baseUrl,
+      expect(response.entry.config.preferences!.baseUrl,
           equals(ConfigFetcher.euOnlyBaseUrl));
-      expect(response.config.preferences!.redirect, equals(0));
+      expect(response.entry.config.preferences!.redirect, equals(0));
       expect(interceptor.requests[firstPath], 1);
       expect(interceptor.requests[secondPath], 1);
 
@@ -156,12 +155,12 @@ void main() {
         });
 
       // Act
-      final response = await fetcher.fetchConfiguration();
+      final response = await fetcher.fetchConfiguration('');
 
       // Assert
-      expect(response.config.preferences!.baseUrl,
+      expect(response.entry.config.preferences!.baseUrl,
           equals(ConfigFetcher.euOnlyBaseUrl));
-      expect(response.config.preferences!.redirect, equals(0));
+      expect(response.entry.config.preferences!.redirect, equals(0));
       expect(interceptor.requests[firstPath], 1);
       expect(interceptor.requests[secondPath], 1);
 
@@ -191,12 +190,12 @@ void main() {
         });
 
       // Act
-      final response = await fetcher.fetchConfiguration();
+      final response = await fetcher.fetchConfiguration('');
 
       // Assert
-      expect(response.config.preferences!.baseUrl,
+      expect(response.entry.config.preferences!.baseUrl,
           equals(ConfigFetcher.euOnlyBaseUrl));
-      expect(response.config.preferences!.redirect, equals(1));
+      expect(response.entry.config.preferences!.redirect, equals(1));
       expect(interceptor.requests[firstPath], 2);
       expect(interceptor.requests[secondPath], 1);
 
@@ -227,11 +226,11 @@ void main() {
         });
 
       // Act
-      final response = await fetcher.fetchConfiguration();
+      final response = await fetcher.fetchConfiguration('');
 
       // Assert
-      expect(response.config.preferences!.baseUrl, equals(customUrl));
-      expect(response.config.preferences!.redirect, equals(0));
+      expect(response.entry.config.preferences!.baseUrl, equals(customUrl));
+      expect(response.entry.config.preferences!.redirect, equals(0));
       expect(interceptor.requests[firstPath], null);
       expect(interceptor.requests[secondPath], 1);
 
@@ -262,12 +261,12 @@ void main() {
         });
 
       // Act
-      final response = await fetcher.fetchConfiguration();
+      final response = await fetcher.fetchConfiguration('');
 
       // Assert
-      expect(response.config.preferences!.baseUrl,
+      expect(response.entry.config.preferences!.baseUrl,
           equals(ConfigFetcher.globalBaseUrl));
-      expect(response.config.preferences!.redirect, equals(0));
+      expect(response.entry.config.preferences!.redirect, equals(0));
       expect(interceptor.requests[firstPath], 1);
       expect(interceptor.requests[secondPath], 1);
 
@@ -280,11 +279,7 @@ void main() {
   group('Fetcher Tests', () {
     test('etag works', () async {
       final etag = 'test-etag';
-      final cache = ConfigJsonCache(
-          logger: ConfigCatLogger(),
-          cache: NullConfigCatCache(),
-          sdkKey: testSdkKey);
-      final fetcher = _createFetcher(cache: cache);
+      final fetcher = _createFetcher();
       final dioAdapter = DioAdapter(dio: fetcher.httpClient);
 
       // Arrange
@@ -303,19 +298,19 @@ void main() {
         }, headers: {'If-None-Match': etag});
 
       // Act
-      final fetchedResponse = await fetcher.fetchConfiguration();
-      await cache.writeCache(fetchedResponse.config);
+      final fetchedResponse = await fetcher.fetchConfiguration('');
 
       // Assert
       expect(fetchedResponse.isFetched, isTrue);
-      expect(fetchedResponse.config, isNot(same(Config.empty)));
+      expect(fetchedResponse.entry.config, isNot(same(Config.empty)));
+      expect(fetchedResponse.entry.eTag, equals(etag));
 
       // Act
-      final notModifiedResponse = await fetcher.fetchConfiguration();
+      final notModifiedResponse = await fetcher.fetchConfiguration(etag);
 
       // Assert
       expect(notModifiedResponse.isNotModified, isTrue);
-      expect(notModifiedResponse.config, same(Config.empty));
+      expect(notModifiedResponse.entry.config, same(Config.empty));
 
       // Cleanup
       fetcher.close();
@@ -334,11 +329,11 @@ void main() {
       });
 
       // Act
-      final fetchedResponse = await fetcher.fetchConfiguration();
+      final fetchedResponse = await fetcher.fetchConfiguration('');
 
       // Assert
       expect(fetchedResponse.isFailed, isTrue);
-      expect(fetchedResponse.config, same(Config.empty));
+      expect(fetchedResponse.entry.config, same(Config.empty));
 
       // Cleanup
       fetcher.close();
@@ -364,57 +359,11 @@ void main() {
       });
 
       // Act
-      final fetchedResponse = await fetcher.fetchConfiguration();
+      final fetchedResponse = await fetcher.fetchConfiguration('');
 
       // Assert
       expect(fetchedResponse.isFailed, isTrue);
-      expect(fetchedResponse.config, same(Config.empty));
-
-      // Cleanup
-      fetcher.close();
-      dioAdapter.close();
-    });
-
-    test('return with same future on simultaneous calls', () async {
-      final fetcher = _createFetcher();
-      final dioAdapter = DioAdapter(dio: fetcher.httpClient);
-
-      // Arrange
-      final body = _createTestConfig(ConfigFetcher.globalBaseUrl, 0).toJson();
-      final path =
-          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
-      dioAdapter.onGet(path, (server) {
-        server.reply(200, body);
-      });
-
-      String resp1 = '';
-      String resp2 = '';
-
-      // Act
-      final future1 = fetcher
-          .fetchConfiguration()
-          .then((value) => value.config.eTag = 'test');
-      final future2 = fetcher
-          .fetchConfiguration()
-          .then((value) => resp1 = value.config.eTag);
-      final future3 = fetcher
-          .fetchConfiguration()
-          .then((value) => resp2 = value.config.eTag);
-      await future1;
-      await future2;
-      await future3;
-
-      // Assert
-      expect(resp1, equals('test'));
-      expect(resp2, equals('test'));
-
-      // Act
-      final result = await fetcher.fetchConfiguration();
-
-      // Assert
-      expect(result.config.preferences!.baseUrl,
-          equals(ConfigFetcher.globalBaseUrl));
-      expect(result.config.preferences!.redirect, equals(0));
+      expect(fetchedResponse.entry.config, same(Config.empty));
 
       // Cleanup
       fetcher.close();
@@ -423,23 +372,17 @@ void main() {
 
     test('real fetch', () async {
       // Arrange
-      final cache = ConfigJsonCache(
-          logger: ConfigCatLogger(),
-          cache: NullConfigCatCache(),
-          sdkKey: testSdkKey);
       final fetcher = _createFetcher(
-          cache: cache,
           sdkKey: 'PKDVCLf-Hq-h-kCzMp-L7Q/PaDVCFk9EpmD6sLpGLltTA');
 
       // Act
-      final fetchedResponse = await fetcher.fetchConfiguration();
-      await cache.writeCache(fetchedResponse.config);
+      final fetchedResponse = await fetcher.fetchConfiguration('');
 
       // Assert
       expect(fetchedResponse.isFetched, isTrue);
 
       // Act
-      final notModifiedResponse = await fetcher.fetchConfiguration();
+      final notModifiedResponse = await fetcher.fetchConfiguration(fetchedResponse.entry.eTag);
 
       // Assert
       expect(notModifiedResponse.isNotModified, isTrue);
@@ -451,22 +394,18 @@ void main() {
 }
 
 ConfigFetcher _createFetcher(
-    {ConfigJsonCache? cache,
-    ConfigCatOptions options = const ConfigCatOptions(),
+    {ConfigCatOptions options = const ConfigCatOptions(),
     String sdkKey = testSdkKey}) {
   final logger = ConfigCatLogger();
   return ConfigFetcher(
       logger: logger,
       sdkKey: sdkKey,
       mode: 'm',
-      jsonCache: cache ??
-          ConfigJsonCache(
-              logger: logger, cache: NullConfigCatCache(), sdkKey: sdkKey),
       options: options);
 }
 
 Config _createTestConfig(String url, int redirectMode) {
-  return Config(Preferences(url, redirectMode), {}, '', 0);
+  return Config(Preferences(url, redirectMode), {});
 }
 
 class RequestCounterInterceptor extends Interceptor {

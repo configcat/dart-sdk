@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'package:dio/dio.dart';
 
-import 'data_governance.dart';
-import 'configcat_options.dart';
-import 'mixins.dart';
-import 'json/config.dart';
-import 'json/config_json_cache.dart';
-import 'constants.dart';
-import 'log/configcat_logger.dart';
+import 'entry.dart';
+import '../data_governance.dart';
+import '../configcat_options.dart';
+import '../mixins.dart';
+import '../json/config.dart';
+import '../constants.dart';
+import '../log/configcat_logger.dart';
 
 enum _Status { fetched, notModified, failure }
 
@@ -19,9 +19,9 @@ class _RedirectMode {
 
 class FetchResponse {
   final _Status _status;
-  final Config config;
+  final Entry entry;
 
-  FetchResponse._(this._status, this.config);
+  FetchResponse._(this._status, this.entry);
 
   bool get isFetched {
     return _status == _Status.fetched;
@@ -35,30 +35,28 @@ class FetchResponse {
     return _status == _Status.failure;
   }
 
-  factory FetchResponse.success(Config config) {
-    return FetchResponse._(_Status.fetched, config);
+  factory FetchResponse.success(Entry entry) {
+    return FetchResponse._(_Status.fetched, entry);
   }
 
   factory FetchResponse.failure() {
-    return FetchResponse._(_Status.failure, Config.empty);
+    return FetchResponse._(_Status.failure, Entry.empty);
   }
 
   factory FetchResponse.notModified() {
-    return FetchResponse._(_Status.notModified, Config.empty);
+    return FetchResponse._(_Status.notModified, Entry.empty);
   }
 }
 
 abstract class Fetcher {
   Dio get httpClient;
 
-  Future<FetchResponse> fetchConfiguration();
+  Future<FetchResponse> fetchConfiguration(String eTag);
 
   void close();
 }
 
-class ConfigFetcher
-    with ContinuousFutureSynchronizer<FetchResponse>
-    implements Fetcher {
+class ConfigFetcher with ConfigJsonParser implements Fetcher {
   static const globalBaseUrl = 'https://cdn-global.configcat.com';
   static const euOnlyBaseUrl = 'https://cdn-eu.configcat.com';
   static const _userAgentHeaderName = 'X-ConfigCat-UserAgent';
@@ -67,7 +65,6 @@ class ConfigFetcher
   static const _successStatusCodes = [200, 201, 202, 203, 204];
 
   late final ConfigCatLogger _logger;
-  late final ConfigJsonCache _jsonCache;
   late final String _mode;
   late final String _sdkKey;
 
@@ -79,10 +76,8 @@ class ConfigFetcher
       {required ConfigCatLogger logger,
       required String sdkKey,
       required String mode,
-      required ConfigJsonCache jsonCache,
       required ConfigCatOptions options}) {
     _logger = logger;
-    _jsonCache = jsonCache;
     _mode = mode;
     _sdkKey = sdkKey;
 
@@ -114,9 +109,8 @@ class ConfigFetcher
 
   /// Fetches the current ConfigCat configuration json.
   @override
-  Future<FetchResponse> fetchConfiguration() {
-    // ensure fetch requests are not initiated simultaneously
-    return syncFuture(() => _executeFetch(2));
+  Future<FetchResponse> fetchConfiguration(String eTag) {
+    return _executeFetch(2, eTag);
   }
 
   /// Closes the underlying http connection.
@@ -125,10 +119,10 @@ class ConfigFetcher
     _httpClient.close();
   }
 
-  Future<FetchResponse> _executeFetch(int executionCount) async {
-    final response = await _doFetch();
+  Future<FetchResponse> _executeFetch(int executionCount, String eTag) async {
+    final response = await _doFetch(eTag);
 
-    final preferences = response.config.preferences;
+    final preferences = response.entry.config.preferences;
     if (!response.isFetched || preferences == null) {
       return response;
     }
@@ -152,7 +146,7 @@ class ConfigFetcher
       }
 
       if (executionCount > 0) {
-        return await _executeFetch(executionCount - 1);
+        return await _executeFetch(executionCount - 1, eTag);
       }
     }
 
@@ -161,11 +155,10 @@ class ConfigFetcher
     return response;
   }
 
-  Future<FetchResponse> _doFetch() async {
-    final cache = await _jsonCache.readCache();
+  Future<FetchResponse> _doFetch(String eTag) async {
     Map<String, String> headers = {
       _userAgentHeaderName: 'ConfigCat-Dart/$_mode-$version',
-      if (cache.eTag.isNotEmpty) _ifNoneMatchHeaderName: cache.eTag
+      if (eTag.isNotEmpty) _ifNoneMatchHeaderName: eTag
     };
 
     try {
@@ -176,14 +169,14 @@ class ConfigFetcher
 
       if (_successStatusCodes.contains(response.statusCode)) {
         final eTag = response.headers.value(_eTagHeaderName) ?? '';
-        final config =
-            await _jsonCache.readFromJson(response.data.toString(), eTag);
+        final json = response.data.toString();
+        final config = parseConfigFromJson(response.data.toString(), _logger);
         if (config == Config.empty) {
           return FetchResponse.failure();
         }
 
         _logger.debug('Fetch was successful: new config fetched.');
-        return FetchResponse.success(config);
+        return FetchResponse.success(Entry(config, json, eTag, DateTime.now().toUtc()));
       } else if (response.statusCode == 304) {
         _logger.debug('Fetch was successful: config not modified.');
         return FetchResponse.notModified();

@@ -13,17 +13,13 @@ class Config {
   @JsonKey(name: 'f')
   final Map<String, Setting> entries;
 
-  @JsonKey(name: 'e', defaultValue: '')
-  String eTag;
-
-  @JsonKey(name: 't', defaultValue: -1)
-  int timeStamp;
-
-  Config(this.preferences, this.entries, this.eTag, this.timeStamp);
+  Config(this.preferences, this.entries);
 
   factory Config.fromJson(Map<String, dynamic> json) => _$ConfigFromJson(json);
 
   Map<String, dynamic> toJson() => _$ConfigToJson(this);
 
-  static Config empty = Config(null, {}, '', -1);
+  bool isEmpty() => this == empty;
+
+  static Config empty = Config(null, {});
 }

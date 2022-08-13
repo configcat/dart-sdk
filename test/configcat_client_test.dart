@@ -1,5 +1,5 @@
 import 'package:configcat_client/configcat_client.dart';
-import 'package:configcat_client/src/config_fetcher.dart';
+import 'package:configcat_client/src/fetch/config_fetcher.dart';
 import 'package:configcat_client/src/json/config.dart';
 import 'package:configcat_client/src/json/preferences.dart';
 import 'package:dio/dio.dart';
@@ -333,7 +333,5 @@ Config createTestConfigWithVariationId(Map<String, List<Object>> map) {
   return Config(
       Preferences(ConfigFetcher.globalBaseUrl, 0),
       map.map((key, value) =>
-          MapEntry(key, Setting(value[0], 0, [], [], value[1].toString()))),
-      "",
-      0);
+          MapEntry(key, Setting(value[0], 0, [], [], value[1].toString()))));
 }
