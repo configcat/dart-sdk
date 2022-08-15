@@ -12,13 +12,13 @@ const testSdkKey = 'test';
 const etag = 'test-etag';
 
 Config createTestConfig(Map<String, Object> map) {
-  return Config(
-      Preferences(ConfigFetcher.globalBaseUrl, 0),
+  return Config(Preferences(ConfigFetcher.globalBaseUrl, 0),
       map.map((key, value) => MapEntry(key, Setting(value, 0, [], [], ''))));
 }
 
 Entry createTestEntry(Map<String, Object> map) {
-  return Entry(createTestConfig(map), map[0].toString(), '', DateTime.now().toUtc());
+  return Entry(
+      createTestConfig(map), map[0].toString(), '', DateTime.now().toUtc());
 }
 
 String getPath() {
@@ -34,6 +34,11 @@ class RequestCounterInterceptor extends Interceptor {
         return requests[key];
       }
     }
+  }
+
+  int allRequestCount() {
+    if (requests.values.isEmpty) return 0;
+    return requests.values.reduce((value, element) => value + element);
   }
 
   RequestCounterInterceptor();

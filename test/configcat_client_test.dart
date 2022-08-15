@@ -1,20 +1,28 @@
+import 'dart:convert';
+
 import 'package:configcat_client/configcat_client.dart';
 import 'package:configcat_client/src/fetch/config_fetcher.dart';
 import 'package:configcat_client/src/json/config.dart';
 import 'package:configcat_client/src/json/preferences.dart';
 import 'package:dio/dio.dart';
 import 'package:http_mock_adapter/http_mock_adapter.dart';
+import 'package:mockito/mockito.dart';
 import 'package:test/test.dart';
 
+import 'cache_test.mocks.dart';
 import 'helpers.dart';
 
 void main() {
   late ConfigCatClient client;
   late DioAdapter dioAdapter;
+  late MockConfigCatCache cache;
   setUp(() {
+    cache = MockConfigCatCache();
+    when(cache.read(any)).thenAnswer((_) => Future.value(''));
     client = ConfigCatClient.get(
         sdkKey: testSdkKey,
-        options: ConfigCatOptions(mode: PollingMode.manualPoll()));
+        options:
+            ConfigCatOptions(mode: PollingMode.manualPoll(), cache: cache));
     dioAdapter = DioAdapter(dio: client.httpClient);
   });
   tearDown(() {
@@ -182,6 +190,29 @@ void main() {
       ..onGet(getPath(), (server) {
         server.reply(500, null);
       }, headers: {'If-None-Match': etag});
+
+    // Act
+    await client.forceRefresh();
+    final value1 = await client.getValue(key: 'value', defaultValue: 0);
+
+    // Assert
+    expect(value1, equals(42));
+
+    // Act
+    await client.forceRefresh();
+    final value2 = await client.getValue(key: 'value', defaultValue: 0);
+
+    // Assert
+    expect(value2, equals(42));
+  });
+
+  test('returns cached value on failure', () async {
+    // Arrange
+    final body = jsonEncode(createTestConfig({'value': 42}));
+    when(cache.read(any)).thenAnswer((_) => Future.value(body));
+    dioAdapter.onGet(getPath(), (server) {
+      server.reply(500, null);
+    });
 
     // Act
     await client.forceRefresh();

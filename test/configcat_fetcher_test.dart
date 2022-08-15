@@ -1,5 +1,6 @@
 import 'package:configcat_client/configcat_client.dart';
 import 'package:configcat_client/src/fetch/config_fetcher.dart';
+import 'package:configcat_client/src/fetch/entry.dart';
 import 'package:configcat_client/src/json/config.dart';
 import 'package:configcat_client/src/json/preferences.dart';
 import 'package:dio/dio.dart';
@@ -370,6 +371,12 @@ void main() {
       dioAdapter.close();
     });
 
+    test('entity tests', () async {
+      // Assert
+      expect(Entry.empty.isEmpty(), isTrue);
+      expect(Config.empty.isEmpty(), isTrue);
+    });
+
     test('real fetch', () async {
       // Arrange
       final fetcher = _createFetcher(
@@ -382,7 +389,8 @@ void main() {
       expect(fetchedResponse.isFetched, isTrue);
 
       // Act
-      final notModifiedResponse = await fetcher.fetchConfiguration(fetchedResponse.entry.eTag);
+      final notModifiedResponse =
+          await fetcher.fetchConfiguration(fetchedResponse.entry.eTag);
 
       // Assert
       expect(notModifiedResponse.isNotModified, isTrue);
@@ -398,10 +406,7 @@ ConfigFetcher _createFetcher(
     String sdkKey = testSdkKey}) {
   final logger = ConfigCatLogger();
   return ConfigFetcher(
-      logger: logger,
-      sdkKey: sdkKey,
-      mode: 'm',
-      options: options);
+      logger: logger, sdkKey: sdkKey, mode: 'm', options: options);
 }
 
 Config _createTestConfig(String url, int redirectMode) {

@@ -68,7 +68,12 @@ class ConfigCatClient {
     _configService =
         _override != null && _override!.behaviour == OverrideBehaviour.localOnly
             ? null
-            : ConfigService(sdkKey: sdkKey, mode: mode, fetcher: _fetcher, logger: _logger, cache: cache);
+            : ConfigService(
+                sdkKey: sdkKey,
+                mode: mode,
+                fetcher: _fetcher,
+                logger: _logger,
+                cache: cache);
   }
 
   /// Gets the value of a feature flag or setting as [T] identified by the given [key].

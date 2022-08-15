@@ -9,7 +9,7 @@ class Entry {
 
   Entry(this.config, this.json, this.eTag, this.fetchTime);
 
-  bool isEmpty() => this == empty;
+  bool isEmpty() => identical(this, empty);
 
   Entry withTime(DateTime time) => Entry(config, json, eTag, time);
 

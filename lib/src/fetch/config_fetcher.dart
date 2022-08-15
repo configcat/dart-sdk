@@ -176,7 +176,8 @@ class ConfigFetcher with ConfigJsonParser implements Fetcher {
         }
 
         _logger.debug('Fetch was successful: new config fetched.');
-        return FetchResponse.success(Entry(config, json, eTag, DateTime.now().toUtc()));
+        return FetchResponse.success(
+            Entry(config, json, eTag, DateTime.now().toUtc()));
       } else if (response.statusCode == 304) {
         _logger.debug('Fetch was successful: config not modified.');
         return FetchResponse.notModified();

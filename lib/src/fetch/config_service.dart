@@ -25,16 +25,17 @@ class ConfigService with ConfigJsonParser, ContinuousFutureSynchronizer {
 
   ConfigService(
       {required String sdkKey,
-        required PollingMode mode,
-        required Fetcher fetcher,
-        required ConfigCatLogger logger,
+      required PollingMode mode,
+      required Fetcher fetcher,
+      required ConfigCatLogger logger,
       required ConfigCatCache cache}) {
-    _cacheKey = sha1.convert(utf8.encode('dart_${configJsonName}_$sdkKey')).toString();
+    _cacheKey =
+        sha1.convert(utf8.encode('dart_${configJsonName}_$sdkKey')).toString();
     _mode = mode;
     _fetcher = fetcher;
     _logger = logger;
     _cache = cache;
-    
+
     if (mode is AutoPollingMode) {
       _timer = Timer.periodic(mode.autoPollInterval, (Timer t) async {
         await refresh();
@@ -52,7 +53,8 @@ class ConfigService with ConfigJsonParser, ContinuousFutureSynchronizer {
   Future<Map<String, Setting>> getSettings() async {
     final mode = _mode;
     if (mode is LazyLoadingMode) {
-      final config = await _fetchIfOlder(DateTime.now().toUtc().subtract(mode.cacheRefreshInterval));
+      final config = await _fetchIfOlder(
+          DateTime.now().toUtc().subtract(mode.cacheRefreshInterval));
       return config.entries;
     } else {
       final config = await _fetchIfOlder(distantPast, preferCached: true);
@@ -63,12 +65,13 @@ class ConfigService with ConfigJsonParser, ContinuousFutureSynchronizer {
   Future<void> refresh() async {
     await _fetchIfOlder(distantFuture);
   }
-  
+
   void close() {
     _timer?.cancel();
   }
 
-  Future<Config> _fetchIfOlder(DateTime time, {bool preferCached = false}) async {
+  Future<Config> _fetchIfOlder(DateTime time,
+      {bool preferCached = false}) async {
     // Sync up with the cache and use it when it's not expired.
     if (_cachedEntry.isEmpty() || _cachedEntry.fetchTime.isAfter(time)) {
       final json = await _readCache();
@@ -101,7 +104,8 @@ class ConfigService with ConfigJsonParser, ContinuousFutureSynchronizer {
       // After the maxInitWaitTimeInSeconds timeout the client will be initialized and while
       // the config is not ready the default value will be returned.
       return await _fetchConfig().timeout(mode.maxInitWaitTime, onTimeout: () {
-        _logger.warning('Max init wait time for the very first fetch reached (${mode.maxInitWaitTime.inMilliseconds}ms). Returning cached config.');
+        _logger.warning(
+            'Max init wait time for the very first fetch reached (${mode.maxInitWaitTime.inMilliseconds}ms). Returning cached config.');
         _initialized = true;
         return _cachedEntry.config;
       });
