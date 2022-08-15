@@ -101,7 +101,7 @@ class ConfigService with ConfigJsonParser, ContinuousFutureSynchronizer {
       // After the maxInitWaitTimeInSeconds timeout the client will be initialized and while
       // the config is not ready the default value will be returned.
       return await _fetchConfig().timeout(mode.maxInitWaitTime, onTimeout: () {
-        _logger.warning('Max init wait time for the very first fetch reached (${mode.maxInitWaitTime.inMilliseconds}ms). Reading cache.');
+        _logger.warning('Max init wait time for the very first fetch reached (${mode.maxInitWaitTime.inMilliseconds}ms). Returning cached config.');
         _initialized = true;
         return _cachedEntry.config;
       });

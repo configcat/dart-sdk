@@ -38,7 +38,7 @@ void main() {
       expect(response.entry.config.preferences!.baseUrl,
           equals(ConfigFetcher.globalBaseUrl));
       expect(response.entry.config.preferences!.redirect, equals(0));
-      expect(interceptor.requests[path], 1);
+      expect(interceptor.requestCountForPath(path), 1);
 
       // Cleanup
       fetcher.close();
@@ -65,7 +65,7 @@ void main() {
       expect(response.entry.config.preferences!.baseUrl,
           equals(ConfigFetcher.globalBaseUrl));
       expect(response.entry.config.preferences!.redirect, equals(1));
-      expect(interceptor.requests[path], 1);
+      expect(interceptor.requestCountForPath(path), 1);
 
       // Cleanup
       fetcher.close();
@@ -92,7 +92,7 @@ void main() {
       expect(response.entry.config.preferences!.baseUrl,
           equals(ConfigFetcher.globalBaseUrl));
       expect(response.entry.config.preferences!.redirect, equals(2));
-      expect(interceptor.requests[path], 1);
+      expect(interceptor.requestCountForPath(path), 1);
 
       // Cleanup
       fetcher.close();
@@ -126,8 +126,8 @@ void main() {
       expect(response.entry.config.preferences!.baseUrl,
           equals(ConfigFetcher.euOnlyBaseUrl));
       expect(response.entry.config.preferences!.redirect, equals(0));
-      expect(interceptor.requests[firstPath], 1);
-      expect(interceptor.requests[secondPath], 1);
+      expect(interceptor.requestCountForPath(firstPath), 1);
+      expect(interceptor.requestCountForPath(secondPath), 1);
 
       // Cleanup
       fetcher.close();
@@ -161,8 +161,8 @@ void main() {
       expect(response.entry.config.preferences!.baseUrl,
           equals(ConfigFetcher.euOnlyBaseUrl));
       expect(response.entry.config.preferences!.redirect, equals(0));
-      expect(interceptor.requests[firstPath], 1);
-      expect(interceptor.requests[secondPath], 1);
+      expect(interceptor.requestCountForPath(firstPath), 1);
+      expect(interceptor.requestCountForPath(secondPath), 1);
 
       // Cleanup
       fetcher.close();
@@ -196,8 +196,8 @@ void main() {
       expect(response.entry.config.preferences!.baseUrl,
           equals(ConfigFetcher.euOnlyBaseUrl));
       expect(response.entry.config.preferences!.redirect, equals(1));
-      expect(interceptor.requests[firstPath], 2);
-      expect(interceptor.requests[secondPath], 1);
+      expect(interceptor.requestCountForPath(firstPath), 2);
+      expect(interceptor.requestCountForPath(secondPath), 1);
 
       // Cleanup
       fetcher.close();
@@ -231,8 +231,8 @@ void main() {
       // Assert
       expect(response.entry.config.preferences!.baseUrl, equals(customUrl));
       expect(response.entry.config.preferences!.redirect, equals(0));
-      expect(interceptor.requests[firstPath], null);
-      expect(interceptor.requests[secondPath], 1);
+      expect(interceptor.requestCountForPath(firstPath), null);
+      expect(interceptor.requestCountForPath(secondPath), 1);
 
       // Cleanup
       fetcher.close();
@@ -267,8 +267,8 @@ void main() {
       expect(response.entry.config.preferences!.baseUrl,
           equals(ConfigFetcher.globalBaseUrl));
       expect(response.entry.config.preferences!.redirect, equals(0));
-      expect(interceptor.requests[firstPath], 1);
-      expect(interceptor.requests[secondPath], 1);
+      expect(interceptor.requestCountForPath(firstPath), 1);
+      expect(interceptor.requestCountForPath(secondPath), 1);
 
       // Cleanup
       fetcher.close();
@@ -406,35 +406,4 @@ ConfigFetcher _createFetcher(
 
 Config _createTestConfig(String url, int redirectMode) {
   return Config(Preferences(url, redirectMode), {});
-}
-
-class RequestCounterInterceptor extends Interceptor {
-  final requests = <String, int>{};
-
-  RequestCounterInterceptor();
-
-  @override
-  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    final count = requests[options.path];
-    if (count != null) {
-      requests[options.path] = count + 1;
-    } else {
-      requests[options.path] = 1;
-    }
-    handler.next(options);
-  }
-
-  @override
-  void onError(DioError err, ErrorInterceptorHandler handler) {
-    handler.next(err);
-  }
-
-  @override
-  void onResponse(Response response, ResponseInterceptorHandler handler) {
-    handler.next(response);
-  }
-
-  void clear() {
-    requests.clear();
-  }
 }
