@@ -360,6 +360,7 @@ void main() {
       // Assert
       expect(settings2['key']?.value, 'test2');
       verify(cache.write(any, any)).called(2);
+      expect(interceptor.allRequestCount(), 2);
 
       // Cleanup
       fetcher.close();
@@ -410,6 +411,7 @@ void main() {
       expect(settings3['key']?.value, 'test2');
 
       verify(cache.write(any, any)).called(2);
+      expect(interceptor.allRequestCount(), 2);
 
       // Cleanup
       fetcher.close();
@@ -464,6 +466,7 @@ void main() {
       // Assert
       expect(settings2['key']?.value, 'test2');
       verify(cache.write(any, any)).called(2);
+      expect(interceptor.allRequestCount(), 2);
 
       // Cleanup
       fetcher.close();
