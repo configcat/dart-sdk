@@ -1,4 +1,5 @@
 import 'package:configcat_client/configcat_client.dart';
+import 'package:configcat_client/src/error_reporter.dart';
 import 'package:configcat_client/src/fetch/config_fetcher.dart';
 import 'package:configcat_client/src/fetch/entry.dart';
 import 'package:configcat_client/src/json/config.dart';
@@ -406,7 +407,10 @@ ConfigFetcher _createFetcher(
     String sdkKey = testSdkKey}) {
   final logger = ConfigCatLogger();
   return ConfigFetcher(
-      logger: logger, sdkKey: sdkKey, mode: 'm', options: options);
+      logger: logger,
+      sdkKey: sdkKey,
+      options: options,
+      errorReporter: ErrorReporter(logger, null));
 }
 
 Config _createTestConfig(String url, int redirectMode) {

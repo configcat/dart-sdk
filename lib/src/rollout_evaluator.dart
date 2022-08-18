@@ -3,9 +3,12 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:pub_semver/pub_semver.dart';
 
+import 'json/rollout_rule.dart';
+import 'json/percentage_rule.dart';
 import 'configcat_user.dart';
 import 'json/setting.dart';
 import 'log/configcat_logger.dart';
+import 'configcat_options.dart';
 
 class RolloutEvaluator {
   static const _comparatorTexts = [
@@ -30,13 +33,25 @@ class RolloutEvaluator {
   ];
 
   final ConfigCatLogger _logger;
+  final Hooks? _hooks;
 
-  RolloutEvaluator(this._logger);
+  RolloutEvaluator(this._logger, this._hooks);
 
   MapEntry<Value, String> evaluate<Value>(
       Setting setting, String key, ConfigCatUser? user) {
     final logEntries = _LogEntries();
     logEntries.add('Evaluating getValue($key)');
+
+    evalHook(
+        {RolloutRule? rolloutRule, RolloutPercentageItem? percentageItem}) {
+      _hooks?.onFlagEvaluated?.call(EvaluationContext(
+          key: key,
+          variationId: setting.variationId,
+          user: user,
+          value: setting.value,
+          rolloutRule: rolloutRule,
+          percentageRule: percentageItem));
+    }
 
     try {
       if (user == null) {
@@ -45,8 +60,8 @@ class RolloutEvaluator {
           _logger.warning(
               'UserObject missing! You should pass a UserObject to getValue(), in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/');
         }
-
         logEntries.add('Returning ${setting.value}');
+        evalHook();
         return MapEntry(setting.value, setting.variationId);
       }
 
@@ -80,6 +95,7 @@ class RolloutEvaluator {
                   comparator: comparator,
                   comparisonValue: comparisonValue,
                   value: returnValue));
+              evalHook(rolloutRule: rule);
               return MapEntry(returnValue, rule.variationId);
             }
             break;
@@ -94,6 +110,7 @@ class RolloutEvaluator {
                   comparator: comparator,
                   comparisonValue: comparisonValue,
                   value: returnValue));
+              evalHook(rolloutRule: rule);
               return MapEntry(returnValue, rule.variationId);
             }
             break;
@@ -106,6 +123,7 @@ class RolloutEvaluator {
                   comparator: comparator,
                   comparisonValue: comparisonValue,
                   value: returnValue));
+              evalHook(rolloutRule: rule);
               return MapEntry(returnValue, rule.variationId);
             }
             break;
@@ -118,6 +136,7 @@ class RolloutEvaluator {
                   comparator: comparator,
                   comparisonValue: comparisonValue,
                   value: returnValue));
+              evalHook(rolloutRule: rule);
               return MapEntry(returnValue, rule.variationId);
             }
             break;
@@ -144,6 +163,7 @@ class RolloutEvaluator {
                     comparator: comparator,
                     comparisonValue: comparisonValue,
                     value: returnValue));
+                evalHook(rolloutRule: rule);
                 return MapEntry(returnValue, rule.variationId);
               }
             } catch (e) {
@@ -176,6 +196,7 @@ class RolloutEvaluator {
                     comparator: comparator,
                     comparisonValue: comparisonValue,
                     value: returnValue));
+                evalHook(rolloutRule: rule);
                 return MapEntry(returnValue, rule.variationId);
               }
             } catch (e) {
@@ -211,6 +232,7 @@ class RolloutEvaluator {
                     comparator: comparator,
                     comparisonValue: comparisonValue,
                     value: returnValue));
+                evalHook(rolloutRule: rule);
                 return MapEntry(returnValue, rule.variationId);
               }
             } catch (e) {
@@ -239,6 +261,7 @@ class RolloutEvaluator {
                   comparator: comparator,
                   comparisonValue: comparisonValue,
                   value: returnValue));
+              evalHook(rolloutRule: rule);
               return MapEntry(returnValue, rule.variationId);
             }
             break;
@@ -257,6 +280,7 @@ class RolloutEvaluator {
                   comparator: comparator,
                   comparisonValue: comparisonValue,
                   value: returnValue));
+              evalHook(rolloutRule: rule);
               return MapEntry(returnValue, rule.variationId);
             }
             break;
@@ -280,12 +304,14 @@ class RolloutEvaluator {
           bucket += rule.percentage;
           if (scaled < bucket) {
             logEntries.add('Evaluating %% options. Returning ${rule.value}');
+            evalHook(percentageItem: rule);
             return MapEntry(rule.value as Value, rule.variationId);
           }
         }
       }
 
       logEntries.add('Returning ${setting.value}');
+      evalHook();
       return MapEntry(setting.value as Value, setting.variationId);
     } finally {
       _logger.info(logEntries);

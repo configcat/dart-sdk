@@ -1,4 +1,5 @@
 import 'package:configcat_client/configcat_client.dart';
+import 'package:configcat_client/src/error_reporter.dart';
 import 'package:configcat_client/src/fetch/config_fetcher.dart';
 import 'package:configcat_client/src/fetch/config_service.dart';
 import 'package:dio/dio.dart';
@@ -14,31 +15,39 @@ void main() {
   late RequestCounterInterceptor interceptor;
   final ConfigCatLogger logger = ConfigCatLogger();
   late MockConfigCatCache cache;
+  late ConfigFetcher fetcher;
+  late DioAdapter dioAdapter;
   setUp(() {
     interceptor = RequestCounterInterceptor();
     cache = MockConfigCatCache();
+    fetcher = ConfigFetcher(
+        logger: logger,
+        sdkKey: testSdkKey,
+        options: const ConfigCatOptions(),
+        errorReporter: ErrorReporter(logger, null));
+    fetcher.httpClient.interceptors.add(interceptor);
+    dioAdapter = DioAdapter(dio: fetcher.httpClient);
   });
   tearDown(() {
     interceptor.clear();
+    dioAdapter.close();
   });
+
+  ConfigService _createService(PollingMode pollingMode) {
+    return ConfigService(
+        sdkKey: testSdkKey,
+        options: ConfigCatOptions(mode: pollingMode),
+        fetcher: fetcher,
+        logger: logger,
+        cache: cache,
+        errorReporter: ErrorReporter(logger, null));
+  }
 
   group('Service Tests', () {
     test('ensure only one fetch runs at a time', () async {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
-      final fetcher = ConfigFetcher(
-          logger: logger,
-          sdkKey: testSdkKey,
-          mode: 'm',
-          options: const ConfigCatOptions());
-      fetcher.httpClient.interceptors.add(interceptor);
-      final dioAdapter = DioAdapter(dio: fetcher.httpClient);
-      final service = ConfigService(
-          sdkKey: testSdkKey,
-          mode: PollingMode.manualPoll(),
-          fetcher: fetcher,
-          logger: logger,
-          cache: cache);
+      final service = _createService(PollingMode.manualPoll());
 
       dioAdapter.onGet(
           sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
@@ -56,6 +65,9 @@ void main() {
 
       // Assert
       expect(interceptor.allRequestCount(), 1);
+
+      // Cleanup
+      service.close();
     });
   });
 
@@ -63,19 +75,8 @@ void main() {
     test('refresh', () async {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
-      final fetcher = ConfigFetcher(
-          logger: logger,
-          sdkKey: testSdkKey,
-          mode: 'm',
-          options: const ConfigCatOptions());
-      fetcher.httpClient.interceptors.add(interceptor);
-      final dioAdapter = DioAdapter(dio: fetcher.httpClient);
-      final service = ConfigService(
-          sdkKey: testSdkKey,
-          mode: PollingMode.autoPoll(),
-          fetcher: fetcher,
-          logger: logger,
-          cache: cache);
+
+      final service = _createService(PollingMode.autoPoll());
 
       dioAdapter
         ..onGet(sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
@@ -108,8 +109,6 @@ void main() {
       expect(interceptor.allRequestCount(), 2);
 
       // Cleanup
-      fetcher.close();
-      dioAdapter.close();
       service.close();
     });
 
@@ -117,22 +116,8 @@ void main() {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
 
-      var onChanged = false;
-      final fetcher = ConfigFetcher(
-          logger: logger,
-          sdkKey: testSdkKey,
-          mode: 'm',
-          options: const ConfigCatOptions());
-      fetcher.httpClient.interceptors.add(interceptor);
-      final dioAdapter = DioAdapter(dio: fetcher.httpClient);
-      final service = ConfigService(
-          sdkKey: testSdkKey,
-          mode: PollingMode.autoPoll(
-              autoPollInterval: const Duration(milliseconds: 1000),
-              onConfigChanged: () => onChanged = true),
-          fetcher: fetcher,
-          logger: logger,
-          cache: cache);
+      final service = _createService(PollingMode.autoPoll(
+          autoPollInterval: const Duration(milliseconds: 1000)));
       dioAdapter
         ..onGet(sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
             (server) {
@@ -164,12 +149,9 @@ void main() {
       // Assert
       expect(settings2['key']?.value, 'test2');
       verify(cache.write(any, any)).called(greaterThanOrEqualTo(2));
-      expect(onChanged, isTrue);
       expect(interceptor.allRequestCount(), 3);
 
       // Cleanup
-      fetcher.close();
-      dioAdapter.close();
       service.close();
     });
 
@@ -177,19 +159,7 @@ void main() {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
 
-      final fetcher = ConfigFetcher(
-          logger: logger,
-          sdkKey: testSdkKey,
-          mode: 'm',
-          options: const ConfigCatOptions());
-      fetcher.httpClient.interceptors.add(interceptor);
-      final dioAdapter = DioAdapter(dio: fetcher.httpClient);
-      final service = ConfigService(
-          sdkKey: testSdkKey,
-          mode: PollingMode.autoPoll(),
-          fetcher: fetcher,
-          logger: logger,
-          cache: cache);
+      final service = _createService(PollingMode.autoPoll());
       dioAdapter.onGet(
           sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
           (server) {
@@ -205,8 +175,6 @@ void main() {
       expect(interceptor.allRequestCount(), 1);
 
       // Cleanup
-      fetcher.close();
-      dioAdapter.close();
       service.close();
     });
 
@@ -214,22 +182,8 @@ void main() {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
 
-      var onChanged = false;
-      final fetcher = ConfigFetcher(
-          logger: logger,
-          sdkKey: testSdkKey,
-          mode: 'm',
-          options: const ConfigCatOptions());
-      fetcher.httpClient.interceptors.add(interceptor);
-      final dioAdapter = DioAdapter(dio: fetcher.httpClient);
-      final service = ConfigService(
-          sdkKey: testSdkKey,
-          mode: PollingMode.autoPoll(
-              autoPollInterval: Duration(milliseconds: 100),
-              onConfigChanged: () => onChanged = true),
-          fetcher: fetcher,
-          logger: logger,
-          cache: cache);
+      final service = _createService(PollingMode.autoPoll(
+          autoPollInterval: const Duration(milliseconds: 100)));
       dioAdapter
         ..onGet(sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
             (server) {
@@ -257,11 +211,8 @@ void main() {
       // Assert
       expect(settings2['key']?.value, 'test1');
       verify(cache.write(any, any)).called(greaterThanOrEqualTo(1));
-      expect(onChanged, isTrue);
 
       // Cleanup
-      fetcher.close();
-      dioAdapter.close();
       service.close();
     });
 
@@ -269,20 +220,8 @@ void main() {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
 
-      final fetcher = ConfigFetcher(
-          logger: logger,
-          sdkKey: testSdkKey,
-          mode: 'm',
-          options: const ConfigCatOptions());
-      fetcher.httpClient.interceptors.add(interceptor);
-      final dioAdapter = DioAdapter(dio: fetcher.httpClient);
-      final service = ConfigService(
-          sdkKey: testSdkKey,
-          mode: PollingMode.autoPoll(
-              maxInitWaitTime: const Duration(milliseconds: 100)),
-          fetcher: fetcher,
-          logger: logger,
-          cache: cache);
+      final service = _createService(PollingMode.autoPoll(
+          maxInitWaitTime: const Duration(milliseconds: 100)));
 
       dioAdapter.onGet(
           sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
@@ -308,8 +247,6 @@ void main() {
       expect(interceptor.allRequestCount(), 1);
 
       // Cleanup
-      fetcher.close();
-      dioAdapter.close();
       service.close();
     });
   });
@@ -318,20 +255,8 @@ void main() {
     test('refresh', () async {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
-      final fetcher = ConfigFetcher(
-          logger: logger,
-          sdkKey: testSdkKey,
-          mode: 'm',
-          options: const ConfigCatOptions());
-      fetcher.httpClient.interceptors.add(interceptor);
-      final dioAdapter = DioAdapter(dio: fetcher.httpClient);
-      final service = ConfigService(
-          sdkKey: testSdkKey,
-          mode: PollingMode.lazyLoad(
-              cacheRefreshInterval: const Duration(milliseconds: 100)),
-          fetcher: fetcher,
-          logger: logger,
-          cache: cache);
+      final service = _createService(PollingMode.lazyLoad(
+          cacheRefreshInterval: const Duration(milliseconds: 100)));
       dioAdapter
         ..onGet(sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
             (server) {
@@ -363,28 +288,14 @@ void main() {
       expect(interceptor.allRequestCount(), 2);
 
       // Cleanup
-      fetcher.close();
-      dioAdapter.close();
       service.close();
     });
 
     test('reload', () async {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
-      final fetcher = ConfigFetcher(
-          logger: logger,
-          sdkKey: testSdkKey,
-          mode: 'm',
-          options: const ConfigCatOptions());
-      fetcher.httpClient.interceptors.add(interceptor);
-      final dioAdapter = DioAdapter(dio: fetcher.httpClient);
-      final service = ConfigService(
-          sdkKey: testSdkKey,
-          mode: PollingMode.lazyLoad(
-              cacheRefreshInterval: const Duration(milliseconds: 100)),
-          fetcher: fetcher,
-          logger: logger,
-          cache: cache);
+      final service = _createService(PollingMode.lazyLoad(
+          cacheRefreshInterval: const Duration(milliseconds: 100)));
 
       dioAdapter
         ..onGet(sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
@@ -414,8 +325,6 @@ void main() {
       expect(interceptor.allRequestCount(), 2);
 
       // Cleanup
-      fetcher.close();
-      dioAdapter.close();
       service.close();
     });
   });
@@ -424,20 +333,7 @@ void main() {
     test('refresh', () async {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
-      final fetcher = ConfigFetcher(
-          logger: logger,
-          sdkKey: testSdkKey,
-          mode: 'm',
-          options: const ConfigCatOptions());
-      fetcher.httpClient.interceptors.add(interceptor);
-      final dioAdapter = DioAdapter(dio: fetcher.httpClient);
-      final service = ConfigService(
-        sdkKey: testSdkKey,
-        mode: PollingMode.manualPoll(),
-        fetcher: fetcher,
-        logger: logger,
-        cache: cache,
-      );
+      final service = _createService(PollingMode.manualPoll());
       dioAdapter
         ..onGet(sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
             (server) {
@@ -469,25 +365,14 @@ void main() {
       expect(interceptor.allRequestCount(), 2);
 
       // Cleanup
-      fetcher.close();
-      dioAdapter.close();
       service.close();
     });
 
     test('get without refresh', () async {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
-      final fetcher = ConfigFetcher(
-          logger: logger,
-          sdkKey: testSdkKey,
-          mode: 'm',
-          options: const ConfigCatOptions());
-      final service = ConfigService(
-          sdkKey: testSdkKey,
-          mode: PollingMode.manualPoll(),
-          fetcher: fetcher,
-          logger: logger,
-          cache: cache);
+
+      final service = _createService(PollingMode.manualPoll());
 
       // Act
       await service.getSettings();
@@ -497,7 +382,6 @@ void main() {
       expect(interceptor.allRequestCount(), 0);
 
       // Cleanup
-      fetcher.close();
       service.close();
     });
   });

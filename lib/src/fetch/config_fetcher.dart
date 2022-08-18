@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:dio/dio.dart';
 
+import '../error_reporter.dart';
 import 'entry.dart';
 import '../data_governance.dart';
 import '../configcat_options.dart';
@@ -65,7 +66,8 @@ class ConfigFetcher with ConfigJsonParser implements Fetcher {
   static const _successStatusCodes = [200, 201, 202, 203, 204];
 
   late final ConfigCatLogger _logger;
-  late final String _mode;
+  late final ConfigCatOptions _options;
+  late final ErrorReporter _errorReporter;
   late final String _sdkKey;
 
   late final bool _urlIsCustom;
@@ -75,11 +77,12 @@ class ConfigFetcher with ConfigJsonParser implements Fetcher {
   ConfigFetcher(
       {required ConfigCatLogger logger,
       required String sdkKey,
-      required String mode,
-      required ConfigCatOptions options}) {
+      required ConfigCatOptions options,
+      required ErrorReporter errorReporter}) {
     _logger = logger;
-    _mode = mode;
     _sdkKey = sdkKey;
+    _options = options;
+    _errorReporter = errorReporter;
 
     _urlIsCustom = options.baseUrl.isNotEmpty;
     _url = _urlIsCustom
@@ -157,7 +160,8 @@ class ConfigFetcher with ConfigJsonParser implements Fetcher {
 
   Future<FetchResponse> _doFetch(String eTag) async {
     Map<String, String> headers = {
-      _userAgentHeaderName: 'ConfigCat-Dart/$_mode-$version',
+      _userAgentHeaderName:
+          'ConfigCat-Dart/${_options.mode.getPollingIdentifier()}-$version',
       if (eTag.isNotEmpty) _ifNoneMatchHeaderName: eTag
     };
 
@@ -166,15 +170,14 @@ class ConfigFetcher with ConfigJsonParser implements Fetcher {
         '$_url/configuration-files/$_sdkKey/$configJsonName',
         options: Options(headers: headers),
       );
-
       if (_successStatusCodes.contains(response.statusCode)) {
         final eTag = response.headers.value(_eTagHeaderName) ?? '';
         final json = response.data.toString();
-        final config = parseConfigFromJson(response.data.toString(), _logger);
+        final config =
+            parseConfigFromJson(response.data.toString(), _errorReporter);
         if (config == Config.empty) {
           return FetchResponse.failure();
         }
-
         _logger.debug('Fetch was successful: new config fetched.');
         return FetchResponse.success(
             Entry(config, json, eTag, DateTime.now().toUtc()));
@@ -182,12 +185,12 @@ class ConfigFetcher with ConfigJsonParser implements Fetcher {
         _logger.debug('Fetch was successful: config not modified.');
         return FetchResponse.notModified();
       } else {
-        _logger.error(
+        _errorReporter.error(
             'Double-check your API KEY at https://app.configcat.com/apikey. Received unexpected response: ${response.statusCode}');
         return FetchResponse.failure();
       }
     } catch (e, s) {
-      _logger.error('Exception occurred during fetching.', e, s);
+      _errorReporter.error('Exception occurred during fetching.', e, s);
       return FetchResponse.failure();
     }
   }

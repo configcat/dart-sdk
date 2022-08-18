@@ -1,6 +1,6 @@
-import 'package:configcat_client/src/fetch/config_service.dart';
 import 'package:dio/dio.dart';
 
+import 'error_reporter.dart';
 import 'fetch/config_fetcher.dart';
 import 'configcat_options.dart';
 import 'configcat_user.dart';
@@ -8,9 +8,9 @@ import 'override/behaviour.dart';
 import 'override/flag_overrides.dart';
 import 'rollout_evaluator.dart';
 import 'configcat_cache.dart';
-import 'polling_mode.dart';
 import 'json/setting.dart';
 import 'log/configcat_logger.dart';
+import 'fetch/config_service.dart';
 
 /// ConfigCat SDK client.
 class ConfigCatClient {
@@ -19,6 +19,8 @@ class ConfigCatClient {
   late final RolloutEvaluator _rolloutEvaluator;
   late final Fetcher _fetcher;
   late final FlagOverrides? _override;
+  late final ConfigCatUser? _defaultUser;
+  late final ErrorReporter _errorReporter;
   static final Map<String, ConfigCatClient> _instanceRepository = {};
 
   /// Creates a new or gets an already existing [ConfigCatClient] for the given [sdkKey].
@@ -55,25 +57,27 @@ class ConfigCatClient {
   ConfigCatClient._(String sdkKey, ConfigCatOptions options) {
     _logger = options.logger ?? ConfigCatLogger();
     _override = options.override;
+    _defaultUser = options.defaultUser;
 
     final cache = options.cache ?? NullConfigCatCache();
-    final mode = options.mode ?? PollingMode.autoPoll();
 
-    _rolloutEvaluator = RolloutEvaluator(_logger);
+    _rolloutEvaluator = RolloutEvaluator(_logger, options.hooks);
+    _errorReporter = ErrorReporter(_logger, options.hooks);
     _fetcher = ConfigFetcher(
         logger: _logger,
         sdkKey: sdkKey,
-        mode: mode.getPollingIdentifier(),
-        options: options);
+        options: options,
+        errorReporter: _errorReporter);
     _configService =
         _override != null && _override!.behaviour == OverrideBehaviour.localOnly
             ? null
             : ConfigService(
                 sdkKey: sdkKey,
-                mode: mode,
+                options: options,
                 fetcher: _fetcher,
                 logger: _logger,
-                cache: cache);
+                cache: cache,
+                errorReporter: _errorReporter);
   }
 
   /// Gets the value of a feature flag or setting as [T] identified by the given [key].
@@ -89,20 +93,20 @@ class ConfigCatClient {
     try {
       final settings = await _getSettings();
       if (settings.isEmpty) {
-        _logger.error(
+        _errorReporter.error(
             'Config JSON is not present. Returning defaultValue: $defaultValue.');
         return defaultValue;
       }
       final setting = settings[key];
       if (setting == null) {
-        _logger.error(
+        _errorReporter.error(
             'Value not found for key $key. Here are the available keys: ${settings.keys.join(', ')}');
         return defaultValue;
       }
 
-      return _rolloutEvaluator.evaluate(setting, key, user).key;
+      return _rolloutEvaluator.evaluate(setting, key, user ?? _defaultUser).key;
     } catch (e, s) {
-      _logger.error(
+      _errorReporter.error(
           'Evaluating getValue(\'$key\') failed. Returning defaultValue: $defaultValue.',
           e,
           s);
@@ -123,20 +127,22 @@ class ConfigCatClient {
     try {
       final settings = await _getSettings();
       if (settings.isEmpty) {
-        _logger.error(
+        _errorReporter.error(
             'Config JSON is not present. Returning defaultVariationId: $defaultVariationId.');
         return defaultVariationId;
       }
       final setting = settings[key];
       if (setting == null) {
-        _logger.error(
+        _errorReporter.error(
             'Variation ID not found for key $key. Here are the available keys: ${settings.keys.join(', ')}');
         return defaultVariationId;
       }
 
-      return _rolloutEvaluator.evaluate(setting, key, user).value;
+      return _rolloutEvaluator
+          .evaluate(setting, key, user ?? _defaultUser)
+          .value;
     } catch (e, s) {
-      _logger.error(
+      _errorReporter.error(
           'Evaluating getVariationId(\'$key\') failed. Returning defaultVariationId: $defaultVariationId.',
           e,
           s);
@@ -156,12 +162,13 @@ class ConfigCatClient {
 
       final result = List<String>.empty(growable: true);
       settings.forEach((key, value) {
-        result.add(_rolloutEvaluator.evaluate(value, key, user).value);
+        result.add(
+            _rolloutEvaluator.evaluate(value, key, user ?? _defaultUser).value);
       });
 
       return result;
     } catch (e, s) {
-      _logger.error(
+      _errorReporter.error(
           'An error occurred during getting all the variation ids. Returning empty list.',
           e,
           s);
@@ -179,7 +186,7 @@ class ConfigCatClient {
 
       return settings.keys.toList();
     } catch (e, s) {
-      _logger.error(
+      _errorReporter.error(
           'An error occurred during getting all the setting keys. Returning empty list.',
           e,
           s);
@@ -199,12 +206,13 @@ class ConfigCatClient {
 
       final result = <String, dynamic>{};
       settings.forEach((key, value) {
-        result[key] = _rolloutEvaluator.evaluate(value, key, user).key;
+        result[key] =
+            _rolloutEvaluator.evaluate(value, key, user ?? _defaultUser).key;
       });
 
       return result;
     } catch (e, s) {
-      _logger.error(
+      _errorReporter.error(
           'An error occurred during getting all values. Returning empty map.',
           e,
           s);
@@ -218,7 +226,7 @@ class ConfigCatClient {
     try {
       final settings = await _getSettings();
       if (settings.isEmpty) {
-        _logger.error('Config JSON is not present. Returning null.');
+        _errorReporter.error('Config JSON is not present. Returning null.');
         return null;
       }
 
@@ -242,7 +250,7 @@ class ConfigCatClient {
 
       return null;
     } catch (e, s) {
-      _logger.error(
+      _errorReporter.error(
           'Could not find the setting for the given variation ID: $variationId',
           e,
           s);
@@ -260,10 +268,18 @@ class ConfigCatClient {
     return _configService?.refresh() ?? Future.value(null);
   }
 
+  /// Configures the SDK to not initiate HTTP requests.
+  void setOffline() => _configService?.offline();
+
+  /// Configures the SDK to allow HTTP requests.
+  void setOnline() => _configService?.online();
+
+  /// True when the SDK is configured not to initiate HTTP requests, otherwise false.
+  bool isOffline() => _configService?.isOffline() ?? true;
+
   /// Closes the underlying resources.
   void _close() {
     _configService?.close();
-    _fetcher.close();
     _logger.close();
   }
 

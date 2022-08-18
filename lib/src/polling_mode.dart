@@ -1,9 +1,6 @@
-/// Represents the config changed callback.
-typedef ConfigChangedHandler = void Function();
-
 /// The base class of a polling mode configuration.
 abstract class PollingMode {
-  PollingMode._();
+  const PollingMode._();
 
   /// Creates a configured auto polling configuration.
   ///
@@ -12,10 +9,8 @@ abstract class PollingMode {
   /// [listener] sets a configuration changed listener.
   factory PollingMode.autoPoll(
       {autoPollInterval = const Duration(seconds: 60),
-      maxInitWaitTime = const Duration(seconds: 5),
-      onConfigChanged}) {
-    return AutoPollingMode._(
-        autoPollInterval, maxInitWaitTime, onConfigChanged);
+      maxInitWaitTime = const Duration(seconds: 5)}) {
+    return AutoPollingMode._(autoPollInterval, maxInitWaitTime);
   }
 
   /// Creates a configured lazy loading polling configuration.
@@ -34,16 +29,18 @@ abstract class PollingMode {
   /// Gets the current polling mode's identifier.
   /// Used for analytical purposes in HTTP User-Agent headers.
   String getPollingIdentifier();
+
+  /// The default polling mode used by [ConfigCatClient] when no mode is set.
+  static const defaultMode =
+      AutoPollingMode._(Duration(seconds: 60), Duration(seconds: 5));
 }
 
 /// Represents the auto polling mode's configuration.
 class AutoPollingMode extends PollingMode {
   final Duration autoPollInterval;
   final Duration maxInitWaitTime;
-  final ConfigChangedHandler? onConfigChanged;
 
-  AutoPollingMode._(
-      this.autoPollInterval, this.maxInitWaitTime, this.onConfigChanged)
+  const AutoPollingMode._(this.autoPollInterval, this.maxInitWaitTime)
       : super._();
 
   @override
@@ -54,7 +51,7 @@ class AutoPollingMode extends PollingMode {
 
 /// Represents the manual polling mode's configuration.
 class ManualPollingMode extends PollingMode {
-  ManualPollingMode._() : super._();
+  const ManualPollingMode._() : super._();
 
   @override
   String getPollingIdentifier() {
@@ -66,7 +63,7 @@ class ManualPollingMode extends PollingMode {
 class LazyLoadingMode extends PollingMode {
   final Duration cacheRefreshInterval;
 
-  LazyLoadingMode._(this.cacheRefreshInterval) : super._();
+  const LazyLoadingMode._(this.cacheRefreshInterval) : super._();
 
   @override
   String getPollingIdentifier() {

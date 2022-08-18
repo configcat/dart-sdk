@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'json/config.dart';
-import 'log/configcat_logger.dart';
+import 'error_reporter.dart';
 
 /// This mixin can be used to ensure that an asynchronous operation couldn't be
 /// initiated multiple times simultaneously. Each caller will wait for the
@@ -38,12 +38,12 @@ mixin ContinuousFutureSynchronizer<T> {
 /// This mixin is used to deserialize [Config] from JSON.
 mixin ConfigJsonParser {
   /// Parse [Config] from JSON.
-  Config parseConfigFromJson(String json, ConfigCatLogger logger) {
+  Config parseConfigFromJson(String json, ErrorReporter errorReporter) {
     try {
       final decoded = jsonDecode(json);
       return Config.fromJson(decoded);
     } catch (e, s) {
-      logger.error('Config JSON parsing failed.', e, s);
+      errorReporter.error('Config JSON parsing failed.', e, s);
       return Config.empty;
     }
   }
