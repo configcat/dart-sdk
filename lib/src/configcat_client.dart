@@ -19,9 +19,9 @@ class ConfigCatClient {
   late final RolloutEvaluator _rolloutEvaluator;
   late final Fetcher _fetcher;
   late final FlagOverrides? _override;
-  late final ConfigCatUser? _defaultUser;
   late final ErrorReporter _errorReporter;
   late final Hooks _hooks;
+  late ConfigCatUser? _defaultUser;
   static final Map<String, ConfigCatClient> _instanceRepository = {};
 
   /// Creates a new or gets an already existing [ConfigCatClient] for the given [sdkKey].
@@ -275,6 +275,9 @@ class ConfigCatClient {
   Future<void> forceRefresh() {
     return _configService?.refresh() ?? Future.value(null);
   }
+
+  /// Sets the default user.
+  void setDefaultUser(ConfigCatUser user) => _defaultUser = user;
 
   /// Configures the SDK to not initiate HTTP requests.
   void setOffline() => _configService?.offline();
