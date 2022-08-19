@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import 'configcat_cache.dart';
 import 'data_governance.dart';
+import 'json/setting.dart';
 import 'log/configcat_logger.dart';
 import 'polling_mode.dart';
 import 'configcat_client.dart';
@@ -17,25 +18,70 @@ class EvaluationContext {
   final String variationId;
   final ConfigCatUser? user;
   final dynamic value;
-  final RolloutRule? rolloutRule;
-  final RolloutPercentageItem? percentageRule;
+  final RolloutRule? flagEvaluationRule;
+  final RolloutPercentageItem? flagEvaluationPercentageRule;
 
   EvaluationContext(
       {required this.key,
       required this.variationId,
       required this.user,
       required this.value,
-      required this.rolloutRule,
-      required this.percentageRule});
+      required this.flagEvaluationRule,
+      required this.flagEvaluationPercentageRule});
 }
 
 /// Events fired by [ConfigCatClient].
 class Hooks {
-  final Function(String, [dynamic error, StackTrace? stackTrace])? onError;
-  final Function()? onConfigChanged;
-  final Function(EvaluationContext)? onFlagEvaluated;
+  final List<Function(String, [dynamic error, StackTrace? stackTrace])>
+      _onError = [];
+  final List<Function(Map<String, Setting>)> _onConfigChanged = [];
+  final List<Function(EvaluationContext)> _onFlagEvaluated = [];
 
-  Hooks({this.onError, this.onConfigChanged, this.onFlagEvaluated});
+  Hooks(
+      {Function(String, [dynamic error, StackTrace? stackTrace])? onError,
+      Function(Map<String, Setting>)? onConfigChanged,
+      Function(EvaluationContext)? onFlagEvaluated}) {
+    if (onError != null) _onError.add(onError);
+    if (onConfigChanged != null) _onConfigChanged.add(onConfigChanged);
+    if (onFlagEvaluated != null) _onFlagEvaluated.add(onFlagEvaluated);
+  }
+
+  void addOnError(
+      Function(String, [dynamic error, StackTrace? stackTrace]) onError) {
+    _onError.add(onError);
+  }
+
+  void addOnConfigChanged(Function(Map<String, Setting>) onConfigChanged) {
+    _onConfigChanged.add(onConfigChanged);
+  }
+
+  void addOnFlagEvaluated(Function(EvaluationContext) onFlagEvaluated) {
+    _onFlagEvaluated.add(onFlagEvaluated);
+  }
+
+  void invokeError(String message, [dynamic error, StackTrace? stackTrace]) {
+    for (final hook in _onError) {
+      hook(message, error, stackTrace);
+    }
+  }
+
+  void invokeConfigChanged(Map<String, Setting> entries) {
+    for (final hook in _onConfigChanged) {
+      hook(entries);
+    }
+  }
+
+  void invokeFlagEvaluated(EvaluationContext context) {
+    for (final hook in _onFlagEvaluated) {
+      hook(context);
+    }
+  }
+
+  void clear() {
+    _onError.clear();
+    _onConfigChanged.clear();
+    _onFlagEvaluated.clear();
+  }
 }
 
 /// Configuration options for [ConfigCatClient].

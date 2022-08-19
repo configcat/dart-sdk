@@ -33,7 +33,7 @@ class RolloutEvaluator {
   ];
 
   final ConfigCatLogger _logger;
-  final Hooks? _hooks;
+  final Hooks _hooks;
 
   RolloutEvaluator(this._logger, this._hooks);
 
@@ -44,13 +44,13 @@ class RolloutEvaluator {
 
     evalHook(
         {RolloutRule? rolloutRule, RolloutPercentageItem? percentageItem}) {
-      _hooks?.onFlagEvaluated?.call(EvaluationContext(
+      _hooks.invokeFlagEvaluated(EvaluationContext(
           key: key,
           variationId: setting.variationId,
           user: user,
           value: setting.value,
-          rolloutRule: rolloutRule,
-          percentageRule: percentageItem));
+          flagEvaluationRule: rolloutRule,
+          flagEvaluationPercentageRule: percentageItem));
     }
 
     try {

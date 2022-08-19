@@ -410,7 +410,7 @@ ConfigFetcher _createFetcher(
       logger: logger,
       sdkKey: sdkKey,
       options: options,
-      errorReporter: ErrorReporter(logger, null));
+      errorReporter: ErrorReporter(logger, Hooks()));
 }
 
 Config _createTestConfig(String url, int redirectMode) {

@@ -17,7 +17,8 @@ import '../error_reporter.dart';
 
 class ConfigService with ConfigJsonParser, ContinuousFutureSynchronizer {
   late final String _cacheKey;
-  late final ConfigCatOptions _options;
+  late final PollingMode _mode;
+  late final Hooks _hooks;
   late final Fetcher _fetcher;
   late final ConfigCatLogger _logger;
   late final ConfigCatCache _cache;
@@ -29,20 +30,21 @@ class ConfigService with ConfigJsonParser, ContinuousFutureSynchronizer {
 
   ConfigService(
       {required String sdkKey,
-      required ConfigCatOptions options,
+      required PollingMode mode,
+      required Hooks hooks,
       required Fetcher fetcher,
       required ConfigCatLogger logger,
       required ConfigCatCache cache,
       required ErrorReporter errorReporter}) {
     _cacheKey =
         sha1.convert(utf8.encode('dart_${configJsonName}_$sdkKey')).toString();
-    _options = options;
+    _mode = mode;
+    _hooks = hooks;
     _fetcher = fetcher;
     _logger = logger;
     _cache = cache;
     _errorReporter = errorReporter;
 
-    final mode = options.mode;
     if (mode is AutoPollingMode) {
       _startPoll(mode);
     } else {
@@ -52,7 +54,7 @@ class ConfigService with ConfigJsonParser, ContinuousFutureSynchronizer {
   }
 
   Future<Map<String, Setting>> getSettings() async {
-    final mode = _options.mode;
+    final mode = _mode;
     if (mode is LazyLoadingMode) {
       final config = await _fetchIfOlder(
           DateTime.now().toUtc().subtract(mode.cacheRefreshInterval));
@@ -70,7 +72,7 @@ class ConfigService with ConfigJsonParser, ContinuousFutureSynchronizer {
   void online() {
     if (!_offline) return;
     _offline = false;
-    final mode = _options.mode;
+    final mode = _mode;
     if (mode is AutoPollingMode) {
       _startPoll(mode);
     }
@@ -98,7 +100,7 @@ class ConfigService with ConfigJsonParser, ContinuousFutureSynchronizer {
         final config = parseConfigFromJson(json, _errorReporter);
         if (!config.isEmpty()) {
           _cachedEntry = Entry(config, json, '', distantPast);
-          _options.hooks?.onConfigChanged?.call();
+          _hooks.invokeConfigChanged(config.entries);
         }
       }
       if (_cachedEntry.fetchTime.isAfter(time)) {
@@ -118,7 +120,7 @@ class ConfigService with ConfigJsonParser, ContinuousFutureSynchronizer {
   }
 
   Future<Config> _fetch() async {
-    final mode = _options.mode;
+    final mode = _mode;
     if (mode is AutoPollingMode && !_initialized) {
       // Waiting for the client initialization.
       // After the maxInitWaitTimeInSeconds timeout the client will be initialized and while
@@ -139,7 +141,7 @@ class ConfigService with ConfigJsonParser, ContinuousFutureSynchronizer {
     if (response.isFetched && response.entry.json != _cachedEntry.json) {
       _cachedEntry = response.entry;
       await _writeCache(response.entry.json);
-      _options.hooks?.onConfigChanged?.call();
+      _hooks.invokeConfigChanged(response.entry.config.entries);
     } else if (response.isNotModified) {
       _cachedEntry = _cachedEntry.withTime(DateTime.now().toUtc());
     }

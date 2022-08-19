@@ -21,6 +21,7 @@ class ConfigCatClient {
   late final FlagOverrides? _override;
   late final ConfigCatUser? _defaultUser;
   late final ErrorReporter _errorReporter;
+  late final Hooks _hooks;
   static final Map<String, ConfigCatClient> _instanceRepository = {};
 
   /// Creates a new or gets an already existing [ConfigCatClient] for the given [sdkKey].
@@ -58,11 +59,12 @@ class ConfigCatClient {
     _logger = options.logger ?? ConfigCatLogger();
     _override = options.override;
     _defaultUser = options.defaultUser;
+    _hooks = options.hooks ?? Hooks();
 
     final cache = options.cache ?? NullConfigCatCache();
 
-    _rolloutEvaluator = RolloutEvaluator(_logger, options.hooks);
-    _errorReporter = ErrorReporter(_logger, options.hooks);
+    _rolloutEvaluator = RolloutEvaluator(_logger, _hooks);
+    _errorReporter = ErrorReporter(_logger, _hooks);
     _fetcher = ConfigFetcher(
         logger: _logger,
         sdkKey: sdkKey,
@@ -73,7 +75,8 @@ class ConfigCatClient {
             ? null
             : ConfigService(
                 sdkKey: sdkKey,
-                options: options,
+                mode: options.mode,
+                hooks: _hooks,
                 fetcher: _fetcher,
                 logger: _logger,
                 cache: cache,
@@ -263,6 +266,11 @@ class ConfigCatClient {
     return _fetcher.httpClient;
   }
 
+  /// Gets the [Hooks] object for subscribing events.
+  Hooks get hooks {
+    return _hooks;
+  }
+
   /// Initiates a force refresh on the cached configuration.
   Future<void> forceRefresh() {
     return _configService?.refresh() ?? Future.value(null);
@@ -281,6 +289,7 @@ class ConfigCatClient {
   void _close() {
     _configService?.close();
     _logger.close();
+    _hooks.clear();
   }
 
   Future<Map<String, Setting>> _getSettings() async {

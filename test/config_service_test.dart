@@ -24,7 +24,7 @@ void main() {
         logger: logger,
         sdkKey: testSdkKey,
         options: const ConfigCatOptions(),
-        errorReporter: ErrorReporter(logger, null));
+        errorReporter: ErrorReporter(logger, Hooks()));
     fetcher.httpClient.interceptors.add(interceptor);
     dioAdapter = DioAdapter(dio: fetcher.httpClient);
   });
@@ -36,11 +36,12 @@ void main() {
   ConfigService _createService(PollingMode pollingMode) {
     return ConfigService(
         sdkKey: testSdkKey,
-        options: ConfigCatOptions(mode: pollingMode),
+        mode: pollingMode,
+        hooks: Hooks(),
         fetcher: fetcher,
         logger: logger,
         cache: cache,
-        errorReporter: ErrorReporter(logger, null));
+        errorReporter: ErrorReporter(logger, Hooks()));
   }
 
   group('Service Tests', () {
