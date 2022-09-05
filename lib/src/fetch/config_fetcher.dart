@@ -1,8 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:dio/dio.dart';
 
 import '../error_reporter.dart';
-import 'entry.dart';
+import '../json/entry.dart';
 import '../data_governance.dart';
 import '../configcat_options.dart';
 import '../mixins.dart';
@@ -172,15 +173,11 @@ class ConfigFetcher with ConfigJsonParser implements Fetcher {
       );
       if (_successStatusCodes.contains(response.statusCode)) {
         final eTag = response.headers.value(_eTagHeaderName) ?? '';
-        final json = response.data.toString();
-        final config =
-            parseConfigFromJson(response.data.toString(), _errorReporter);
-        if (config == Config.empty) {
-          return FetchResponse.failure();
-        }
+        final config = _parseConfigFromJson(response.data.toString());
+        if (config == Config.empty) return FetchResponse.failure();
         _logger.debug('Fetch was successful: new config fetched.');
         return FetchResponse.success(
-            Entry(config, json, eTag, DateTime.now().toUtc()));
+            Entry(config, eTag, DateTime.now().toUtc()));
       } else if (response.statusCode == 304) {
         _logger.debug('Fetch was successful: config not modified.');
         return FetchResponse.notModified();
@@ -192,6 +189,16 @@ class ConfigFetcher with ConfigJsonParser implements Fetcher {
     } catch (e, s) {
       _errorReporter.error('Exception occurred during fetching.', e, s);
       return FetchResponse.failure();
+    }
+  }
+
+  Config _parseConfigFromJson(String json) {
+    try {
+      final decoded = jsonDecode(json);
+      return Config.fromJson(decoded);
+    } catch (e, s) {
+      _errorReporter.error('Config JSON parsing failed.', e, s);
+      return Config.empty;
     }
   }
 }

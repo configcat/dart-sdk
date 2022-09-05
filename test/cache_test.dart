@@ -40,7 +40,7 @@ void main() {
     // Arrange
     final cache = MockConfigCatCache();
     when(cache.read(any)).thenAnswer(
-        (_) => Future.value(jsonEncode(createTestConfig({'value': 'test'}))));
+        (_) => Future.value(jsonEncode(createTestEntry({'value': 'test'}))));
 
     final client = ConfigCatClient.get(
         sdkKey: testSdkKey, options: ConfigCatOptions(cache: cache));

@@ -208,7 +208,7 @@ void main() {
 
   test('returns cached value on failure', () async {
     // Arrange
-    final body = jsonEncode(createTestConfig({'value': 42}));
+    final body = jsonEncode(createTestEntry({'value': 42}));
     when(cache.read(any)).thenAnswer((_) => Future.value(body));
     dioAdapter.onGet(getPath(), (server) {
       server.reply(500, null);

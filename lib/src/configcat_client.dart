@@ -1,3 +1,4 @@
+import 'package:configcat_client/src/constants.dart';
 import 'package:dio/dio.dart';
 
 import 'error_reporter.dart';
@@ -33,13 +34,10 @@ class ConfigCatClient {
     }
 
     var client = _instanceRepository[sdkKey];
-
     if (client != null && options != ConfigCatOptions.defaultOptions) {
-      client._logger.warning("message");
+      client._logger.warning("Client for '$sdkKey' is already created and will be reused; options passed are being ignored.");
     }
-
     client ??= _instanceRepository[sdkKey] = ConfigCatClient._(sdkKey, options);
-
     return client;
   }
 
@@ -59,7 +57,7 @@ class ConfigCatClient {
 
     final cache = options.cache ?? NullConfigCatCache();
 
-    _rolloutEvaluator = RolloutEvaluator(_logger, _hooks);
+    _rolloutEvaluator = RolloutEvaluator(_logger);
     _errorReporter = ErrorReporter(_logger, _hooks);
     _fetcher = ConfigFetcher(
         logger: _logger,
@@ -90,26 +88,57 @@ class ConfigCatClient {
     ConfigCatUser? user,
   }) async {
     try {
-      final settings = await _getSettings();
-      if (settings.isEmpty) {
+      final result = await _getSettings();
+      if (result.isEmpty) {
         _errorReporter.error(
-            'Config JSON is not present. Returning defaultValue: $defaultValue.');
+            'Config JSON is not present. Returning defaultValue: \'$defaultValue\'.');
         return defaultValue;
       }
-      final setting = settings[key];
+      final setting = result.settings[key];
       if (setting == null) {
         _errorReporter.error(
-            'Value not found for key $key. Here are the available keys: ${settings.keys.join(', ')}');
+            'Value not found for key $key. Here are the available keys: ${result.settings.keys.join(', ')}');
         return defaultValue;
       }
 
-      return _rolloutEvaluator.evaluate(setting, key, user ?? _defaultUser).key;
+      return _evaluate(key, setting, user ?? _defaultUser, result.fetchTime).value;
     } catch (e, s) {
       _errorReporter.error(
-          'Evaluating getValue(\'$key\') failed. Returning defaultValue: $defaultValue.',
+          'Evaluating getValue(\'$key\') failed. Returning defaultValue: \'$defaultValue\'.',
           e,
           s);
       return defaultValue;
+    }
+  }
+
+  /// Gets the value and evaluation details of a feature flag or setting identified by the given [key].
+  ///
+  /// [key] is the identifier of the feature flag or setting.
+  /// [user] is the user object to identify the caller.
+  Future<EvaluationDetails<T>> getValueDetails<T>({
+    required String key,
+    required T defaultValue,
+    ConfigCatUser? user,
+  }) async {
+    try {
+      final result = await _getSettings();
+      if (result.isEmpty) {
+        final err = 'Config JSON is not present. Returning defaultValue: \'$defaultValue\'.';
+        _errorReporter.error(err);
+        return EvaluationDetails.makeError(key, defaultValue, err);
+      }
+      final setting = result.settings[key];
+      if (setting == null) {
+        final err = 'Value not found for key $key. Here are the available keys: ${result.settings.keys.join(', ')}';
+        _errorReporter.error(err);
+        return EvaluationDetails.makeError(key, defaultValue, err);
+      }
+
+      return _evaluate(key, setting, user ?? _defaultUser, result.fetchTime).value;
+    } catch (e, s) {
+      final err = 'Evaluating getValue(\'$key\') failed. Returning defaultValue: \'$defaultValue\'.';
+      _errorReporter.error(err, e, s);
+      return EvaluationDetails.makeError(key, defaultValue, err);
     }
   }
 
@@ -124,25 +153,24 @@ class ConfigCatClient {
     ConfigCatUser? user,
   }) async {
     try {
-      final settings = await _getSettings();
-      if (settings.isEmpty) {
+      final result = await _getSettings();
+      if (result.isEmpty) {
         _errorReporter.error(
-            'Config JSON is not present. Returning defaultVariationId: $defaultVariationId.');
+            'Config JSON is not present. Returning defaultVariationId: \'$defaultVariationId\'.');
         return defaultVariationId;
       }
-      final setting = settings[key];
+      final setting = result.settings[key];
       if (setting == null) {
         _errorReporter.error(
-            'Variation ID not found for key $key. Here are the available keys: ${settings.keys.join(', ')}');
+            'Variation ID not found for key $key. Here are the available keys: ${result.settings.keys.join(', ')}');
         return defaultVariationId;
       }
 
-      return _rolloutEvaluator
-          .evaluate(setting, key, user ?? _defaultUser)
-          .value;
+      return _evaluate(key, setting, user ?? _defaultUser, result.fetchTime)
+          .variationId;
     } catch (e, s) {
       _errorReporter.error(
-          'Evaluating getVariationId(\'$key\') failed. Returning defaultVariationId: $defaultVariationId.',
+          'Evaluating getVariationId(\'$key\') failed. Returning defaultVariationId: \'$defaultVariationId\'.',
           e,
           s);
       return defaultVariationId;
@@ -154,15 +182,15 @@ class ConfigCatClient {
   /// [user] is the user object to identify the caller.
   Future<List<String>> getAllVariationIds({ConfigCatUser? user}) async {
     try {
-      final settings = await _getSettings();
-      if (settings.isEmpty) {
+      final settingsResult = await _getSettings();
+      if (settingsResult.isEmpty) {
         return [];
       }
 
       final result = List<String>.empty(growable: true);
-      settings.forEach((key, value) {
+      settingsResult.settings.forEach((key, value) {
         result.add(
-            _rolloutEvaluator.evaluate(value, key, user ?? _defaultUser).value);
+            _evaluate(key, value, user ?? _defaultUser, settingsResult.fetchTime).variationId);
       });
 
       return result;
@@ -178,12 +206,12 @@ class ConfigCatClient {
   /// Gets a collection of all setting keys.
   Future<List<String>> getAllKeys() async {
     try {
-      final settings = await _getSettings();
-      if (settings.isEmpty) {
+      final result = await _getSettings();
+      if (result.isEmpty) {
         return [];
       }
 
-      return settings.keys.toList();
+      return result.settings.keys.toList();
     } catch (e, s) {
       _errorReporter.error(
           'An error occurred during getting all the setting keys. Returning empty list.',
@@ -198,15 +226,15 @@ class ConfigCatClient {
   /// [user] is the user object to identify the caller.
   Future<Map<String, dynamic>> getAllValues({ConfigCatUser? user}) async {
     try {
-      final settings = await _getSettings();
-      if (settings.isEmpty) {
+      final settingsResult = await _getSettings();
+      if (settingsResult.isEmpty) {
         return {};
       }
 
       final result = <String, dynamic>{};
-      settings.forEach((key, value) {
+      settingsResult.settings.forEach((key, value) {
         result[key] =
-            _rolloutEvaluator.evaluate(value, key, user ?? _defaultUser).key;
+            _evaluate(key, value, user ?? _defaultUser, settingsResult.fetchTime).value;
       });
 
       return result;
@@ -223,13 +251,13 @@ class ConfigCatClient {
   Future<MapEntry<String, T>?> getKeyAndValue<T>(
       {required String variationId}) async {
     try {
-      final settings = await _getSettings();
-      if (settings.isEmpty) {
+      final result = await _getSettings();
+      if (result.isEmpty) {
         _errorReporter.error('Config JSON is not present. Returning null.');
         return null;
       }
 
-      for (final entry in settings.entries) {
+      for (final entry in result.settings.entries) {
         if (entry.value.variationId == variationId) {
           return MapEntry(entry.key, entry.value.value);
         }
@@ -250,7 +278,7 @@ class ConfigCatClient {
       return null;
     } catch (e, s) {
       _errorReporter.error(
-          'Could not find the setting for the given variation ID: $variationId',
+          'Could not find the setting for the given variation ID: \'$variationId\'',
           e,
           s);
       return null;
@@ -273,7 +301,10 @@ class ConfigCatClient {
   }
 
   /// Sets the default user.
-  void setDefaultUser(ConfigCatUser user) => _defaultUser = user;
+  void setDefaultUser(ConfigCatUser? user) => _defaultUser = user;
+
+  /// Sets the default user to null.
+  void clearDefaultUser() => _defaultUser = null;
 
   /// Configures the SDK to not initiate HTTP requests.
   void setOffline() => _configService?.offline();
@@ -296,23 +327,39 @@ class ConfigCatClient {
     _hooks.clear();
   }
 
-  Future<Map<String, Setting>> _getSettings() async {
+  Future<SettingResult> _getSettings() async {
     if (_override != null) {
       switch (_override!.behaviour) {
         case OverrideBehaviour.localOnly:
           final local = await _override!.dataSource.getOverrides();
-          return local;
+          return SettingResult(settings: local, fetchTime: distantPast);
         case OverrideBehaviour.localOverRemote:
-          final remote = await _configService?.getSettings() ?? {};
+          final remote = await _configService?.getSettings() ?? SettingResult.empty;
           final local = await _override!.dataSource.getOverrides();
-          return Map<String, Setting>.of(remote)..addAll(local);
+          return SettingResult(settings: Map<String, Setting>.of(remote.settings)..addAll(local), fetchTime: remote.fetchTime);
         case OverrideBehaviour.remoteOverLocal:
-          final remote = await _configService?.getSettings() ?? {};
+          final remote = await _configService?.getSettings() ?? SettingResult.empty;
           final local = await _override!.dataSource.getOverrides();
-          return Map<String, Setting>.of(local)..addAll(remote);
+          return SettingResult(settings: Map<String, Setting>.of(local)..addAll(remote.settings), fetchTime: remote.fetchTime);
       }
     }
 
-    return await _configService?.getSettings() ?? {};
+    return await _configService?.getSettings() ?? SettingResult.empty;
+  }
+
+  EvaluationDetails<T> _evaluate<T>(String key, Setting setting, ConfigCatUser? user, DateTime fetchTime) {
+    final eval = _rolloutEvaluator.evaluate<T>(setting, key, user);
+    final details = EvaluationDetails<T>(key: key,
+        variationId: eval.variationId,
+        user: user,
+        isDefaultValue: false,
+        error: null,
+        value: eval.value,
+        fetchTime: fetchTime,
+        matchedEvaluationRule: eval.matchedEvaluationRule,
+        matchedEvaluationPercentageRule: eval.matchedEvaluationPercentageRule);
+
+    _hooks.invokeFlagEvaluated(details);
+    return details;
   }
 }

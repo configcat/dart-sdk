@@ -1,6 +1,6 @@
 import 'package:configcat_client/src/fetch/config_fetcher.dart';
 import 'package:configcat_client/src/constants.dart';
-import 'package:configcat_client/src/fetch/entry.dart';
+import 'package:configcat_client/src/json/entry.dart';
 import 'package:configcat_client/src/json/config.dart';
 import 'package:configcat_client/src/json/preferences.dart';
 import 'package:configcat_client/src/json/setting.dart';
@@ -18,11 +18,22 @@ Config createTestConfig(Map<String, Object> map) {
 
 Entry createTestEntry(Map<String, Object> map) {
   return Entry(
-      createTestConfig(map), map[0].toString(), '', DateTime.now().toUtc());
+      createTestConfig(map), map[0].toString(), DateTime.now().toUtc());
 }
 
 String getPath() {
   return sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
+}
+
+Future<Duration> until(Future<bool> Function() predicate, Duration timeout) async {
+  final start = DateTime.now().toUtc();
+  while(!await predicate()) {
+    await Future.delayed(const Duration(milliseconds: 100));
+    if (DateTime.now().toUtc().isAfter(start.add(timeout))) {
+      throw Exception("Test await timed out.");
+    }
+  }
+  return DateTime.now().toUtc().difference(start);
 }
 
 class RequestCounterInterceptor extends Interceptor {

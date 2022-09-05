@@ -1,7 +1,7 @@
 import 'package:configcat_client/configcat_client.dart';
 import 'package:configcat_client/src/error_reporter.dart';
 import 'package:configcat_client/src/fetch/config_fetcher.dart';
-import 'package:configcat_client/src/fetch/entry.dart';
+import 'package:configcat_client/src/json/entry.dart';
 import 'package:configcat_client/src/json/config.dart';
 import 'package:configcat_client/src/json/preferences.dart';
 import 'package:dio/dio.dart';
@@ -374,8 +374,8 @@ void main() {
 
     test('entity tests', () async {
       // Assert
-      expect(Entry.empty.isEmpty(), isTrue);
-      expect(Config.empty.isEmpty(), isTrue);
+      expect(Entry.empty.isEmpty, isTrue);
+      expect(Config.empty.isEmpty, isTrue);
     });
 
     test('real fetch', () async {

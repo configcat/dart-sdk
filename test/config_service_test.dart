@@ -98,14 +98,14 @@ void main() {
       final settings1 = await service.getSettings();
 
       // Assert
-      expect(settings1['key']?.value, 'test1');
+      expect(settings1.settings['key']?.value, 'test1');
 
       // Act
       await service.refresh();
       final settings2 = await service.getSettings();
 
       // Assert
-      expect(settings2['key']?.value, 'test2');
+      expect(settings2.settings['key']?.value, 'test2');
       verify(cache.write(any, any)).called(equals(2));
       expect(interceptor.allRequestCount(), 2);
 
@@ -118,7 +118,7 @@ void main() {
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
 
       final service = _createService(PollingMode.autoPoll(
-          autoPollInterval: const Duration(milliseconds: 1000)));
+          autoPollInterval: const Duration(seconds: 1)));
       dioAdapter
         ..onGet(sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
             (server) {
@@ -133,7 +133,7 @@ void main() {
           server.reply(200, createTestConfig({'key': 'test2'}).toJson(),
               headers: {
                 Headers.contentTypeHeader: [Headers.jsonContentType],
-                'Etag': ['tag1']
+                'Etag': ['tag2']
               });
         }, headers: {'If-None-Match': 'tag1'});
 
@@ -141,16 +141,22 @@ void main() {
       final settings1 = await service.getSettings();
 
       // Assert
-      expect(settings1['key']?.value, 'test1');
+      expect(settings1.settings['key']?.value, 'test1');
 
       // Act
-      await Future.delayed(const Duration(milliseconds: 2500));
       final settings2 = await service.getSettings();
 
       // Assert
-      expect(settings2['key']?.value, 'test2');
-      verify(cache.write(any, any)).called(greaterThanOrEqualTo(2));
-      expect(interceptor.allRequestCount(), 3);
+      expect(settings2.settings['key']?.value, 'test1');
+
+      await until(() async {
+          final settings3 = await service.getSettings();
+          final value = settings3.settings['key']?.value ?? '';
+          return value == 'test2';
+      }, const Duration(milliseconds: 2500));
+
+      verify(cache.write(any, any)).called(2);
+      expect(interceptor.allRequestCount(), 2);
 
       // Cleanup
       service.close();
@@ -203,14 +209,14 @@ void main() {
       final settings1 = await service.getSettings();
 
       // Assert
-      expect(settings1['key']?.value, 'test1');
+      expect(settings1.settings['key']?.value, 'test1');
 
       // Act
       await Future.delayed(const Duration(milliseconds: 500));
       final settings2 = await service.getSettings();
 
       // Assert
-      expect(settings2['key']?.value, 'test1');
+      expect(settings2.settings['key']?.value, 'test1');
       verify(cache.write(any, any)).called(greaterThanOrEqualTo(1));
 
       // Cleanup
@@ -238,13 +244,13 @@ void main() {
       // Assert
       expect(DateTime.now().difference(current),
           lessThan(const Duration(milliseconds: 150)));
-      expect(result, isEmpty);
+      expect(result.isEmpty, isTrue);
 
       // Act
       final result2 = await service.getSettings();
 
       // Assert
-      expect(result2, isEmpty);
+      expect(result2.isEmpty, isTrue);
       expect(interceptor.allRequestCount(), 1);
 
       // Cleanup
@@ -277,14 +283,14 @@ void main() {
       final settings1 = await service.getSettings();
 
       // Assert
-      expect(settings1['key']?.value, 'test1');
+      expect(settings1.settings['key']?.value, 'test1');
 
       // Act
       await service.refresh();
       final settings2 = await service.getSettings();
 
       // Assert
-      expect(settings2['key']?.value, 'test2');
+      expect(settings2.settings['key']?.value, 'test2');
       verify(cache.write(any, any)).called(2);
       expect(interceptor.allRequestCount(), 2);
 
@@ -313,14 +319,15 @@ void main() {
         }, headers: {'If-None-Match': 'tag1'});
 
       final settings1 = await service.getSettings();
-      expect(settings1['key']?.value, 'test1');
+      expect(settings1.settings['key']?.value, 'test1');
       final settings2 = await service.getSettings();
-      expect(settings2['key']?.value, 'test1');
+      expect(settings2.settings['key']?.value, 'test1');
 
-      await Future.delayed(Duration(milliseconds: 150));
-
-      final settings3 = await service.getSettings();
-      expect(settings3['key']?.value, 'test2');
+      await until(() async {
+        final settings3 = await service.getSettings();
+        final value = settings3.settings['key']?.value ?? '';
+        return value == 'test2';
+      }, const Duration(milliseconds: 150));
 
       verify(cache.write(any, any)).called(2);
       expect(interceptor.allRequestCount(), 2);
@@ -354,14 +361,14 @@ void main() {
       final settings1 = await service.getSettings();
 
       // Assert
-      expect(settings1['key']?.value, 'test1');
+      expect(settings1.settings['key']?.value, 'test1');
 
       // Act
       await service.refresh();
       final settings2 = await service.getSettings();
 
       // Assert
-      expect(settings2['key']?.value, 'test2');
+      expect(settings2.settings['key']?.value, 'test2');
       verify(cache.write(any, any)).called(2);
       expect(interceptor.allRequestCount(), 2);
 

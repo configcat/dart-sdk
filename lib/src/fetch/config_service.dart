@@ -10,10 +10,20 @@ import '../mixins.dart';
 import '../constants.dart';
 import '../log/configcat_logger.dart';
 import '../json/setting.dart';
-import '../json/config.dart';
 import 'config_fetcher.dart';
-import 'entry.dart';
+import '../json/entry.dart';
 import '../error_reporter.dart';
+
+class SettingResult {
+  final Map<String, Setting> settings;
+  final DateTime fetchTime;
+
+  SettingResult({required this.settings, required this.fetchTime});
+
+  bool get isEmpty => settings.isEmpty;
+
+  static SettingResult empty = SettingResult(settings: {}, fetchTime: distantPast);
+}
 
 class ConfigService with ConfigJsonParser, ContinuousFutureSynchronizer {
   late final String _cacheKey;
@@ -50,18 +60,19 @@ class ConfigService with ConfigJsonParser, ContinuousFutureSynchronizer {
     } else {
       _timer = null;
       _initialized = true;
+      _hooks.invokeOnReady();
     }
   }
 
-  Future<Map<String, Setting>> getSettings() async {
+  Future<SettingResult> getSettings() async {
     final mode = _mode;
     if (mode is LazyLoadingMode) {
-      final config = await _fetchIfOlder(
+      final entry = await _fetchIfOlder(
           DateTime.now().toUtc().subtract(mode.cacheRefreshInterval));
-      return config.entries;
+      return SettingResult(settings: entry.config.entries, fetchTime: entry.fetchTime);
     } else {
-      final config = await _fetchIfOlder(distantPast, preferCached: true);
-      return config.entries;
+      final entry = await _fetchIfOlder(distantPast, preferCached: true);
+      return SettingResult(settings: entry.config.entries, fetchTime: entry.fetchTime);
     }
   }
 
@@ -91,27 +102,24 @@ class ConfigService with ConfigJsonParser, ContinuousFutureSynchronizer {
     _fetcher.close();
   }
 
-  Future<Config> _fetchIfOlder(DateTime time,
+  Future<Entry> _fetchIfOlder(DateTime time,
       {bool preferCached = false}) async {
     // Sync up with the cache and use it when it's not expired.
-    if (_cachedEntry.isEmpty() || _cachedEntry.fetchTime.isAfter(time)) {
-      final json = await _readCache();
-      if (json.isNotEmpty && json != _cachedEntry.json) {
-        final config = parseConfigFromJson(json, _errorReporter);
-        if (!config.isEmpty()) {
-          _cachedEntry = Entry(config, json, '', distantPast);
-          _hooks.invokeConfigChanged(config.entries);
-        }
+    if (_cachedEntry.isEmpty || _cachedEntry.fetchTime.isAfter(time)) {
+      final entry = await _readCache();
+      if (!entry.isEmpty && entry.eTag != _cachedEntry.eTag) {
+        _cachedEntry = entry;
+        _hooks.invokeConfigChanged(entry.config.entries);
       }
       if (_cachedEntry.fetchTime.isAfter(time)) {
-        return _cachedEntry.config;
+        return _cachedEntry;
       }
     }
     // Use cache anyway (either offline mode or get calls on auto & manual poll must not initiate fetch).
     // The initialized check ensures that we subscribe for the ongoing fetch during the
     // max init wait time window in case of auto poll.
     if ((preferCached && _initialized) || _offline) {
-      return _cachedEntry.config;
+      return _cachedEntry;
     }
 
     // No fetch is running, initiate a new one.
@@ -119,7 +127,7 @@ class ConfigService with ConfigJsonParser, ContinuousFutureSynchronizer {
     return await syncFuture(() => _fetch());
   }
 
-  Future<Config> _fetch() async {
+  Future<Entry> _fetch() async {
     final mode = _mode;
     if (mode is AutoPollingMode && !_initialized) {
       // Waiting for the client initialization.
@@ -129,24 +137,28 @@ class ConfigService with ConfigJsonParser, ContinuousFutureSynchronizer {
         _logger.warning(
             'Max init wait time for the very first fetch reached (${mode.maxInitWaitTime.inMilliseconds}ms). Returning cached config.');
         _initialized = true;
-        return _cachedEntry.config;
+        _hooks.invokeOnReady();
+        return _cachedEntry;
       });
     }
     // The service is initialized, start fetch without timeout.
     return await _fetchConfig();
   }
 
-  Future<Config> _fetchConfig() async {
+  Future<Entry> _fetchConfig() async {
     final response = await _fetcher.fetchConfiguration(_cachedEntry.eTag);
-    if (response.isFetched && response.entry.json != _cachedEntry.json) {
+    if (response.isFetched) {
       _cachedEntry = response.entry;
-      await _writeCache(response.entry.json);
+      await _writeCache(response.entry);
       _hooks.invokeConfigChanged(response.entry.config.entries);
     } else if (response.isNotModified) {
       _cachedEntry = _cachedEntry.withTime(DateTime.now().toUtc());
     }
-    _initialized = true;
-    return _cachedEntry.config;
+    if (!_initialized) {
+      _hooks.invokeOnReady();
+      _initialized = true;
+    }
+    return _cachedEntry;
   }
 
   void _startPoll(AutoPollingMode mode) {
@@ -161,18 +173,23 @@ class ConfigService with ConfigJsonParser, ContinuousFutureSynchronizer {
     });
   }
 
-  Future<String> _readCache() async {
+  Future<Entry> _readCache() async {
     try {
-      return await _cache.read(_cacheKey);
+      final json = await _cache.read(_cacheKey);
+      if (json.isEmpty) return Entry.empty;
+      final decoded = jsonDecode(json);
+      return Entry.fromJson(decoded);
     } catch (e, s) {
       _errorReporter.error('An error occurred during the cache read.', e, s);
-      return '';
+      return Entry.empty;
     }
   }
 
-  Future<void> _writeCache(String value) async {
+  Future<void> _writeCache(Entry value) async {
     try {
-      await _cache.write(_cacheKey, value);
+      final map = value.toJson();
+      final json = jsonEncode(map);
+      await _cache.write(_cacheKey, json);
     } catch (e, s) {
       _errorReporter.error('An error occurred during the cache write.', e, s);
     }
