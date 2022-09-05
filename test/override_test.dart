@@ -10,7 +10,7 @@ import 'helpers.dart';
 
 void main() {
   tearDown(() {
-    ConfigCatClient.close();
+    ConfigCatClient.closeAll();
   });
 
   test('local only', () async {

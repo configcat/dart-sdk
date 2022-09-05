@@ -27,30 +27,26 @@ class ConfigCatClient {
   /// Creates a new or gets an already existing [ConfigCatClient] for the given [sdkKey].
   factory ConfigCatClient.get(
       {required String sdkKey,
-      ConfigCatOptions options = const ConfigCatOptions()}) {
+      ConfigCatOptions options = ConfigCatOptions.defaultOptions}) {
     if (sdkKey.isEmpty) {
       throw ArgumentError('The SDK key cannot be empty.');
     }
 
     var client = _instanceRepository[sdkKey];
+
+    if (client != null && options != ConfigCatOptions.defaultOptions) {
+      client._logger.warning("message");
+    }
+
     client ??= _instanceRepository[sdkKey] = ConfigCatClient._(sdkKey, options);
 
     return client;
   }
 
-  /// Closes an individual or all [ConfigCatClient] instances.
-  ///
-  /// If [client] is not set, all underlying [ConfigCatClient]
-  /// instances will be closed, otherwise only the given [client] will be closed.
-  static void close({ConfigCatClient? client}) {
-    if (client != null) {
-      client._close();
-      _instanceRepository.removeWhere((key, value) => value == client);
-      return;
-    }
-
+  /// Closes all [ConfigCatClient] instances.
+  static closeAll() {
     for (final client in _instanceRepository.entries) {
-      client.value._close();
+      client.value._closeResources();
     }
     _instanceRepository.clear();
   }
@@ -289,7 +285,12 @@ class ConfigCatClient {
   bool isOffline() => _configService?.isOffline() ?? true;
 
   /// Closes the underlying resources.
-  void _close() {
+  void close() {
+    _closeResources();
+    _instanceRepository.removeWhere((key, value) => value == this);
+  }
+
+  void _closeResources() {
     _configService?.close();
     _logger.close();
     _hooks.clear();

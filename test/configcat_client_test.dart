@@ -26,7 +26,7 @@ void main() {
     dioAdapter = DioAdapter(dio: client.httpClient);
   });
   tearDown(() {
-    ConfigCatClient.close();
+    ConfigCatClient.closeAll();
     dioAdapter.close();
   });
 
@@ -345,14 +345,14 @@ void main() {
     expect(client2, same(client));
 
     // Act
-    ConfigCatClient.close(client: client2);
+    client2.close();
     final client3 = ConfigCatClient.get(sdkKey: "another");
 
     // Assert
     expect(client3, isNot(same(client2)));
 
     // Act
-    ConfigCatClient.close();
+    ConfigCatClient.closeAll();
     final client4 = ConfigCatClient.get(sdkKey: "another");
 
     // Assert

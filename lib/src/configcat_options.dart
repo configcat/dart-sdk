@@ -113,4 +113,6 @@ class ConfigCatOptions {
     this.defaultUser,
     this.hooks,
   });
+
+  static const ConfigCatOptions defaultOptions = ConfigCatOptions();
 }

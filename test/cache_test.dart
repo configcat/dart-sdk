@@ -12,7 +12,7 @@ import 'helpers.dart';
 @GenerateMocks([ConfigCatCache])
 void main() {
   tearDown(() {
-    ConfigCatClient.close();
+    ConfigCatClient.closeAll();
   });
 
   test('failing cache, returns memory-cached value', () async {

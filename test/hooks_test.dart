@@ -34,7 +34,7 @@ void main() {
       expect(value, equals('testValue'));
 
       // Cleanup
-      ConfigCatClient.close(client: client);
+      client.close();
       dioAdapter.close();
     });
 
@@ -65,7 +65,7 @@ void main() {
       expect(value, equals('testValue'));
 
       // Cleanup
-      ConfigCatClient.close(client: client);
+      client.close();
       dioAdapter.close();
     });
   });
