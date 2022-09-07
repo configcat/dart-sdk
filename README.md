@@ -52,7 +52,7 @@ if (isMyAwesomeFeatureEnabled) {
 ```
 ### 6. Close the client on application exit
 ```dart
-ConfigCatClient.close();
+client.close();
 ```
 
 ## Getting user-specific setting values with Targeting
