@@ -190,7 +190,7 @@ void main() {
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
 
       final service = _createService(PollingMode.autoPoll(
-          autoPollInterval: const Duration(milliseconds: 100)));
+          autoPollInterval: const Duration(milliseconds: 200)));
       dioAdapter.onGet(getPath(), (server) {
         server.reply(200, createTestConfig({'key': 'test1'}).toJson());
       });
@@ -201,7 +201,7 @@ void main() {
       var reqCount = interceptor.allRequestCount();
 
       // Assert
-      expect(reqCount, greaterThanOrEqualTo(5));
+      expect(reqCount, greaterThanOrEqualTo(3));
 
       // Act
       await Future.delayed(const Duration(milliseconds: 500));
@@ -214,7 +214,7 @@ void main() {
       await Future.delayed(const Duration(milliseconds: 500));
 
       // Assert
-      expect(interceptor.allRequestCount(), greaterThanOrEqualTo(10));
+      expect(interceptor.allRequestCount(), greaterThanOrEqualTo(6));
 
       // Cleanup
       service.close();
