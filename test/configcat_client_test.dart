@@ -16,13 +16,16 @@ void main() {
   late ConfigCatClient client;
   late DioAdapter dioAdapter;
   late MockConfigCatCache cache;
+  late RequestCounterInterceptor interceptor;
   setUp(() {
     cache = MockConfigCatCache();
+    interceptor = RequestCounterInterceptor();
     when(cache.read(any)).thenAnswer((_) => Future.value(''));
     client = ConfigCatClient.get(
         sdkKey: testSdkKey,
         options:
             ConfigCatOptions(mode: PollingMode.manualPoll(), cache: cache));
+    client.httpClient.interceptors.add(interceptor);
     dioAdapter = DioAdapter(dio: client.httpClient);
   });
   tearDown(() {
@@ -357,6 +360,35 @@ void main() {
 
     // Assert
     expect(client4, isNot(same(client3)));
+  });
+
+  test('online/offline', () async {
+    // Arrange
+    final body = createTestConfig({'stringValue': 'testValue'}).toJson();
+    dioAdapter.onGet(getPath(), (server) {
+      server.reply(200, body);
+    });
+
+    // Act
+    await client.forceRefresh();
+
+    // Assert
+    expect(interceptor.allRequestCount(), equals(1));
+
+    // Act
+    client.setOffline();
+    await client.forceRefresh();
+
+    // Assert
+    expect(interceptor.allRequestCount(), equals(1));
+    expect(client.isOffline(), isTrue);
+
+    // Act
+    client.setOnline();
+    await client.forceRefresh();
+
+    // Assert
+    expect(interceptor.allRequestCount(), equals(2));
   });
 }
 

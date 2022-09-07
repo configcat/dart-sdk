@@ -185,6 +185,40 @@ void main() {
       service.close();
     });
 
+    test('online/offline', () async {
+      // Arrange
+      when(cache.read(any)).thenAnswer((_) => Future.value(''));
+
+      final service = _createService(PollingMode.autoPoll(autoPollInterval: const Duration(milliseconds: 100)));
+      dioAdapter.onGet(getPath(), (server) {
+            server.reply(200, createTestConfig({'key': 'test1'}).toJson());
+      });
+
+      // Act
+      await Future.delayed(const Duration(milliseconds: 500));
+      service.offline();
+      var reqCount = interceptor.allRequestCount();
+
+      // Assert
+      expect(reqCount, greaterThanOrEqualTo(5));
+
+      // Act
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Assert
+      expect(interceptor.allRequestCount(), equals(reqCount));
+
+      // Act
+      service.online();
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Assert
+      expect(interceptor.allRequestCount(), greaterThanOrEqualTo(10));
+      
+      // Cleanup
+      service.close();
+    });
+
     test('failing', () async {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));

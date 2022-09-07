@@ -1,3 +1,4 @@
+import 'package:configcat_client/configcat_client.dart';
 import 'package:configcat_client/src/fetch/config_fetcher.dart';
 import 'package:configcat_client/src/constants.dart';
 import 'package:configcat_client/src/json/entry.dart';
@@ -14,6 +15,15 @@ const etag = 'test-etag';
 Config createTestConfig(Map<String, Object> map) {
   return Config(Preferences(ConfigFetcher.globalBaseUrl, 0),
       map.map((key, value) => MapEntry(key, Setting(value, 0, [], [], ''))));
+}
+
+Config createTestConfigWithRules() {
+  return Config(Preferences(ConfigFetcher.globalBaseUrl, 0), {
+    'key1': Setting("def", 0, [], [
+      RolloutRule("fake1", "Identifier", 2, "@test1.com", "variationId1"),
+      RolloutRule("fake2", "Identifier", 2, "@test2.com", "variationId2")
+    ], ''),
+  });
 }
 
 Entry createTestEntry(Map<String, Object> map) {
