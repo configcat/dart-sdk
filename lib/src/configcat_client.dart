@@ -35,7 +35,8 @@ class ConfigCatClient {
 
     var client = _instanceRepository[sdkKey];
     if (client != null && options != ConfigCatOptions.defaultOptions) {
-      client._logger.warning("Client for '$sdkKey' is already created and will be reused; options passed are being ignored.");
+      client._logger.warning(
+          "Client for '$sdkKey' is already created and will be reused; options passed are being ignored.");
     }
     client ??= _instanceRepository[sdkKey] = ConfigCatClient._(sdkKey, options);
     return client;
@@ -101,7 +102,8 @@ class ConfigCatClient {
         return defaultValue;
       }
 
-      return _evaluate(key, setting, user ?? _defaultUser, result.fetchTime).value;
+      return _evaluate(key, setting, user ?? _defaultUser, result.fetchTime)
+          .value;
     } catch (e, s) {
       _errorReporter.error(
           'Evaluating getValue(\'$key\') failed. Returning defaultValue: \'$defaultValue\'.',
@@ -123,20 +125,23 @@ class ConfigCatClient {
     try {
       final result = await _getSettings();
       if (result.isEmpty) {
-        final err = 'Config JSON is not present. Returning defaultValue: \'$defaultValue\'.';
+        final err =
+            'Config JSON is not present. Returning defaultValue: \'$defaultValue\'.';
         _errorReporter.error(err);
         return EvaluationDetails.makeError(key, defaultValue, err);
       }
       final setting = result.settings[key];
       if (setting == null) {
-        final err = 'Value not found for key $key. Here are the available keys: ${result.settings.keys.join(', ')}';
+        final err =
+            'Value not found for key $key. Here are the available keys: ${result.settings.keys.join(', ')}';
         _errorReporter.error(err);
         return EvaluationDetails.makeError(key, defaultValue, err);
       }
 
       return _evaluate(key, setting, user ?? _defaultUser, result.fetchTime);
     } catch (e, s) {
-      final err = 'Evaluating getValue(\'$key\') failed. Returning defaultValue: \'$defaultValue\'.';
+      final err =
+          'Evaluating getValue(\'$key\') failed. Returning defaultValue: \'$defaultValue\'.';
       _errorReporter.error(err, e, s);
       return EvaluationDetails.makeError(key, defaultValue, err);
     }
@@ -189,8 +194,9 @@ class ConfigCatClient {
 
       final result = List<String>.empty(growable: true);
       settingsResult.settings.forEach((key, value) {
-        result.add(
-            _evaluate(key, value, user ?? _defaultUser, settingsResult.fetchTime).variationId);
+        result.add(_evaluate(
+                key, value, user ?? _defaultUser, settingsResult.fetchTime)
+            .variationId);
       });
 
       return result;
@@ -233,8 +239,9 @@ class ConfigCatClient {
 
       final result = <String, dynamic>{};
       settingsResult.settings.forEach((key, value) {
-        result[key] =
-            _evaluate(key, value, user ?? _defaultUser, settingsResult.fetchTime).value;
+        result[key] = _evaluate(
+                key, value, user ?? _defaultUser, settingsResult.fetchTime)
+            .value;
       });
 
       return result;
@@ -334,22 +341,30 @@ class ConfigCatClient {
           final local = await _override!.dataSource.getOverrides();
           return SettingResult(settings: local, fetchTime: distantPast);
         case OverrideBehaviour.localOverRemote:
-          final remote = await _configService?.getSettings() ?? SettingResult.empty;
+          final remote =
+              await _configService?.getSettings() ?? SettingResult.empty;
           final local = await _override!.dataSource.getOverrides();
-          return SettingResult(settings: Map<String, Setting>.of(remote.settings)..addAll(local), fetchTime: remote.fetchTime);
+          return SettingResult(
+              settings: Map<String, Setting>.of(remote.settings)..addAll(local),
+              fetchTime: remote.fetchTime);
         case OverrideBehaviour.remoteOverLocal:
-          final remote = await _configService?.getSettings() ?? SettingResult.empty;
+          final remote =
+              await _configService?.getSettings() ?? SettingResult.empty;
           final local = await _override!.dataSource.getOverrides();
-          return SettingResult(settings: Map<String, Setting>.of(local)..addAll(remote.settings), fetchTime: remote.fetchTime);
+          return SettingResult(
+              settings: Map<String, Setting>.of(local)..addAll(remote.settings),
+              fetchTime: remote.fetchTime);
       }
     }
 
     return await _configService?.getSettings() ?? SettingResult.empty;
   }
 
-  EvaluationDetails<T> _evaluate<T>(String key, Setting setting, ConfigCatUser? user, DateTime fetchTime) {
+  EvaluationDetails<T> _evaluate<T>(
+      String key, Setting setting, ConfigCatUser? user, DateTime fetchTime) {
     final eval = _rolloutEvaluator.evaluate<T>(setting, key, user);
-    final details = EvaluationDetails<T>(key: key,
+    final details = EvaluationDetails<T>(
+        key: key,
         variationId: eval.variationId,
         user: user,
         isDefaultValue: false,

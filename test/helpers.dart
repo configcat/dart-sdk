@@ -19,10 +19,15 @@ Config createTestConfig(Map<String, Object> map) {
 
 Config createTestConfigWithRules() {
   return Config(Preferences(ConfigFetcher.globalBaseUrl, 0), {
-    'key1': Setting("def", 0, [], [
-      RolloutRule("fake1", "Identifier", 2, "@test1.com", "variationId1"),
-      RolloutRule("fake2", "Identifier", 2, "@test2.com", "variationId2")
-    ], ''),
+    'key1': Setting(
+        "def",
+        0,
+        [],
+        [
+          RolloutRule("fake1", "Identifier", 2, "@test1.com", "variationId1"),
+          RolloutRule("fake2", "Identifier", 2, "@test2.com", "variationId2")
+        ],
+        ''),
   });
 }
 
@@ -35,9 +40,10 @@ String getPath() {
   return sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
 }
 
-Future<Duration> until(Future<bool> Function() predicate, Duration timeout) async {
+Future<Duration> until(
+    Future<bool> Function() predicate, Duration timeout) async {
   final start = DateTime.now().toUtc();
-  while(!await predicate()) {
+  while (!await predicate()) {
     await Future.delayed(const Duration(milliseconds: 100));
     if (DateTime.now().toUtc().isAfter(start.add(timeout))) {
       throw Exception("Test await timed out.");

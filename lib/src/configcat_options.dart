@@ -35,8 +35,10 @@ class EvaluationDetails<T> {
       required this.matchedEvaluationRule,
       required this.matchedEvaluationPercentageRule});
 
-  static EvaluationDetails<T> makeError<T>(String key, T defaultValue, String error) {
-    return EvaluationDetails<T>(key: key,
+  static EvaluationDetails<T> makeError<T>(
+      String key, T defaultValue, String error) {
+    return EvaluationDetails<T>(
+        key: key,
         variationId: "",
         user: null,
         isDefaultValue: true,
@@ -59,7 +61,8 @@ class Hooks {
   Hooks(
       {Function(String, [dynamic error, StackTrace? stackTrace])? onError,
       Function(Map<String, Setting>)? onConfigChanged,
-      Function(EvaluationDetails)? onFlagEvaluated, Function()? onClientReady}) {
+      Function(EvaluationDetails)? onFlagEvaluated,
+      Function()? onClientReady}) {
     if (onError != null) _onError.add(onError);
     if (onConfigChanged != null) _onConfigChanged.add(onConfigChanged);
     if (onFlagEvaluated != null) _onFlagEvaluated.add(onFlagEvaluated);

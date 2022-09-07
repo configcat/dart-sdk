@@ -96,9 +96,14 @@ void main() {
         expect(details.matchedEvaluationPercentageRule, isNull);
         expect(details.matchedEvaluationRule?.value, equals('fake1'));
         expect(details.matchedEvaluationRule?.comparator, equals(2));
-        expect(details.matchedEvaluationRule?.comparisonAttribute, equals('Identifier'));
-        expect(details.matchedEvaluationRule?.comparisonValue, equals('@test1.com'));
-        expect(details.fetchTime.isAfter(DateTime.now().toUtc().subtract(const Duration(seconds: 1))), isTrue);
+        expect(details.matchedEvaluationRule?.comparisonAttribute,
+            equals('Identifier'));
+        expect(details.matchedEvaluationRule?.comparisonValue,
+            equals('@test1.com'));
+        expect(
+            details.fetchTime.isAfter(
+                DateTime.now().toUtc().subtract(const Duration(seconds: 1))),
+            isTrue);
         eval = true;
       });
 

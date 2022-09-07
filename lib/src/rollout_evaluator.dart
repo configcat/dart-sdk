@@ -18,10 +18,10 @@ class EvaluationResult<T> {
 
   EvaluationResult(
       {required this.key,
-        required this.variationId,
-        required this.value,
-        required this.matchedEvaluationRule,
-        required this.matchedEvaluationPercentageRule});
+      required this.variationId,
+      required this.value,
+      required this.matchedEvaluationRule,
+      required this.matchedEvaluationPercentageRule});
 }
 
 class RolloutEvaluator {
@@ -57,8 +57,11 @@ class RolloutEvaluator {
 
     EvaluationResult<Value> produceResult(
         {RolloutRule? rolloutRule, RolloutPercentageItem? percentageItem}) {
-      return EvaluationResult(key: key,
-          variationId: rolloutRule?.variationId ?? percentageItem?.variationId ?? setting.variationId,
+      return EvaluationResult(
+          key: key,
+          variationId: rolloutRule?.variationId ??
+              percentageItem?.variationId ??
+              setting.variationId,
           value: rolloutRule?.value ?? percentageItem?.value ?? setting.value,
           matchedEvaluationRule: rolloutRule,
           matchedEvaluationPercentageRule: percentageItem);

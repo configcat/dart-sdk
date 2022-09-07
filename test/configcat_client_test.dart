@@ -399,7 +399,10 @@ void main() {
 
     // Act
     await client.forceRefresh();
-    final details = await client.getValueDetails(key: 'key1', defaultValue: '', user: ConfigCatUser(identifier: 'test@test2.com'));
+    final details = await client.getValueDetails(
+        key: 'key1',
+        defaultValue: '',
+        user: ConfigCatUser(identifier: 'test@test2.com'));
 
     // Assert
     expect(details.value, equals('fake2'));
@@ -410,9 +413,14 @@ void main() {
     expect(details.matchedEvaluationPercentageRule, isNull);
     expect(details.matchedEvaluationRule?.value, equals('fake2'));
     expect(details.matchedEvaluationRule?.comparator, equals(2));
-    expect(details.matchedEvaluationRule?.comparisonAttribute, equals('Identifier'));
-    expect(details.matchedEvaluationRule?.comparisonValue, equals('@test2.com'));
-    expect(details.fetchTime.isAfter(DateTime.now().toUtc().subtract(const Duration(seconds: 1))), isTrue);
+    expect(details.matchedEvaluationRule?.comparisonAttribute,
+        equals('Identifier'));
+    expect(
+        details.matchedEvaluationRule?.comparisonValue, equals('@test2.com'));
+    expect(
+        details.fetchTime.isAfter(
+            DateTime.now().toUtc().subtract(const Duration(seconds: 1))),
+        isTrue);
   });
 }
 

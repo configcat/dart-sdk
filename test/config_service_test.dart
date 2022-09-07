@@ -117,8 +117,8 @@ void main() {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
 
-      final service = _createService(PollingMode.autoPoll(
-          autoPollInterval: const Duration(seconds: 1)));
+      final service = _createService(
+          PollingMode.autoPoll(autoPollInterval: const Duration(seconds: 1)));
       dioAdapter
         ..onGet(sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
             (server) {
@@ -150,9 +150,9 @@ void main() {
       expect(settings2.settings['key']?.value, 'test1');
 
       await until(() async {
-          final settings3 = await service.getSettings();
-          final value = settings3.settings['key']?.value ?? '';
-          return value == 'test2';
+        final settings3 = await service.getSettings();
+        final value = settings3.settings['key']?.value ?? '';
+        return value == 'test2';
       }, const Duration(milliseconds: 2500));
 
       verify(cache.write(any, any)).called(2);
@@ -189,9 +189,10 @@ void main() {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
 
-      final service = _createService(PollingMode.autoPoll(autoPollInterval: const Duration(milliseconds: 100)));
+      final service = _createService(PollingMode.autoPoll(
+          autoPollInterval: const Duration(milliseconds: 100)));
       dioAdapter.onGet(getPath(), (server) {
-            server.reply(200, createTestConfig({'key': 'test1'}).toJson());
+        server.reply(200, createTestConfig({'key': 'test1'}).toJson());
       });
 
       // Act
@@ -214,7 +215,7 @@ void main() {
 
       // Assert
       expect(interceptor.allRequestCount(), greaterThanOrEqualTo(10));
-      
+
       // Cleanup
       service.close();
     });

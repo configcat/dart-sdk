@@ -22,7 +22,8 @@ class SettingResult {
 
   bool get isEmpty => settings.isEmpty;
 
-  static SettingResult empty = SettingResult(settings: {}, fetchTime: distantPast);
+  static SettingResult empty =
+      SettingResult(settings: {}, fetchTime: distantPast);
 }
 
 class ConfigService with ConfigJsonParser, ContinuousFutureSynchronizer {
@@ -46,8 +47,9 @@ class ConfigService with ConfigJsonParser, ContinuousFutureSynchronizer {
       required ConfigCatLogger logger,
       required ConfigCatCache cache,
       required ErrorReporter errorReporter}) {
-    _cacheKey =
-        sha1.convert(utf8.encode('dart_${configJsonName}_${sdkKey}_v2')).toString();
+    _cacheKey = sha1
+        .convert(utf8.encode('dart_${configJsonName}_${sdkKey}_v2'))
+        .toString();
     _mode = mode;
     _hooks = hooks;
     _fetcher = fetcher;
@@ -69,10 +71,12 @@ class ConfigService with ConfigJsonParser, ContinuousFutureSynchronizer {
     if (mode is LazyLoadingMode) {
       final entry = await _fetchIfOlder(
           DateTime.now().toUtc().subtract(mode.cacheRefreshInterval));
-      return SettingResult(settings: entry.config.entries, fetchTime: entry.fetchTime);
+      return SettingResult(
+          settings: entry.config.entries, fetchTime: entry.fetchTime);
     } else {
       final entry = await _fetchIfOlder(distantPast, preferCached: true);
-      return SettingResult(settings: entry.config.entries, fetchTime: entry.fetchTime);
+      return SettingResult(
+          settings: entry.config.entries, fetchTime: entry.fetchTime);
     }
   }
 
