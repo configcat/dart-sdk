@@ -47,7 +47,7 @@ class ConfigService with ConfigJsonParser, ContinuousFutureSynchronizer {
       required ConfigCatCache cache,
       required ErrorReporter errorReporter}) {
     _cacheKey =
-        sha1.convert(utf8.encode('dart_${configJsonName}_$sdkKey')).toString();
+        sha1.convert(utf8.encode('dart_${configJsonName}_${sdkKey}_v2')).toString();
     _mode = mode;
     _hooks = hooks;
     _fetcher = fetcher;

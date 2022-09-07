@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 2.0.0 -
+### Added
+- `setDefaultUser(user)` / `clearDefaultUser()` methods to set / remove a default user object used when there's no user passed to `getValue()` / `getValueDetails()` / `getAllValues()` / `getAllVariationIds()` methods.
+- `setOffline()` / `setOnline()` methods to indicate whether the SDK is allowed to make HTTP calls or not. In 'offline' mode the SDK works from the cache only.
+- `onClientReady()` / `onConfigChanged(Map<string, Setting>)` / `onFlagEvaluated(EvaluationDetails)` / `onError(String)` hooks. Subscription is possible on client initialization options and on the `hooks` property of `ConfigCatClient`.
+- `getValueDetails()` method to retrieve evaluation details along with the feature flag / setting value.
+
+### Changed
+- The static `close()` method was split to an instance level `close()` method which closes the given `ConfigCatClient` and to a static `closeAll()` method which closes all instantiated client instances.
+
+### Removed
+- The `onConfigChanged()` hook parameter of `PollingModes.autoPoll`. It was replaced by the newly introduced `onConfigChanged(Map<string, Setting>)` hook function which is invoked with each polling mode. 
+
 ## 1.1.0 - 2022-08-16
 ### Changed
 - Replaced the refresh policies construction with a single config service that takes care of the different polling mechanisms, caching, and the synchronization of HTTP requests.
