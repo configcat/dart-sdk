@@ -134,7 +134,7 @@ class ConfigCatClient {
         return EvaluationDetails.makeError(key, defaultValue, err);
       }
 
-      return _evaluate(key, setting, user ?? _defaultUser, result.fetchTime).value;
+      return _evaluate(key, setting, user ?? _defaultUser, result.fetchTime);
     } catch (e, s) {
       final err = 'Evaluating getValue(\'$key\') failed. Returning defaultValue: \'$defaultValue\'.';
       _errorReporter.error(err, e, s);

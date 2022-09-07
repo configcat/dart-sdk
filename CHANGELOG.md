@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `setDefaultUser(user)` / `clearDefaultUser()` methods to set / remove a default user object used when there's no user passed to `getValue()` / `getValueDetails()` / `getAllValues()` / `getAllVariationIds()` methods.
 - `setOffline()` / `setOnline()` methods to indicate whether the SDK is allowed to make HTTP calls or not. In 'offline' mode the SDK works from the cache only.
 - `onClientReady()` / `onConfigChanged(Map<string, Setting>)` / `onFlagEvaluated(EvaluationDetails)` / `onError(String)` hooks. Subscription is possible on client initialization options and on the `hooks` property of `ConfigCatClient`.
-- `getValueDetails()` method to retrieve evaluation details along with the feature flag / setting value.
+- `getValueDetails()` method to retrieve evaluation details along with the feature flag / setting value. It returns the same details that is passed to `onFlagEvaluated(EvaluationDetails)` on each evaluation. 
 
 ### Changed
 - The static `close()` method was split to an instance level `close()` method which closes the given `ConfigCatClient` and to a static `closeAll()` method which closes all instantiated client instances.

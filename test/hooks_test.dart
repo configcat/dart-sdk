@@ -89,7 +89,7 @@ void main() {
       // Act
       client.hooks.addOnFlagEvaluated((details) {
         expect(details.value, equals('fake1'));
-        expect(details.key, 'key1');
+        expect(details.key, equals('key1'));
         expect(details.variationId, equals('variationId1'));
         expect(details.isDefaultValue, isFalse);
         expect(details.error, isNull);

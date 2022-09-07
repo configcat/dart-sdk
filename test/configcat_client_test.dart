@@ -390,6 +390,30 @@ void main() {
     // Assert
     expect(interceptor.allRequestCount(), equals(2));
   });
+
+  test('eval details', () async {
+    // Arrange
+    dioAdapter.onGet(getPath(), (server) {
+      server.reply(200, createTestConfigWithRules());
+    });
+
+    // Act
+    await client.forceRefresh();
+    final details = await client.getValueDetails(key: 'key1', defaultValue: '', user: ConfigCatUser(identifier: 'test@test2.com'));
+
+    // Assert
+    expect(details.value, equals('fake2'));
+    expect(details.key, equals('key1'));
+    expect(details.variationId, equals('variationId2'));
+    expect(details.isDefaultValue, isFalse);
+    expect(details.error, isNull);
+    expect(details.matchedEvaluationPercentageRule, isNull);
+    expect(details.matchedEvaluationRule?.value, equals('fake2'));
+    expect(details.matchedEvaluationRule?.comparator, equals(2));
+    expect(details.matchedEvaluationRule?.comparisonAttribute, equals('Identifier'));
+    expect(details.matchedEvaluationRule?.comparisonValue, equals('@test2.com'));
+    expect(details.fetchTime.isAfter(DateTime.now().toUtc().subtract(const Duration(seconds: 1))), isTrue);
+  });
 }
 
 Config createTestConfigWithVariationId(Map<String, List<Object>> map) {
