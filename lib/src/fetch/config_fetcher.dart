@@ -58,7 +58,7 @@ abstract class Fetcher {
   void close();
 }
 
-class ConfigFetcher with ConfigJsonParser implements Fetcher {
+class ConfigFetcher implements Fetcher {
   static const globalBaseUrl = 'https://cdn-global.configcat.com';
   static const euOnlyBaseUrl = 'https://cdn-eu.configcat.com';
   static const _userAgentHeaderName = 'X-ConfigCat-UserAgent';

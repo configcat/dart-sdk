@@ -52,6 +52,24 @@ Future<Duration> until(
   return DateTime.now().toUtc().difference(start);
 }
 
+class CustomCache implements ConfigCatCache {
+  late String _value;
+
+  CustomCache(String initial) { _value = initial; }
+
+  @override
+  Future<String> read(String key) {
+    return Future.value(_value);
+  }
+
+  @override
+  Future<void> write(String key, String value) {
+    _value = value;
+    return Future.value();
+  }
+
+}
+
 class RequestCounterInterceptor extends Interceptor {
   final requests = <String, int>{};
 

@@ -1,8 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
-
-import 'json/config.dart';
-import 'error_reporter.dart';
 
 /// This mixin can be used to ensure that an asynchronous operation couldn't be
 /// initiated multiple times simultaneously. Each caller will wait for the
@@ -35,16 +31,38 @@ mixin ContinuousFutureSynchronizer<T> {
   }
 }
 
-/// This mixin is used to deserialize [Config] from JSON.
-mixin ConfigJsonParser {
-  /// Parse [Config] from JSON.
-  Config parseConfigFromJson(String json, ErrorReporter errorReporter) {
+mixin PeriodicExecutor {
+  Completer<void>? _canceller;
+  Future<void> Function()? _task;
+  Duration _interval = const Duration(seconds: 1);
+
+  void startPeriodic(Duration interval, Future<void> Function() task) {
+    if (_canceller != null) return;
+    _canceller = Completer<void>();
+    _task = task;
+    _interval = interval;
+    scheduleMicrotask(_execute);
+  }
+
+  void cancelPeriodic() {
+    if ((_canceller?.isCompleted ?? true)) return;
+    _canceller?.complete();
+    _canceller = null;
+  }
+
+  Future<void> _execute() async {
     try {
-      final decoded = jsonDecode(json);
-      return Config.fromJson(decoded);
-    } catch (e, s) {
-      errorReporter.error('Config JSON parsing failed.', e, s);
-      return Config.empty;
+      while (!(_canceller?.isCompleted ?? true)) {
+        await _task?.call();
+        await _delay(_interval);
+      }
+    } finally {
+      if (!(_canceller?.isCompleted ?? true)) {
+        scheduleMicrotask(_execute);
+      }
     }
   }
+
+  Future<void> _delay(Duration duration) =>
+    Future.any([Future.delayed(duration), _canceller?.future ?? Future.value()]);
 }

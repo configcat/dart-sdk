@@ -91,24 +91,28 @@ class ConfigCatClient {
     try {
       final result = await _getSettings();
       if (result.isEmpty) {
-        _errorReporter.error(
-            'Config JSON is not present. Returning defaultValue: \'$defaultValue\'.');
+        final err =
+            'Config JSON is not present. Returning defaultValue: \'$defaultValue\'.';
+        _errorReporter.error(err);
+        hooks.invokeFlagEvaluated(EvaluationDetails.makeError(key, defaultValue, err));
         return defaultValue;
       }
       final setting = result.settings[key];
       if (setting == null) {
-        _errorReporter.error(
-            'Value not found for key $key. Here are the available keys: ${result.settings.keys.join(', ')}');
+        final err =
+            'Value not found for key $key. Here are the available keys: ${result.settings.keys.join(', ')}';
+        _errorReporter.error(err);
+        hooks.invokeFlagEvaluated(EvaluationDetails.makeError(key, defaultValue, err));
         return defaultValue;
       }
 
       return _evaluate(key, setting, user ?? _defaultUser, result.fetchTime)
           .value;
     } catch (e, s) {
-      _errorReporter.error(
-          'Evaluating getValue(\'$key\') failed. Returning defaultValue: \'$defaultValue\'.',
-          e,
-          s);
+      final err =
+          'Evaluating getValue(\'$key\') failed. Returning defaultValue: \'$defaultValue\'.';
+      _errorReporter.error(err, e, s);
+      hooks.invokeFlagEvaluated(EvaluationDetails.makeError(key, defaultValue, err));
       return defaultValue;
     }
   }
@@ -128,14 +132,18 @@ class ConfigCatClient {
         final err =
             'Config JSON is not present. Returning defaultValue: \'$defaultValue\'.';
         _errorReporter.error(err);
-        return EvaluationDetails.makeError(key, defaultValue, err);
+        final details = EvaluationDetails.makeError(key, defaultValue, err);
+        hooks.invokeFlagEvaluated(details);
+        return details;
       }
       final setting = result.settings[key];
       if (setting == null) {
         final err =
             'Value not found for key $key. Here are the available keys: ${result.settings.keys.join(', ')}';
         _errorReporter.error(err);
-        return EvaluationDetails.makeError(key, defaultValue, err);
+        final details = EvaluationDetails.makeError(key, defaultValue, err);
+        hooks.invokeFlagEvaluated(details);
+        return details;
       }
 
       return _evaluate(key, setting, user ?? _defaultUser, result.fetchTime);
@@ -143,7 +151,9 @@ class ConfigCatClient {
       final err =
           'Evaluating getValue(\'$key\') failed. Returning defaultValue: \'$defaultValue\'.';
       _errorReporter.error(err, e, s);
-      return EvaluationDetails.makeError(key, defaultValue, err);
+      final details = EvaluationDetails.makeError(key, defaultValue, err);
+      hooks.invokeFlagEvaluated(details);
+      return details;
     }
   }
 

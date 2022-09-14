@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:configcat_client/configcat_client.dart';
 import 'package:configcat_client/src/error_reporter.dart';
 import 'package:configcat_client/src/fetch/config_fetcher.dart';
@@ -33,14 +35,14 @@ void main() {
     dioAdapter.close();
   });
 
-  ConfigService _createService(PollingMode pollingMode) {
+  ConfigService _createService(PollingMode pollingMode, {ConfigCatCache? customCache }) {
     return ConfigService(
         sdkKey: testSdkKey,
         mode: pollingMode,
         hooks: Hooks(),
         fetcher: fetcher,
         logger: logger,
-        cache: cache,
+        cache: customCache ?? cache,
         errorReporter: ErrorReporter(logger, Hooks()));
   }
 
@@ -177,6 +179,31 @@ void main() {
       await service.getSettings();
       await service.getSettings();
       await service.getSettings();
+
+      // Assert
+      expect(interceptor.allRequestCount(), 1);
+
+      // Cleanup
+      service.close();
+    });
+
+    test('ensure cached fetch time is respected on interval calc', () async {
+      // Arrange
+      final cached = jsonEncode(createTestEntry({'key': true}).toJson());
+      when(cache.read(any)).thenAnswer((_) => Future.value(cached));
+
+      final service = _createService(PollingMode.autoPoll(autoPollInterval: const Duration(milliseconds: 200)));
+      dioAdapter.onGet(
+          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
+              (server) {
+            server.reply(200, createTestConfig({'key': true}).toJson());
+          });
+
+      // Assert
+      expect(interceptor.allRequestCount(), 0);
+
+      // Act
+      await Future.delayed(const Duration(milliseconds: 300));
 
       // Assert
       expect(interceptor.allRequestCount(), 1);
@@ -366,6 +393,35 @@ void main() {
 
       verify(cache.write(any, any)).called(2);
       expect(interceptor.allRequestCount(), 2);
+
+      // Cleanup
+      service.close();
+    });
+
+    test('ensure cached fetch time is respected on TTL calc', () async {
+      // Arrange
+      final cache = CustomCache(jsonEncode(createTestEntry({'key': true}).toJson()));
+      final service = _createService(PollingMode.lazyLoad(cacheRefreshInterval: const Duration(milliseconds: 200)), customCache: cache);
+      dioAdapter.onGet(
+          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
+              (server) {
+            server.reply(200, createTestConfig({'key': true}).toJson());
+          });
+
+      // Act
+      await service.getSettings();
+      await service.getSettings();
+
+      // Assert
+      expect(interceptor.allRequestCount(), 0);
+
+      // Act
+      await Future.delayed(const Duration(milliseconds: 300));
+      await service.getSettings();
+      await service.getSettings();
+
+      // Assert
+      expect(interceptor.allRequestCount(), 1);
 
       // Cleanup
       service.close();

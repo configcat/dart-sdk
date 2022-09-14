@@ -26,7 +26,7 @@ class SettingResult {
       SettingResult(settings: {}, fetchTime: distantPast);
 }
 
-class ConfigService with ConfigJsonParser, ContinuousFutureSynchronizer {
+class ConfigService with ContinuousFutureSynchronizer, PeriodicExecutor {
   late final String _cacheKey;
   late final PollingMode _mode;
   late final Hooks _hooks;
@@ -34,7 +34,6 @@ class ConfigService with ConfigJsonParser, ContinuousFutureSynchronizer {
   late final ConfigCatLogger _logger;
   late final ConfigCatCache _cache;
   late final ErrorReporter _errorReporter;
-  Timer? _timer;
   Entry _cachedEntry = Entry.empty;
   bool _offline = false;
   bool _initialized = false;
@@ -60,7 +59,6 @@ class ConfigService with ConfigJsonParser, ContinuousFutureSynchronizer {
     if (mode is AutoPollingMode) {
       _startPoll(mode);
     } else {
-      _timer = null;
       _initialized = true;
       _hooks.invokeOnReady();
     }
@@ -96,13 +94,13 @@ class ConfigService with ConfigJsonParser, ContinuousFutureSynchronizer {
   void offline() {
     if (_offline) return;
     _offline = true;
-    _timer?.cancel();
+    cancelPeriodic();
   }
 
   bool isOffline() => _offline;
 
   void close() {
-    _timer?.cancel();
+    cancelPeriodic();
     _fetcher.close();
   }
 
@@ -125,10 +123,9 @@ class ConfigService with ConfigJsonParser, ContinuousFutureSynchronizer {
     if ((preferCached && _initialized) || _offline) {
       return _cachedEntry;
     }
-
     // No fetch is running, initiate a new one.
     // Ensure only one fetch request is running at a time.
-    return await syncFuture(() => _fetch());
+    return await syncFuture(_fetch);
   }
 
   Future<Entry> _fetch() async {
@@ -166,15 +163,8 @@ class ConfigService with ConfigJsonParser, ContinuousFutureSynchronizer {
   }
 
   void _startPoll(AutoPollingMode mode) {
-    final timer = _timer;
-    if (timer != null && timer.isActive) return;
-    _timer = Timer.periodic(mode.autoPollInterval, (Timer t) async {
-      await refresh();
-    });
-    // execute immediately, because periodic() waits for an interval amount of time before the first tick
-    Timer.run(() async {
-      await refresh();
-    });
+    startPeriodic(mode.autoPollInterval,
+            () async => await _fetchIfOlder(DateTime.now().toUtc().subtract(mode.autoPollInterval)));
   }
 
   Future<Entry> _readCache() async {
