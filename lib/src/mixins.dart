@@ -63,6 +63,6 @@ mixin PeriodicExecutor {
     }
   }
 
-  Future<void> _delay(Duration duration) =>
-    Future.any([Future.delayed(duration), _canceller?.future ?? Future.value()]);
+  Future<void> _delay(Duration duration) => Future.any(
+      [Future.delayed(duration), _canceller?.future ?? Future.value()]);
 }

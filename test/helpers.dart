@@ -55,7 +55,9 @@ Future<Duration> until(
 class CustomCache implements ConfigCatCache {
   late String _value;
 
-  CustomCache(String initial) { _value = initial; }
+  CustomCache(String initial) {
+    _value = initial;
+  }
 
   @override
   Future<String> read(String key) {
@@ -67,7 +69,6 @@ class CustomCache implements ConfigCatCache {
     _value = value;
     return Future.value();
   }
-
 }
 
 class RequestCounterInterceptor extends Interceptor {

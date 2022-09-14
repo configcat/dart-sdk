@@ -35,7 +35,8 @@ void main() {
     dioAdapter.close();
   });
 
-  ConfigService _createService(PollingMode pollingMode, {ConfigCatCache? customCache }) {
+  ConfigService _createService(PollingMode pollingMode,
+      {ConfigCatCache? customCache}) {
     return ConfigService(
         sdkKey: testSdkKey,
         mode: pollingMode,
@@ -192,12 +193,13 @@ void main() {
       final cached = jsonEncode(createTestEntry({'key': true}).toJson());
       when(cache.read(any)).thenAnswer((_) => Future.value(cached));
 
-      final service = _createService(PollingMode.autoPoll(autoPollInterval: const Duration(milliseconds: 200)));
+      final service = _createService(PollingMode.autoPoll(
+          autoPollInterval: const Duration(milliseconds: 200)));
       dioAdapter.onGet(
           sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
-              (server) {
-            server.reply(200, createTestConfig({'key': true}).toJson());
-          });
+          (server) {
+        server.reply(200, createTestConfig({'key': true}).toJson());
+      });
 
       // Assert
       expect(interceptor.allRequestCount(), 0);
@@ -400,13 +402,17 @@ void main() {
 
     test('ensure cached fetch time is respected on TTL calc', () async {
       // Arrange
-      final cache = CustomCache(jsonEncode(createTestEntry({'key': true}).toJson()));
-      final service = _createService(PollingMode.lazyLoad(cacheRefreshInterval: const Duration(milliseconds: 200)), customCache: cache);
+      final cache =
+          CustomCache(jsonEncode(createTestEntry({'key': true}).toJson()));
+      final service = _createService(
+          PollingMode.lazyLoad(
+              cacheRefreshInterval: const Duration(milliseconds: 200)),
+          customCache: cache);
       dioAdapter.onGet(
           sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
-              (server) {
-            server.reply(200, createTestConfig({'key': true}).toJson());
-          });
+          (server) {
+        server.reply(200, createTestConfig({'key': true}).toJson());
+      });
 
       // Act
       await service.getSettings();

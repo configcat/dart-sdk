@@ -163,8 +163,10 @@ class ConfigService with ContinuousFutureSynchronizer, PeriodicExecutor {
   }
 
   void _startPoll(AutoPollingMode mode) {
-    startPeriodic(mode.autoPollInterval,
-            () async => await _fetchIfOlder(DateTime.now().toUtc().subtract(mode.autoPollInterval)));
+    startPeriodic(
+        mode.autoPollInterval,
+        () async => await _fetchIfOlder(
+            DateTime.now().toUtc().subtract(mode.autoPollInterval)));
   }
 
   Future<Entry> _readCache() async {

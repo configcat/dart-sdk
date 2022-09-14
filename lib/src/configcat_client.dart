@@ -94,7 +94,8 @@ class ConfigCatClient {
         final err =
             'Config JSON is not present. Returning defaultValue: \'$defaultValue\'.';
         _errorReporter.error(err);
-        hooks.invokeFlagEvaluated(EvaluationDetails.makeError(key, defaultValue, err));
+        hooks.invokeFlagEvaluated(
+            EvaluationDetails.makeError(key, defaultValue, err));
         return defaultValue;
       }
       final setting = result.settings[key];
@@ -102,7 +103,8 @@ class ConfigCatClient {
         final err =
             'Value not found for key $key. Here are the available keys: ${result.settings.keys.join(', ')}';
         _errorReporter.error(err);
-        hooks.invokeFlagEvaluated(EvaluationDetails.makeError(key, defaultValue, err));
+        hooks.invokeFlagEvaluated(
+            EvaluationDetails.makeError(key, defaultValue, err));
         return defaultValue;
       }
 
@@ -112,7 +114,8 @@ class ConfigCatClient {
       final err =
           'Evaluating getValue(\'$key\') failed. Returning defaultValue: \'$defaultValue\'.';
       _errorReporter.error(err, e, s);
-      hooks.invokeFlagEvaluated(EvaluationDetails.makeError(key, defaultValue, err));
+      hooks.invokeFlagEvaluated(
+          EvaluationDetails.makeError(key, defaultValue, err));
       return defaultValue;
     }
   }
