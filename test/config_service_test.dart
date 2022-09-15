@@ -436,13 +436,13 @@ void main() {
     test('ensure cached fetch time is respected on TTL with 301', () async {
       // Arrange
       final cache =
-      CustomCache(jsonEncode(createTestEntry({'key': true}).toJson()));
+          CustomCache(jsonEncode(createTestEntry({'key': true}).toJson()));
 
       dioAdapter.onGet(
           sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
-              (server) {
-            server.reply(304, {});
-          });
+          (server) {
+        server.reply(304, {});
+      });
 
       // Act
       final service = _createService(
