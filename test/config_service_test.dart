@@ -432,6 +432,47 @@ void main() {
       // Cleanup
       service.close();
     });
+
+    test('ensure cached fetch time is respected on TTL with 301', () async {
+      // Arrange
+      final cache =
+      CustomCache(jsonEncode(createTestEntry({'key': true}).toJson()));
+
+      dioAdapter.onGet(
+          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
+              (server) {
+            server.reply(304, {});
+          });
+
+      // Act
+      final service = _createService(
+          PollingMode.lazyLoad(
+              cacheRefreshInterval: const Duration(milliseconds: 200)),
+          customCache: cache);
+      await service.getSettings();
+      await service.getSettings();
+
+      // Assert
+      expect(interceptor.allRequestCount(), 0);
+
+      // Act
+      await Future.delayed(const Duration(milliseconds: 300));
+      await service.getSettings();
+
+      final service2 = _createService(
+          PollingMode.lazyLoad(
+              cacheRefreshInterval: const Duration(milliseconds: 200)),
+          customCache: cache);
+      await service2.getSettings();
+      await service2.getSettings();
+
+      // Assert
+      expect(interceptor.allRequestCount(), 1);
+
+      // Cleanup
+      service.close();
+      service2.close();
+    });
   });
 
   group('Manual Polling Tests', () {

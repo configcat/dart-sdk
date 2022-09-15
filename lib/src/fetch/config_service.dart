@@ -154,6 +154,7 @@ class ConfigService with ContinuousFutureSynchronizer, PeriodicExecutor {
       _hooks.invokeConfigChanged(response.entry.config.entries);
     } else if (response.isNotModified) {
       _cachedEntry = _cachedEntry.withTime(DateTime.now().toUtc());
+      await _writeCache(_cachedEntry);
     }
     if (!_initialized) {
       _hooks.invokeOnReady();
