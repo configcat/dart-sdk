@@ -22,8 +22,9 @@ class _RedirectMode {
 class FetchResponse {
   final _Status _status;
   final Entry entry;
+  final String? error;
 
-  FetchResponse._(this._status, this.entry);
+  FetchResponse._(this._status, this.entry, this.error);
 
   bool get isFetched {
     return _status == _Status.fetched;
@@ -38,15 +39,15 @@ class FetchResponse {
   }
 
   factory FetchResponse.success(Entry entry) {
-    return FetchResponse._(_Status.fetched, entry);
+    return FetchResponse._(_Status.fetched, entry, null);
   }
 
-  factory FetchResponse.failure() {
-    return FetchResponse._(_Status.failure, Entry.empty);
+  factory FetchResponse.failure(String error) {
+    return FetchResponse._(_Status.failure, Entry.empty, error);
   }
 
   factory FetchResponse.notModified() {
-    return FetchResponse._(_Status.notModified, Entry.empty);
+    return FetchResponse._(_Status.notModified, Entry.empty, null);
   }
 }
 
@@ -174,7 +175,7 @@ class ConfigFetcher implements Fetcher {
       if (_successStatusCodes.contains(response.statusCode)) {
         final eTag = response.headers.value(_eTagHeaderName) ?? '';
         final config = _parseConfigFromJson(response.data.toString());
-        if (config == Config.empty) return FetchResponse.failure();
+        if (config == Config.empty) return FetchResponse.failure('Config JSON parsing failed.');
         _logger.debug('Fetch was successful: new config fetched.');
         return FetchResponse.success(
             Entry(config, eTag, DateTime.now().toUtc()));
@@ -182,13 +183,14 @@ class ConfigFetcher implements Fetcher {
         _logger.debug('Fetch was successful: config not modified.');
         return FetchResponse.notModified();
       } else {
-        _errorReporter.error(
-            'Double-check your API KEY at https://app.configcat.com/apikey. Received unexpected response: ${response.statusCode}');
-        return FetchResponse.failure();
+        final error =
+            'Double-check your API KEY at https://app.configcat.com/apikey. Received unexpected response: ${response.statusCode}';
+        _errorReporter.error(error);
+        return FetchResponse.failure(error);
       }
     } catch (e, s) {
       _errorReporter.error('Exception occurred during fetching.', e, s);
-      return FetchResponse.failure();
+      return FetchResponse.failure(e.toString());
     }
   }
 
