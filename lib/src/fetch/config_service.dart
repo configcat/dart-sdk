@@ -94,12 +94,14 @@ class ConfigService with ContinuousFutureSynchronizer, PeriodicExecutor {
     if (mode is AutoPollingMode) {
       _startPoll(mode);
     }
+    _logger.debug("Switched to ONLINE mode.");
   }
 
   void offline() {
     if (_offline) return;
     _offline = true;
     cancelPeriodic();
+    _logger.debug("Switched to OFFLINE mode.");
   }
 
   bool isOffline() => _offline;
