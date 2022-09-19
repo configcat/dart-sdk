@@ -495,10 +495,12 @@ void main() {
         }, headers: {'If-None-Match': 'tag1'});
 
       // Act
-      await service.refresh();
+      final result = await service.refresh();
       final settings1 = await service.getSettings();
 
       // Assert
+      expect(result.isSuccess, isTrue);
+      expect(result.error, isNull);
       expect(settings1.settings['key']?.value, 'test1');
 
       // Act
@@ -509,6 +511,35 @@ void main() {
       expect(settings2.settings['key']?.value, 'test2');
       verify(cache.write(any, any)).called(2);
       expect(interceptor.allRequestCount(), 2);
+
+      // Cleanup
+      service.close();
+    });
+
+    test('failing refresh', () async {
+      // Arrange
+      when(cache.read(any)).thenAnswer((_) => Future.value(''));
+      final service = _createService(PollingMode.manualPoll());
+      dioAdapter.onGet(
+          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
+          (server) {
+        server.reply(500, {});
+      });
+
+      // Act
+      final result = await service.refresh();
+      final settings1 = await service.getSettings();
+
+      // Assert
+      expect(result.isSuccess, isFalse);
+      expect(
+          result.error,
+          equals(
+              "Double-check your API KEY at https://app.configcat.com/apikey. Received unexpected response: 500"));
+      expect(settings1.settings, isEmpty);
+
+      verifyNever(cache.write(any, any));
+      expect(interceptor.allRequestCount(), 1);
 
       // Cleanup
       service.close();

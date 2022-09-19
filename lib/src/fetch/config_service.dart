@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:configcat_client/src/fetch/refresh_result.dart';
 import 'package:crypto/crypto.dart';
 
 import '../configcat_cache.dart';
 import '../configcat_options.dart';
+import '../pair.dart';
 import '../polling_mode.dart';
 import '../mixins.dart';
 import '../constants.dart';
@@ -70,16 +72,19 @@ class ConfigService with ContinuousFutureSynchronizer, PeriodicExecutor {
       final entry = await _fetchIfOlder(
           DateTime.now().toUtc().subtract(mode.cacheRefreshInterval));
       return SettingResult(
-          settings: entry.config.entries, fetchTime: entry.fetchTime);
+          settings: entry.first.config.entries,
+          fetchTime: entry.first.fetchTime);
     } else {
       final entry = await _fetchIfOlder(distantPast, preferCached: true);
       return SettingResult(
-          settings: entry.config.entries, fetchTime: entry.fetchTime);
+          settings: entry.first.config.entries,
+          fetchTime: entry.first.fetchTime);
     }
   }
 
-  Future<void> refresh() async {
-    await _fetchIfOlder(distantFuture);
+  Future<RefreshResult> refresh() async {
+    final fetch = await _fetchIfOlder(distantFuture);
+    return RefreshResult(fetch.second == null, fetch.second);
   }
 
   void online() {
@@ -104,7 +109,7 @@ class ConfigService with ContinuousFutureSynchronizer, PeriodicExecutor {
     _fetcher.close();
   }
 
-  Future<Entry> _fetchIfOlder(DateTime time,
+  Future<Pair<Entry, String?>> _fetchIfOlder(DateTime time,
       {bool preferCached = false}) async {
     // Sync up with the cache and use it when it's not expired.
     if (_cachedEntry.isEmpty || _cachedEntry.fetchTime.isAfter(time)) {
@@ -114,21 +119,26 @@ class ConfigService with ContinuousFutureSynchronizer, PeriodicExecutor {
         _hooks.invokeConfigChanged(entry.config.entries);
       }
       if (_cachedEntry.fetchTime.isAfter(time)) {
-        return _cachedEntry;
+        return Pair(_cachedEntry, null);
       }
     }
-    // Use cache anyway (either offline mode or get calls on auto & manual poll must not initiate fetch).
+    // Use cache anyway (get calls on auto & manual poll must not initiate fetch).
     // The initialized check ensures that we subscribe for the ongoing fetch during the
     // max init wait time window in case of auto poll.
-    if ((preferCached && _initialized) || _offline) {
-      return _cachedEntry;
+    if (preferCached && _initialized) {
+      return Pair(_cachedEntry, null);
+    }
+    // If we are in offline mode we are not allowed to initiate fetch.
+    if (_offline) {
+      return Pair(_cachedEntry,
+          "The SDK is in offline mode, it can't initiate HTTP calls.");
     }
     // No fetch is running, initiate a new one.
     // Ensure only one fetch request is running at a time.
     return await syncFuture(_fetch);
   }
 
-  Future<Entry> _fetch() async {
+  Future<Pair<Entry, String?>> _fetch() async {
     final mode = _mode;
     if (mode is AutoPollingMode && !_initialized) {
       // Waiting for the client initialization.
@@ -139,14 +149,14 @@ class ConfigService with ContinuousFutureSynchronizer, PeriodicExecutor {
             'Max init wait time for the very first fetch reached (${mode.maxInitWaitTime.inMilliseconds}ms). Returning cached config.');
         _initialized = true;
         _hooks.invokeOnReady();
-        return _cachedEntry;
+        return Pair(_cachedEntry, null);
       });
     }
     // The service is initialized, start fetch without timeout.
     return await _fetchConfig();
   }
 
-  Future<Entry> _fetchConfig() async {
+  Future<Pair<Entry, String?>> _fetchConfig() async {
     final response = await _fetcher.fetchConfiguration(_cachedEntry.eTag);
     if (response.isFetched) {
       _cachedEntry = response.entry;
@@ -160,7 +170,7 @@ class ConfigService with ContinuousFutureSynchronizer, PeriodicExecutor {
       _hooks.invokeOnReady();
       _initialized = true;
     }
-    return _cachedEntry;
+    return Pair(_cachedEntry, response.error);
   }
 
   void _startPoll(AutoPollingMode mode) {

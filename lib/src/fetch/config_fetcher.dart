@@ -174,8 +174,8 @@ class ConfigFetcher implements Fetcher {
       );
       if (_successStatusCodes.contains(response.statusCode)) {
         final eTag = response.headers.value(_eTagHeaderName) ?? '';
-        final config = _parseConfigFromJson(response.data.toString());
-        if (config == Config.empty) return FetchResponse.failure('Config JSON parsing failed.');
+        final decoded = jsonDecode(response.data.toString());
+        final config = Config.fromJson(decoded);
         _logger.debug('Fetch was successful: new config fetched.');
         return FetchResponse.success(
             Entry(config, eTag, DateTime.now().toUtc()));
@@ -191,16 +191,6 @@ class ConfigFetcher implements Fetcher {
     } catch (e, s) {
       _errorReporter.error('Exception occurred during fetching.', e, s);
       return FetchResponse.failure(e.toString());
-    }
-  }
-
-  Config _parseConfigFromJson(String json) {
-    try {
-      final decoded = jsonDecode(json);
-      return Config.fromJson(decoded);
-    } catch (e, s) {
-      _errorReporter.error('Config JSON parsing failed.', e, s);
-      return Config.empty;
     }
   }
 }

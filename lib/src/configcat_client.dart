@@ -1,4 +1,5 @@
 import 'package:configcat_client/src/constants.dart';
+import 'package:configcat_client/src/fetch/refresh_result.dart';
 import 'package:dio/dio.dart';
 
 import 'error_reporter.dart';
@@ -316,8 +317,10 @@ class ConfigCatClient {
   }
 
   /// Initiates a force refresh on the cached configuration.
-  Future<void> forceRefresh() {
-    return _configService?.refresh() ?? Future.value(null);
+  Future<RefreshResult> forceRefresh() {
+    return _configService?.refresh() ??
+        Future.value(RefreshResult(false,
+            "The SDK uses the LOCAL_ONLY flag override behavior which prevents making HTTP requests."));
   }
 
   /// Sets the default user.
