@@ -320,6 +320,42 @@ void main() {
       // Cleanup
       service.close();
     });
+
+    test('max wait time ignored when the cache is not expired yet', () async {
+      // Arrange
+      final cached = jsonEncode(createTestEntry({'key': true}).toJson());
+      when(cache.read(any)).thenAnswer((_) => Future.value(cached));
+
+      final service = _createService(PollingMode.autoPoll(
+          maxInitWaitTime: const Duration(milliseconds: 300), autoPollInterval: const Duration(milliseconds: 100)));
+
+      dioAdapter.onGet(
+          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
+              (server) {
+            server.reply(200, createTestConfig({'key': 'test1'}).toJson(),
+                delay: const Duration(seconds: 2));
+          });
+
+      // Act
+      await Future.delayed(const Duration(milliseconds: 110));
+      final current = DateTime.now();
+      final result = await service.getSettings();
+
+      // Assert
+      expect(DateTime.now().difference(current),
+          lessThan(const Duration(milliseconds: 50)));
+      expect(result.isEmpty, isFalse);
+
+      // Act
+      final result2 = await service.getSettings();
+
+      // Assert
+      expect(result2.isEmpty, isFalse);
+      expect(interceptor.allRequestCount(), 1);
+
+      // Cleanup
+      service.close();
+    });
   });
 
   group('Lazy Loading Tests', () {

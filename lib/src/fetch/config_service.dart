@@ -37,6 +37,7 @@ class ConfigService with ContinuousFutureSynchronizer, PeriodicExecutor {
   late final ConfigCatCache _cache;
   late final ErrorReporter _errorReporter;
   Entry _cachedEntry = Entry.empty;
+  String _cachedJson = '';
   bool _offline = false;
   bool _initialized = false;
 
@@ -61,8 +62,7 @@ class ConfigService with ContinuousFutureSynchronizer, PeriodicExecutor {
     if (mode is AutoPollingMode) {
       _startPoll(mode);
     } else {
-      _initialized = true;
-      _hooks.invokeOnReady();
+      _setInitialized();
     }
   }
 
@@ -120,7 +120,9 @@ class ConfigService with ContinuousFutureSynchronizer, PeriodicExecutor {
         _cachedEntry = entry;
         _hooks.invokeConfigChanged(entry.config.entries);
       }
+      // Cache isn't expired
       if (_cachedEntry.fetchTime.isAfter(time)) {
+        _setInitialized();
         return Pair(_cachedEntry, null);
       }
     }
@@ -144,13 +146,12 @@ class ConfigService with ContinuousFutureSynchronizer, PeriodicExecutor {
     final mode = _mode;
     if (mode is AutoPollingMode && !_initialized) {
       // Waiting for the client initialization.
-      // After the maxInitWaitTimeInSeconds timeout the client will be initialized and while
+      // After the maxInitWaitTime timeout the client will be initialized and while
       // the config is not ready the default value will be returned.
       return await _fetchConfig().timeout(mode.maxInitWaitTime, onTimeout: () {
         _logger.warning(
             'Max init wait time for the very first fetch reached (${mode.maxInitWaitTime.inMilliseconds}ms). Returning cached config.');
-        _initialized = true;
-        _hooks.invokeOnReady();
+        _setInitialized();
         return Pair(_cachedEntry, null);
       });
     }
@@ -168,10 +169,7 @@ class ConfigService with ContinuousFutureSynchronizer, PeriodicExecutor {
       _cachedEntry = _cachedEntry.withTime(DateTime.now().toUtc());
       await _writeCache(_cachedEntry);
     }
-    if (!_initialized) {
-      _hooks.invokeOnReady();
-      _initialized = true;
-    }
+    _setInitialized();
     return Pair(_cachedEntry, response.error);
   }
 
@@ -182,10 +180,18 @@ class ConfigService with ContinuousFutureSynchronizer, PeriodicExecutor {
             DateTime.now().toUtc().subtract(mode.autoPollInterval)));
   }
 
+  void _setInitialized() {
+    if (!_initialized) {
+      _initialized = true;
+      _hooks.invokeOnReady();
+    }
+  }
+
   Future<Entry> _readCache() async {
     try {
       final json = await _cache.read(_cacheKey);
       if (json.isEmpty) return Entry.empty;
+      if (json == _cachedJson) return Entry.empty;
       final decoded = jsonDecode(json);
       return Entry.fromJson(decoded);
     } catch (e, s) {
@@ -198,6 +204,7 @@ class ConfigService with ContinuousFutureSynchronizer, PeriodicExecutor {
     try {
       final map = value.toJson();
       final json = jsonEncode(map);
+      _cachedJson = json;
       await _cache.write(_cacheKey, json);
     } catch (e, s) {
       _errorReporter.error('An error occurred during the cache write.', e, s);
