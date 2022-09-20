@@ -192,6 +192,7 @@ class ConfigService with ContinuousFutureSynchronizer, PeriodicExecutor {
       final json = await _cache.read(_cacheKey);
       if (json.isEmpty) return Entry.empty;
       if (json == _cachedJson) return Entry.empty;
+      _cachedJson = json;
       final decoded = jsonDecode(json);
       return Entry.fromJson(decoded);
     } catch (e, s) {
