@@ -327,14 +327,15 @@ void main() {
       when(cache.read(any)).thenAnswer((_) => Future.value(cached));
 
       final service = _createService(PollingMode.autoPoll(
-          maxInitWaitTime: const Duration(milliseconds: 300), autoPollInterval: const Duration(milliseconds: 100)));
+          maxInitWaitTime: const Duration(milliseconds: 300),
+          autoPollInterval: const Duration(milliseconds: 100)));
 
       dioAdapter.onGet(
           sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
-              (server) {
-            server.reply(200, createTestConfig({'key': 'test1'}).toJson(),
-                delay: const Duration(seconds: 2));
-          });
+          (server) {
+        server.reply(200, createTestConfig({'key': 'test1'}).toJson(),
+            delay: const Duration(seconds: 2));
+      });
 
       // Act
       await Future.delayed(const Duration(milliseconds: 110));
