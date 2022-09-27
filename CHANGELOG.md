@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - The static `close()` method was split to an instance level `close()` method which closes the given `ConfigCatClient` and to a static `closeAll()` method which closes all instantiated client instances.
 - The `forceRefresh()` method now returns with a result object that indicates whether the refresh succeeded or not.
+- The TTL of `lazyLoad` and interval of `autoPoll` is compared against a cached `fetchTime`, which allows the SDK not necessarily download a new `config.json` at each application restart.
 
 ### Removed
 - The `onConfigChanged()` hook parameter of `PollingModes.autoPoll`. It was replaced by the newly introduced `onConfigChanged(Map<string, Setting>)` hook function which is invoked with each polling mode. 
