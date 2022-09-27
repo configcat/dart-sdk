@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:configcat_client/configcat_client.dart';
+import 'package:configcat_client/src/error_reporter.dart';
 import 'package:configcat_client/src/fetch/config_fetcher.dart';
 import 'package:configcat_client/src/fetch/config_service.dart';
 import 'package:dio/dio.dart';
@@ -14,31 +17,41 @@ void main() {
   late RequestCounterInterceptor interceptor;
   final ConfigCatLogger logger = ConfigCatLogger();
   late MockConfigCatCache cache;
+  late ConfigFetcher fetcher;
+  late DioAdapter dioAdapter;
   setUp(() {
     interceptor = RequestCounterInterceptor();
     cache = MockConfigCatCache();
+    fetcher = ConfigFetcher(
+        logger: logger,
+        sdkKey: testSdkKey,
+        options: const ConfigCatOptions(),
+        errorReporter: ErrorReporter(logger, Hooks()));
+    fetcher.httpClient.interceptors.add(interceptor);
+    dioAdapter = DioAdapter(dio: fetcher.httpClient);
   });
   tearDown(() {
     interceptor.clear();
+    dioAdapter.close();
   });
+
+  ConfigService _createService(PollingMode pollingMode,
+      {ConfigCatCache? customCache}) {
+    return ConfigService(
+        sdkKey: testSdkKey,
+        mode: pollingMode,
+        hooks: Hooks(),
+        fetcher: fetcher,
+        logger: logger,
+        cache: customCache ?? cache,
+        errorReporter: ErrorReporter(logger, Hooks()));
+  }
 
   group('Service Tests', () {
     test('ensure only one fetch runs at a time', () async {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
-      final fetcher = ConfigFetcher(
-          logger: logger,
-          sdkKey: testSdkKey,
-          mode: 'm',
-          options: const ConfigCatOptions());
-      fetcher.httpClient.interceptors.add(interceptor);
-      final dioAdapter = DioAdapter(dio: fetcher.httpClient);
-      final service = ConfigService(
-          sdkKey: testSdkKey,
-          mode: PollingMode.manualPoll(),
-          fetcher: fetcher,
-          logger: logger,
-          cache: cache);
+      final service = _createService(PollingMode.manualPoll());
 
       dioAdapter.onGet(
           sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
@@ -56,6 +69,9 @@ void main() {
 
       // Assert
       expect(interceptor.allRequestCount(), 1);
+
+      // Cleanup
+      service.close();
     });
   });
 
@@ -63,19 +79,8 @@ void main() {
     test('refresh', () async {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
-      final fetcher = ConfigFetcher(
-          logger: logger,
-          sdkKey: testSdkKey,
-          mode: 'm',
-          options: const ConfigCatOptions());
-      fetcher.httpClient.interceptors.add(interceptor);
-      final dioAdapter = DioAdapter(dio: fetcher.httpClient);
-      final service = ConfigService(
-          sdkKey: testSdkKey,
-          mode: PollingMode.autoPoll(),
-          fetcher: fetcher,
-          logger: logger,
-          cache: cache);
+
+      final service = _createService(PollingMode.autoPoll());
 
       dioAdapter
         ..onGet(sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
@@ -96,20 +101,18 @@ void main() {
       final settings1 = await service.getSettings();
 
       // Assert
-      expect(settings1['key']?.value, 'test1');
+      expect(settings1.settings['key']?.value, 'test1');
 
       // Act
       await service.refresh();
       final settings2 = await service.getSettings();
 
       // Assert
-      expect(settings2['key']?.value, 'test2');
+      expect(settings2.settings['key']?.value, 'test2');
       verify(cache.write(any, any)).called(equals(2));
       expect(interceptor.allRequestCount(), 2);
 
       // Cleanup
-      fetcher.close();
-      dioAdapter.close();
       service.close();
     });
 
@@ -117,22 +120,8 @@ void main() {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
 
-      var onChanged = false;
-      final fetcher = ConfigFetcher(
-          logger: logger,
-          sdkKey: testSdkKey,
-          mode: 'm',
-          options: const ConfigCatOptions());
-      fetcher.httpClient.interceptors.add(interceptor);
-      final dioAdapter = DioAdapter(dio: fetcher.httpClient);
-      final service = ConfigService(
-          sdkKey: testSdkKey,
-          mode: PollingMode.autoPoll(
-              autoPollInterval: const Duration(milliseconds: 1000),
-              onConfigChanged: () => onChanged = true),
-          fetcher: fetcher,
-          logger: logger,
-          cache: cache);
+      final service = _createService(
+          PollingMode.autoPoll(autoPollInterval: const Duration(seconds: 1)));
       dioAdapter
         ..onGet(sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
             (server) {
@@ -147,7 +136,7 @@ void main() {
           server.reply(200, createTestConfig({'key': 'test2'}).toJson(),
               headers: {
                 Headers.contentTypeHeader: [Headers.jsonContentType],
-                'Etag': ['tag1']
+                'Etag': ['tag2']
               });
         }, headers: {'If-None-Match': 'tag1'});
 
@@ -155,21 +144,24 @@ void main() {
       final settings1 = await service.getSettings();
 
       // Assert
-      expect(settings1['key']?.value, 'test1');
+      expect(settings1.settings['key']?.value, 'test1');
 
       // Act
-      await Future.delayed(const Duration(milliseconds: 2500));
       final settings2 = await service.getSettings();
 
       // Assert
-      expect(settings2['key']?.value, 'test2');
-      verify(cache.write(any, any)).called(greaterThanOrEqualTo(2));
-      expect(onChanged, isTrue);
-      expect(interceptor.allRequestCount(), 3);
+      expect(settings2.settings['key']?.value, 'test1');
+
+      await until(() async {
+        final settings3 = await service.getSettings();
+        final value = settings3.settings['key']?.value ?? '';
+        return value == 'test2';
+      }, const Duration(milliseconds: 2500));
+
+      verify(cache.write(any, any)).called(2);
+      expect(interceptor.allRequestCount(), 2);
 
       // Cleanup
-      fetcher.close();
-      dioAdapter.close();
       service.close();
     });
 
@@ -177,19 +169,7 @@ void main() {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
 
-      final fetcher = ConfigFetcher(
-          logger: logger,
-          sdkKey: testSdkKey,
-          mode: 'm',
-          options: const ConfigCatOptions());
-      fetcher.httpClient.interceptors.add(interceptor);
-      final dioAdapter = DioAdapter(dio: fetcher.httpClient);
-      final service = ConfigService(
-          sdkKey: testSdkKey,
-          mode: PollingMode.autoPoll(),
-          fetcher: fetcher,
-          logger: logger,
-          cache: cache);
+      final service = _createService(PollingMode.autoPoll());
       dioAdapter.onGet(
           sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
           (server) {
@@ -205,8 +185,67 @@ void main() {
       expect(interceptor.allRequestCount(), 1);
 
       // Cleanup
-      fetcher.close();
-      dioAdapter.close();
+      service.close();
+    });
+
+    test('ensure cached fetch time is respected on interval calc', () async {
+      // Arrange
+      final cached = jsonEncode(createTestEntry({'key': true}).toJson());
+      when(cache.read(any)).thenAnswer((_) => Future.value(cached));
+
+      final service = _createService(PollingMode.autoPoll(
+          autoPollInterval: const Duration(milliseconds: 200)));
+      dioAdapter.onGet(
+          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
+          (server) {
+        server.reply(200, createTestConfig({'key': true}).toJson());
+      });
+
+      // Assert
+      expect(interceptor.allRequestCount(), 0);
+
+      // Act
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      // Assert
+      expect(interceptor.allRequestCount(), 1);
+
+      // Cleanup
+      service.close();
+    });
+
+    test('online/offline', () async {
+      // Arrange
+      when(cache.read(any)).thenAnswer((_) => Future.value(''));
+
+      final service = _createService(PollingMode.autoPoll(
+          autoPollInterval: const Duration(milliseconds: 200)));
+      dioAdapter.onGet(getPath(), (server) {
+        server.reply(200, createTestConfig({'key': 'test1'}).toJson());
+      });
+
+      // Act
+      await Future.delayed(const Duration(milliseconds: 500));
+      service.offline();
+      var reqCount = interceptor.allRequestCount();
+
+      // Assert
+      expect(reqCount, greaterThanOrEqualTo(3));
+
+      // Act
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Assert
+      expect(interceptor.allRequestCount(), equals(reqCount));
+
+      // Act
+      service.online();
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Assert
+      expect(interceptor.allRequestCount(), greaterThanOrEqualTo(6));
+
+      // Cleanup
       service.close();
     });
 
@@ -214,22 +253,8 @@ void main() {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
 
-      var onChanged = false;
-      final fetcher = ConfigFetcher(
-          logger: logger,
-          sdkKey: testSdkKey,
-          mode: 'm',
-          options: const ConfigCatOptions());
-      fetcher.httpClient.interceptors.add(interceptor);
-      final dioAdapter = DioAdapter(dio: fetcher.httpClient);
-      final service = ConfigService(
-          sdkKey: testSdkKey,
-          mode: PollingMode.autoPoll(
-              autoPollInterval: Duration(milliseconds: 100),
-              onConfigChanged: () => onChanged = true),
-          fetcher: fetcher,
-          logger: logger,
-          cache: cache);
+      final service = _createService(PollingMode.autoPoll(
+          autoPollInterval: const Duration(milliseconds: 100)));
       dioAdapter
         ..onGet(sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
             (server) {
@@ -248,20 +273,17 @@ void main() {
       final settings1 = await service.getSettings();
 
       // Assert
-      expect(settings1['key']?.value, 'test1');
+      expect(settings1.settings['key']?.value, 'test1');
 
       // Act
       await Future.delayed(const Duration(milliseconds: 500));
       final settings2 = await service.getSettings();
 
       // Assert
-      expect(settings2['key']?.value, 'test1');
+      expect(settings2.settings['key']?.value, 'test1');
       verify(cache.write(any, any)).called(greaterThanOrEqualTo(1));
-      expect(onChanged, isTrue);
 
       // Cleanup
-      fetcher.close();
-      dioAdapter.close();
       service.close();
     });
 
@@ -269,20 +291,8 @@ void main() {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
 
-      final fetcher = ConfigFetcher(
-          logger: logger,
-          sdkKey: testSdkKey,
-          mode: 'm',
-          options: const ConfigCatOptions());
-      fetcher.httpClient.interceptors.add(interceptor);
-      final dioAdapter = DioAdapter(dio: fetcher.httpClient);
-      final service = ConfigService(
-          sdkKey: testSdkKey,
-          mode: PollingMode.autoPoll(
-              maxInitWaitTime: const Duration(milliseconds: 100)),
-          fetcher: fetcher,
-          logger: logger,
-          cache: cache);
+      final service = _createService(PollingMode.autoPoll(
+          maxInitWaitTime: const Duration(milliseconds: 100)));
 
       dioAdapter.onGet(
           sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
@@ -298,18 +308,53 @@ void main() {
       // Assert
       expect(DateTime.now().difference(current),
           lessThan(const Duration(milliseconds: 150)));
-      expect(result, isEmpty);
+      expect(result.isEmpty, isTrue);
 
       // Act
       final result2 = await service.getSettings();
 
       // Assert
-      expect(result2, isEmpty);
+      expect(result2.isEmpty, isTrue);
       expect(interceptor.allRequestCount(), 1);
 
       // Cleanup
-      fetcher.close();
-      dioAdapter.close();
+      service.close();
+    });
+
+    test('max wait time ignored when the cache is not expired yet', () async {
+      // Arrange
+      final cached = jsonEncode(createTestEntry({'key': true}).toJson());
+      when(cache.read(any)).thenAnswer((_) => Future.value(cached));
+
+      final service = _createService(PollingMode.autoPoll(
+          maxInitWaitTime: const Duration(milliseconds: 300),
+          autoPollInterval: const Duration(milliseconds: 100)));
+
+      dioAdapter.onGet(
+          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
+          (server) {
+        server.reply(200, createTestConfig({'key': 'test1'}).toJson(),
+            delay: const Duration(seconds: 2));
+      });
+
+      // Act
+      await Future.delayed(const Duration(milliseconds: 110));
+      final current = DateTime.now();
+      final result = await service.getSettings();
+
+      // Assert
+      expect(DateTime.now().difference(current),
+          lessThan(const Duration(milliseconds: 50)));
+      expect(result.isEmpty, isFalse);
+
+      // Act
+      final result2 = await service.getSettings();
+
+      // Assert
+      expect(result2.isEmpty, isFalse);
+      expect(interceptor.allRequestCount(), 1);
+
+      // Cleanup
       service.close();
     });
   });
@@ -318,20 +363,8 @@ void main() {
     test('refresh', () async {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
-      final fetcher = ConfigFetcher(
-          logger: logger,
-          sdkKey: testSdkKey,
-          mode: 'm',
-          options: const ConfigCatOptions());
-      fetcher.httpClient.interceptors.add(interceptor);
-      final dioAdapter = DioAdapter(dio: fetcher.httpClient);
-      final service = ConfigService(
-          sdkKey: testSdkKey,
-          mode: PollingMode.lazyLoad(
-              cacheRefreshInterval: const Duration(milliseconds: 100)),
-          fetcher: fetcher,
-          logger: logger,
-          cache: cache);
+      final service = _createService(PollingMode.lazyLoad(
+          cacheRefreshInterval: const Duration(milliseconds: 100)));
       dioAdapter
         ..onGet(sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
             (server) {
@@ -351,40 +384,26 @@ void main() {
       final settings1 = await service.getSettings();
 
       // Assert
-      expect(settings1['key']?.value, 'test1');
+      expect(settings1.settings['key']?.value, 'test1');
 
       // Act
       await service.refresh();
       final settings2 = await service.getSettings();
 
       // Assert
-      expect(settings2['key']?.value, 'test2');
+      expect(settings2.settings['key']?.value, 'test2');
       verify(cache.write(any, any)).called(2);
       expect(interceptor.allRequestCount(), 2);
 
       // Cleanup
-      fetcher.close();
-      dioAdapter.close();
       service.close();
     });
 
     test('reload', () async {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
-      final fetcher = ConfigFetcher(
-          logger: logger,
-          sdkKey: testSdkKey,
-          mode: 'm',
-          options: const ConfigCatOptions());
-      fetcher.httpClient.interceptors.add(interceptor);
-      final dioAdapter = DioAdapter(dio: fetcher.httpClient);
-      final service = ConfigService(
-          sdkKey: testSdkKey,
-          mode: PollingMode.lazyLoad(
-              cacheRefreshInterval: const Duration(milliseconds: 100)),
-          fetcher: fetcher,
-          logger: logger,
-          cache: cache);
+      final service = _createService(PollingMode.lazyLoad(
+          cacheRefreshInterval: const Duration(milliseconds: 100)));
 
       dioAdapter
         ..onGet(sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
@@ -401,22 +420,95 @@ void main() {
         }, headers: {'If-None-Match': 'tag1'});
 
       final settings1 = await service.getSettings();
-      expect(settings1['key']?.value, 'test1');
+      expect(settings1.settings['key']?.value, 'test1');
       final settings2 = await service.getSettings();
-      expect(settings2['key']?.value, 'test1');
+      expect(settings2.settings['key']?.value, 'test1');
 
-      await Future.delayed(Duration(milliseconds: 150));
-
-      final settings3 = await service.getSettings();
-      expect(settings3['key']?.value, 'test2');
+      await until(() async {
+        final settings3 = await service.getSettings();
+        final value = settings3.settings['key']?.value ?? '';
+        return value == 'test2';
+      }, const Duration(milliseconds: 150));
 
       verify(cache.write(any, any)).called(2);
       expect(interceptor.allRequestCount(), 2);
 
       // Cleanup
-      fetcher.close();
-      dioAdapter.close();
       service.close();
+    });
+
+    test('ensure cached fetch time is respected on TTL calc', () async {
+      // Arrange
+      final cache =
+          CustomCache(jsonEncode(createTestEntry({'key': true}).toJson()));
+      final service = _createService(
+          PollingMode.lazyLoad(
+              cacheRefreshInterval: const Duration(milliseconds: 200)),
+          customCache: cache);
+      dioAdapter.onGet(
+          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
+          (server) {
+        server.reply(200, createTestConfig({'key': true}).toJson());
+      });
+
+      // Act
+      await service.getSettings();
+      await service.getSettings();
+
+      // Assert
+      expect(interceptor.allRequestCount(), 0);
+
+      // Act
+      await Future.delayed(const Duration(milliseconds: 300));
+      await service.getSettings();
+      await service.getSettings();
+
+      // Assert
+      expect(interceptor.allRequestCount(), 1);
+
+      // Cleanup
+      service.close();
+    });
+
+    test('ensure cached fetch time is respected on TTL with 301', () async {
+      // Arrange
+      final cache =
+          CustomCache(jsonEncode(createTestEntry({'key': true}).toJson()));
+
+      dioAdapter.onGet(
+          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
+          (server) {
+        server.reply(304, {});
+      });
+
+      // Act
+      final service = _createService(
+          PollingMode.lazyLoad(
+              cacheRefreshInterval: const Duration(milliseconds: 200)),
+          customCache: cache);
+      await service.getSettings();
+      await service.getSettings();
+
+      // Assert
+      expect(interceptor.allRequestCount(), 0);
+
+      // Act
+      await Future.delayed(const Duration(milliseconds: 300));
+      await service.getSettings();
+
+      final service2 = _createService(
+          PollingMode.lazyLoad(
+              cacheRefreshInterval: const Duration(milliseconds: 200)),
+          customCache: cache);
+      await service2.getSettings();
+      await service2.getSettings();
+
+      // Assert
+      expect(interceptor.allRequestCount(), 1);
+
+      // Cleanup
+      service.close();
+      service2.close();
     });
   });
 
@@ -424,20 +516,7 @@ void main() {
     test('refresh', () async {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
-      final fetcher = ConfigFetcher(
-          logger: logger,
-          sdkKey: testSdkKey,
-          mode: 'm',
-          options: const ConfigCatOptions());
-      fetcher.httpClient.interceptors.add(interceptor);
-      final dioAdapter = DioAdapter(dio: fetcher.httpClient);
-      final service = ConfigService(
-        sdkKey: testSdkKey,
-        mode: PollingMode.manualPoll(),
-        fetcher: fetcher,
-        logger: logger,
-        cache: cache,
-      );
+      final service = _createService(PollingMode.manualPoll());
       dioAdapter
         ..onGet(sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
             (server) {
@@ -453,41 +532,61 @@ void main() {
         }, headers: {'If-None-Match': 'tag1'});
 
       // Act
-      await service.refresh();
+      final result = await service.refresh();
       final settings1 = await service.getSettings();
 
       // Assert
-      expect(settings1['key']?.value, 'test1');
+      expect(result.isSuccess, isTrue);
+      expect(result.error, isNull);
+      expect(settings1.settings['key']?.value, 'test1');
 
       // Act
       await service.refresh();
       final settings2 = await service.getSettings();
 
       // Assert
-      expect(settings2['key']?.value, 'test2');
+      expect(settings2.settings['key']?.value, 'test2');
       verify(cache.write(any, any)).called(2);
       expect(interceptor.allRequestCount(), 2);
 
       // Cleanup
-      fetcher.close();
-      dioAdapter.close();
+      service.close();
+    });
+
+    test('failing refresh', () async {
+      // Arrange
+      when(cache.read(any)).thenAnswer((_) => Future.value(''));
+      final service = _createService(PollingMode.manualPoll());
+      dioAdapter.onGet(
+          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
+          (server) {
+        server.reply(500, {});
+      });
+
+      // Act
+      final result = await service.refresh();
+      final settings1 = await service.getSettings();
+
+      // Assert
+      expect(result.isSuccess, isFalse);
+      expect(
+          result.error,
+          equals(
+              "Double-check your API KEY at https://app.configcat.com/apikey. Received unexpected response: 500"));
+      expect(settings1.settings, isEmpty);
+
+      verifyNever(cache.write(any, any));
+      expect(interceptor.allRequestCount(), 1);
+
+      // Cleanup
       service.close();
     });
 
     test('get without refresh', () async {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
-      final fetcher = ConfigFetcher(
-          logger: logger,
-          sdkKey: testSdkKey,
-          mode: 'm',
-          options: const ConfigCatOptions());
-      final service = ConfigService(
-          sdkKey: testSdkKey,
-          mode: PollingMode.manualPoll(),
-          fetcher: fetcher,
-          logger: logger,
-          cache: cache);
+
+      final service = _createService(PollingMode.manualPoll());
 
       // Act
       await service.getSettings();
@@ -497,7 +596,6 @@ void main() {
       expect(interceptor.allRequestCount(), 0);
 
       // Cleanup
-      fetcher.close();
       service.close();
     });
   });

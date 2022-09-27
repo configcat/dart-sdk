@@ -37,7 +37,7 @@ void main() {
   };
 
   tearDown(() {
-    ConfigCatClient.close();
+    ConfigCatClient.closeAll();
   });
 
   for (var element in testData.entries) {

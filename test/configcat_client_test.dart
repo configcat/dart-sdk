@@ -16,17 +16,20 @@ void main() {
   late ConfigCatClient client;
   late DioAdapter dioAdapter;
   late MockConfigCatCache cache;
+  late RequestCounterInterceptor interceptor;
   setUp(() {
     cache = MockConfigCatCache();
+    interceptor = RequestCounterInterceptor();
     when(cache.read(any)).thenAnswer((_) => Future.value(''));
     client = ConfigCatClient.get(
         sdkKey: testSdkKey,
         options:
             ConfigCatOptions(mode: PollingMode.manualPoll(), cache: cache));
+    client.httpClient.interceptors.add(interceptor);
     dioAdapter = DioAdapter(dio: client.httpClient);
   });
   tearDown(() {
-    ConfigCatClient.close();
+    ConfigCatClient.closeAll();
     dioAdapter.close();
   });
 
@@ -208,7 +211,7 @@ void main() {
 
   test('returns cached value on failure', () async {
     // Arrange
-    final body = jsonEncode(createTestConfig({'value': 42}));
+    final body = jsonEncode(createTestEntry({'value': 42}));
     when(cache.read(any)).thenAnswer((_) => Future.value(body));
     dioAdapter.onGet(getPath(), (server) {
       server.reply(500, null);
@@ -345,18 +348,79 @@ void main() {
     expect(client2, same(client));
 
     // Act
-    ConfigCatClient.close(client: client2);
+    client2.close();
     final client3 = ConfigCatClient.get(sdkKey: "another");
 
     // Assert
     expect(client3, isNot(same(client2)));
 
     // Act
-    ConfigCatClient.close();
+    ConfigCatClient.closeAll();
     final client4 = ConfigCatClient.get(sdkKey: "another");
 
     // Assert
     expect(client4, isNot(same(client3)));
+  });
+
+  test('online/offline', () async {
+    // Arrange
+    final body = createTestConfig({'stringValue': 'testValue'}).toJson();
+    dioAdapter.onGet(getPath(), (server) {
+      server.reply(200, body);
+    });
+
+    // Act
+    await client.forceRefresh();
+
+    // Assert
+    expect(interceptor.allRequestCount(), equals(1));
+
+    // Act
+    client.setOffline();
+    await client.forceRefresh();
+
+    // Assert
+    expect(interceptor.allRequestCount(), equals(1));
+    expect(client.isOffline(), isTrue);
+
+    // Act
+    client.setOnline();
+    await client.forceRefresh();
+
+    // Assert
+    expect(interceptor.allRequestCount(), equals(2));
+  });
+
+  test('eval details', () async {
+    // Arrange
+    dioAdapter.onGet(getPath(), (server) {
+      server.reply(200, createTestConfigWithRules());
+    });
+
+    // Act
+    await client.forceRefresh();
+    final details = await client.getValueDetails(
+        key: 'key1',
+        defaultValue: '',
+        user: ConfigCatUser(identifier: 'test@test2.com'));
+
+    // Assert
+    expect(details.value, equals('fake2'));
+    expect(details.key, equals('key1'));
+    expect(details.variationId, equals('variationId2'));
+    expect(details.isDefaultValue, isFalse);
+    expect(details.error, isNull);
+    expect(details.matchedEvaluationPercentageRule, isNull);
+    expect(details.matchedEvaluationRule?.value, equals('fake2'));
+    expect(details.matchedEvaluationRule?.comparator, equals(2));
+    expect(details.matchedEvaluationRule?.comparisonAttribute,
+        equals('Identifier'));
+    expect(
+        details.matchedEvaluationRule?.comparisonValue, equals('@test2.com'));
+    expect(
+        details.fetchTime.isAfter(
+            DateTime.now().toUtc().subtract(const Duration(seconds: 1))),
+        isTrue);
   });
 }
 

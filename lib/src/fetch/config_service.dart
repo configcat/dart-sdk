@@ -1,149 +1,214 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:configcat_client/src/fetch/refresh_result.dart';
 import 'package:crypto/crypto.dart';
 
 import '../configcat_cache.dart';
+import '../configcat_options.dart';
+import '../pair.dart';
 import '../polling_mode.dart';
 import '../mixins.dart';
 import '../constants.dart';
 import '../log/configcat_logger.dart';
 import '../json/setting.dart';
-import '../json/config.dart';
 import 'config_fetcher.dart';
-import 'entry.dart';
+import '../json/entry.dart';
+import '../error_reporter.dart';
 
-class ConfigService with ConfigJsonParser, ContinuousFutureSynchronizer {
+class SettingResult {
+  final Map<String, Setting> settings;
+  final DateTime fetchTime;
+
+  SettingResult({required this.settings, required this.fetchTime});
+
+  bool get isEmpty => settings.isEmpty;
+
+  static SettingResult empty =
+      SettingResult(settings: {}, fetchTime: distantPast);
+}
+
+class ConfigService with ContinuousFutureSynchronizer, PeriodicExecutor {
   late final String _cacheKey;
   late final PollingMode _mode;
+  late final Hooks _hooks;
   late final Fetcher _fetcher;
   late final ConfigCatLogger _logger;
   late final ConfigCatCache _cache;
-  late final Timer? _timer;
+  late final ErrorReporter _errorReporter;
   Entry _cachedEntry = Entry.empty;
+  String _cachedJson = '';
+  bool _offline = false;
   bool _initialized = false;
 
   ConfigService(
       {required String sdkKey,
       required PollingMode mode,
+      required Hooks hooks,
       required Fetcher fetcher,
       required ConfigCatLogger logger,
-      required ConfigCatCache cache}) {
-    _cacheKey =
-        sha1.convert(utf8.encode('dart_${configJsonName}_$sdkKey')).toString();
+      required ConfigCatCache cache,
+      required ErrorReporter errorReporter}) {
+    _cacheKey = sha1
+        .convert(utf8.encode('dart_${configJsonName}_${sdkKey}_v2'))
+        .toString();
     _mode = mode;
+    _hooks = hooks;
     _fetcher = fetcher;
     _logger = logger;
     _cache = cache;
+    _errorReporter = errorReporter;
 
     if (mode is AutoPollingMode) {
-      _timer = Timer.periodic(mode.autoPollInterval, (Timer t) async {
-        await refresh();
-      });
-      // execute immediately, because periodic() waits for an interval amount of time before the first tick
-      Timer.run(() async {
-        await refresh();
-      });
+      _startPoll(mode);
     } else {
-      _timer = null;
-      _initialized = true;
+      _setInitialized();
     }
   }
 
-  Future<Map<String, Setting>> getSettings() async {
+  Future<SettingResult> getSettings() async {
     final mode = _mode;
     if (mode is LazyLoadingMode) {
-      final config = await _fetchIfOlder(
+      final entry = await _fetchIfOlder(
           DateTime.now().toUtc().subtract(mode.cacheRefreshInterval));
-      return config.entries;
+      return SettingResult(
+          settings: entry.first.config.entries,
+          fetchTime: entry.first.fetchTime);
     } else {
-      final config = await _fetchIfOlder(distantPast, preferCached: true);
-      return config.entries;
+      final entry = await _fetchIfOlder(distantPast, preferCached: true);
+      return SettingResult(
+          settings: entry.first.config.entries,
+          fetchTime: entry.first.fetchTime);
     }
   }
 
-  Future<void> refresh() async {
-    await _fetchIfOlder(distantFuture);
+  Future<RefreshResult> refresh() async {
+    final fetch = await _fetchIfOlder(distantFuture);
+    return RefreshResult(fetch.second == null, fetch.second);
   }
+
+  void online() {
+    if (!_offline) return;
+    _offline = false;
+    final mode = _mode;
+    if (mode is AutoPollingMode) {
+      _startPoll(mode);
+    }
+    _logger.debug("Switched to ONLINE mode.");
+  }
+
+  void offline() {
+    if (_offline) return;
+    _offline = true;
+    cancelPeriodic();
+    _logger.debug("Switched to OFFLINE mode.");
+  }
+
+  bool isOffline() => _offline;
 
   void close() {
-    _timer?.cancel();
+    cancelPeriodic();
+    _fetcher.close();
   }
 
-  Future<Config> _fetchIfOlder(DateTime time,
+  Future<Pair<Entry, String?>> _fetchIfOlder(DateTime time,
       {bool preferCached = false}) async {
     // Sync up with the cache and use it when it's not expired.
-    if (_cachedEntry.isEmpty() || _cachedEntry.fetchTime.isAfter(time)) {
-      final json = await _readCache();
-      if (json.isNotEmpty && json != _cachedEntry.json) {
-        final config = parseConfigFromJson(json, _logger);
-        if (!config.isEmpty()) {
-          _cachedEntry = Entry(config, json, '', distantPast);
-        }
+    if (_cachedEntry.isEmpty || _cachedEntry.fetchTime.isAfter(time)) {
+      final entry = await _readCache();
+      if (!entry.isEmpty && entry.eTag != _cachedEntry.eTag) {
+        _cachedEntry = entry;
+        _hooks.invokeConfigChanged(entry.config.entries);
       }
+      // Cache isn't expired
       if (_cachedEntry.fetchTime.isAfter(time)) {
-        return _cachedEntry.config;
+        _setInitialized();
+        return Pair(_cachedEntry, null);
       }
     }
     // Use cache anyway (get calls on auto & manual poll must not initiate fetch).
     // The initialized check ensures that we subscribe for the ongoing fetch during the
     // max init wait time window in case of auto poll.
     if (preferCached && _initialized) {
-      return _cachedEntry.config;
+      return Pair(_cachedEntry, null);
     }
-
+    // If we are in offline mode we are not allowed to initiate fetch.
+    if (_offline) {
+      return Pair(_cachedEntry,
+          "The SDK is in offline mode, it can't initiate HTTP calls.");
+    }
     // No fetch is running, initiate a new one.
     // Ensure only one fetch request is running at a time.
-    return await syncFuture(() => _fetch());
+    return await syncFuture(_fetch);
   }
 
-  Future<Config> _fetch() async {
+  Future<Pair<Entry, String?>> _fetch() async {
     final mode = _mode;
     if (mode is AutoPollingMode && !_initialized) {
       // Waiting for the client initialization.
-      // After the maxInitWaitTimeInSeconds timeout the client will be initialized and while
+      // After the maxInitWaitTime timeout the client will be initialized and while
       // the config is not ready the default value will be returned.
       return await _fetchConfig().timeout(mode.maxInitWaitTime, onTimeout: () {
         _logger.warning(
             'Max init wait time for the very first fetch reached (${mode.maxInitWaitTime.inMilliseconds}ms). Returning cached config.');
-        _initialized = true;
-        return _cachedEntry.config;
+        _setInitialized();
+        return Pair(_cachedEntry, null);
       });
     }
     // The service is initialized, start fetch without timeout.
     return await _fetchConfig();
   }
 
-  Future<Config> _fetchConfig() async {
+  Future<Pair<Entry, String?>> _fetchConfig() async {
     final response = await _fetcher.fetchConfiguration(_cachedEntry.eTag);
-    if (response.isFetched && response.entry.json != _cachedEntry.json) {
+    if (response.isFetched) {
       _cachedEntry = response.entry;
-      await _writeCache(response.entry.json);
-      final mode = _mode;
-      if (mode is AutoPollingMode) {
-        mode.onConfigChanged?.call();
-      }
+      await _writeCache(response.entry);
+      _hooks.invokeConfigChanged(response.entry.config.entries);
     } else if (response.isNotModified) {
       _cachedEntry = _cachedEntry.withTime(DateTime.now().toUtc());
+      await _writeCache(_cachedEntry);
     }
-    _initialized = true;
-    return _cachedEntry.config;
+    _setInitialized();
+    return Pair(_cachedEntry, response.error);
   }
 
-  Future<String> _readCache() async {
-    try {
-      return await _cache.read(_cacheKey);
-    } catch (e, s) {
-      _logger.error('An error occurred during the cache read.', e, s);
-      return '';
+  void _startPoll(AutoPollingMode mode) {
+    startPeriodic(
+        mode.autoPollInterval,
+        () async => await _fetchIfOlder(
+            DateTime.now().toUtc().subtract(mode.autoPollInterval)));
+  }
+
+  void _setInitialized() {
+    if (!_initialized) {
+      _initialized = true;
+      _hooks.invokeOnReady();
     }
   }
 
-  Future<void> _writeCache(String value) async {
+  Future<Entry> _readCache() async {
     try {
-      await _cache.write(_cacheKey, value);
+      final json = await _cache.read(_cacheKey);
+      if (json.isEmpty) return Entry.empty;
+      if (json == _cachedJson) return Entry.empty;
+      _cachedJson = json;
+      final decoded = jsonDecode(json);
+      return Entry.fromJson(decoded);
     } catch (e, s) {
-      _logger.error('An error occurred during the cache write.', e, s);
+      _errorReporter.error('An error occurred during the cache read.', e, s);
+      return Entry.empty;
+    }
+  }
+
+  Future<void> _writeCache(Entry value) async {
+    try {
+      final map = value.toJson();
+      final json = jsonEncode(map);
+      _cachedJson = json;
+      await _cache.write(_cacheKey, json);
+    } catch (e, s) {
+      _errorReporter.error('An error occurred during the cache write.', e, s);
     }
   }
 }

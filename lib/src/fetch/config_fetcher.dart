@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:dio/dio.dart';
 
-import 'entry.dart';
+import '../error_reporter.dart';
+import '../json/entry.dart';
 import '../data_governance.dart';
 import '../configcat_options.dart';
 import '../mixins.dart';
@@ -20,8 +22,9 @@ class _RedirectMode {
 class FetchResponse {
   final _Status _status;
   final Entry entry;
+  final String? error;
 
-  FetchResponse._(this._status, this.entry);
+  FetchResponse._(this._status, this.entry, this.error);
 
   bool get isFetched {
     return _status == _Status.fetched;
@@ -36,15 +39,15 @@ class FetchResponse {
   }
 
   factory FetchResponse.success(Entry entry) {
-    return FetchResponse._(_Status.fetched, entry);
+    return FetchResponse._(_Status.fetched, entry, null);
   }
 
-  factory FetchResponse.failure() {
-    return FetchResponse._(_Status.failure, Entry.empty);
+  factory FetchResponse.failure(String error) {
+    return FetchResponse._(_Status.failure, Entry.empty, error);
   }
 
   factory FetchResponse.notModified() {
-    return FetchResponse._(_Status.notModified, Entry.empty);
+    return FetchResponse._(_Status.notModified, Entry.empty, null);
   }
 }
 
@@ -56,7 +59,7 @@ abstract class Fetcher {
   void close();
 }
 
-class ConfigFetcher with ConfigJsonParser implements Fetcher {
+class ConfigFetcher implements Fetcher {
   static const globalBaseUrl = 'https://cdn-global.configcat.com';
   static const euOnlyBaseUrl = 'https://cdn-eu.configcat.com';
   static const _userAgentHeaderName = 'X-ConfigCat-UserAgent';
@@ -65,7 +68,8 @@ class ConfigFetcher with ConfigJsonParser implements Fetcher {
   static const _successStatusCodes = [200, 201, 202, 203, 204];
 
   late final ConfigCatLogger _logger;
-  late final String _mode;
+  late final ConfigCatOptions _options;
+  late final ErrorReporter _errorReporter;
   late final String _sdkKey;
 
   late final bool _urlIsCustom;
@@ -75,11 +79,12 @@ class ConfigFetcher with ConfigJsonParser implements Fetcher {
   ConfigFetcher(
       {required ConfigCatLogger logger,
       required String sdkKey,
-      required String mode,
-      required ConfigCatOptions options}) {
+      required ConfigCatOptions options,
+      required ErrorReporter errorReporter}) {
     _logger = logger;
-    _mode = mode;
     _sdkKey = sdkKey;
+    _options = options;
+    _errorReporter = errorReporter;
 
     _urlIsCustom = options.baseUrl.isNotEmpty;
     _url = _urlIsCustom
@@ -157,7 +162,8 @@ class ConfigFetcher with ConfigJsonParser implements Fetcher {
 
   Future<FetchResponse> _doFetch(String eTag) async {
     Map<String, String> headers = {
-      _userAgentHeaderName: 'ConfigCat-Dart/$_mode-$version',
+      _userAgentHeaderName:
+          'ConfigCat-Dart/${_options.mode.getPollingIdentifier()}-$version',
       if (eTag.isNotEmpty) _ifNoneMatchHeaderName: eTag
     };
 
@@ -166,29 +172,25 @@ class ConfigFetcher with ConfigJsonParser implements Fetcher {
         '$_url/configuration-files/$_sdkKey/$configJsonName',
         options: Options(headers: headers),
       );
-
       if (_successStatusCodes.contains(response.statusCode)) {
         final eTag = response.headers.value(_eTagHeaderName) ?? '';
-        final json = response.data.toString();
-        final config = parseConfigFromJson(response.data.toString(), _logger);
-        if (config == Config.empty) {
-          return FetchResponse.failure();
-        }
-
+        final decoded = jsonDecode(response.data.toString());
+        final config = Config.fromJson(decoded);
         _logger.debug('Fetch was successful: new config fetched.');
         return FetchResponse.success(
-            Entry(config, json, eTag, DateTime.now().toUtc()));
+            Entry(config, eTag, DateTime.now().toUtc()));
       } else if (response.statusCode == 304) {
         _logger.debug('Fetch was successful: config not modified.');
         return FetchResponse.notModified();
       } else {
-        _logger.error(
-            'Double-check your API KEY at https://app.configcat.com/apikey. Received unexpected response: ${response.statusCode}');
-        return FetchResponse.failure();
+        final error =
+            'Double-check your API KEY at https://app.configcat.com/apikey. Received unexpected response: ${response.statusCode}';
+        _errorReporter.error(error);
+        return FetchResponse.failure(error);
       }
     } catch (e, s) {
-      _logger.error('Exception occurred during fetching.', e, s);
-      return FetchResponse.failure();
+      _errorReporter.error('Exception occurred during fetching.', e, s);
+      return FetchResponse.failure(e.toString());
     }
   }
 }

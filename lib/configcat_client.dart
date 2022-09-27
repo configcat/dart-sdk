@@ -24,6 +24,9 @@ export 'src/override/behaviour.dart';
 export 'src/override/data_source.dart';
 export 'src/override/flag_overrides.dart';
 
+// fetch
+export 'src/fetch/refresh_result.dart';
+
 // json models
 export 'src/json/setting.dart';
 export 'src/json/percentage_rule.dart';

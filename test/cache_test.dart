@@ -12,7 +12,7 @@ import 'helpers.dart';
 @GenerateMocks([ConfigCatCache])
 void main() {
   tearDown(() {
-    ConfigCatClient.close();
+    ConfigCatClient.closeAll();
   });
 
   test('failing cache, returns memory-cached value', () async {
@@ -40,7 +40,7 @@ void main() {
     // Arrange
     final cache = MockConfigCatCache();
     when(cache.read(any)).thenAnswer(
-        (_) => Future.value(jsonEncode(createTestConfig({'value': 'test'}))));
+        (_) => Future.value(jsonEncode(createTestEntry({'value': 'test'}))));
 
     final client = ConfigCatClient.get(
         sdkKey: testSdkKey, options: ConfigCatOptions(cache: cache));

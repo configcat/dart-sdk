@@ -25,7 +25,7 @@ flutter pub add configcat_client
 Or put the following directly to your `pubspec.yml` and run `dart pub get` or `flutter pub get`.
 ```yaml
 dependencies:
-  configcat_client: ^1.1.0
+  configcat_client: ^2.0.0
 ```
 
 ### 2. Go to the <a href="https://app.configcat.com/sdkkey" target="_blank">ConfigCat Dashboard</a> to get your *SDK Key*:
@@ -52,7 +52,7 @@ if (isMyAwesomeFeatureEnabled) {
 ```
 ### 6. Close the client on application exit
 ```dart
-ConfigCatClient.close();
+client.close();
 ```
 
 ## Getting user-specific setting values with Targeting

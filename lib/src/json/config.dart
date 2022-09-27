@@ -19,7 +19,7 @@ class Config {
 
   Map<String, dynamic> toJson() => _$ConfigToJson(this);
 
-  bool isEmpty() => identical(this, empty);
+  bool get isEmpty => identical(this, empty);
 
   static Config empty = Config(null, {});
 }

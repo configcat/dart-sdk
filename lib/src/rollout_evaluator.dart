@@ -3,9 +3,26 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:pub_semver/pub_semver.dart';
 
+import 'json/rollout_rule.dart';
+import 'json/percentage_rule.dart';
 import 'configcat_user.dart';
 import 'json/setting.dart';
 import 'log/configcat_logger.dart';
+
+class EvaluationResult<T> {
+  final String key;
+  final String variationId;
+  final T value;
+  final RolloutRule? matchedEvaluationRule;
+  final RolloutPercentageItem? matchedEvaluationPercentageRule;
+
+  EvaluationResult(
+      {required this.key,
+      required this.variationId,
+      required this.value,
+      required this.matchedEvaluationRule,
+      required this.matchedEvaluationPercentageRule});
+}
 
 class RolloutEvaluator {
   static const _comparatorTexts = [
@@ -33,10 +50,22 @@ class RolloutEvaluator {
 
   RolloutEvaluator(this._logger);
 
-  MapEntry<Value, String> evaluate<Value>(
+  EvaluationResult<Value> evaluate<Value>(
       Setting setting, String key, ConfigCatUser? user) {
     final logEntries = _LogEntries();
     logEntries.add('Evaluating getValue($key)');
+
+    EvaluationResult<Value> produceResult(
+        {RolloutRule? rolloutRule, RolloutPercentageItem? percentageItem}) {
+      return EvaluationResult(
+          key: key,
+          variationId: rolloutRule?.variationId ??
+              percentageItem?.variationId ??
+              setting.variationId,
+          value: rolloutRule?.value ?? percentageItem?.value ?? setting.value,
+          matchedEvaluationRule: rolloutRule,
+          matchedEvaluationPercentageRule: percentageItem);
+    }
 
     try {
       if (user == null) {
@@ -45,9 +74,8 @@ class RolloutEvaluator {
           _logger.warning(
               'UserObject missing! You should pass a UserObject to getValue(), in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/');
         }
-
         logEntries.add('Returning ${setting.value}');
-        return MapEntry(setting.value, setting.variationId);
+        return produceResult();
       }
 
       logEntries.add('User object: $user');
@@ -80,7 +108,7 @@ class RolloutEvaluator {
                   comparator: comparator,
                   comparisonValue: comparisonValue,
                   value: returnValue));
-              return MapEntry(returnValue, rule.variationId);
+              return produceResult(rolloutRule: rule);
             }
             break;
           // IS NOT ONE OF
@@ -94,7 +122,7 @@ class RolloutEvaluator {
                   comparator: comparator,
                   comparisonValue: comparisonValue,
                   value: returnValue));
-              return MapEntry(returnValue, rule.variationId);
+              return produceResult(rolloutRule: rule);
             }
             break;
           // CONTAINS
@@ -106,7 +134,7 @@ class RolloutEvaluator {
                   comparator: comparator,
                   comparisonValue: comparisonValue,
                   value: returnValue));
-              return MapEntry(returnValue, rule.variationId);
+              return produceResult(rolloutRule: rule);
             }
             break;
           // DOES NOT CONTAIN
@@ -118,7 +146,7 @@ class RolloutEvaluator {
                   comparator: comparator,
                   comparisonValue: comparisonValue,
                   value: returnValue));
-              return MapEntry(returnValue, rule.variationId);
+              return produceResult(rolloutRule: rule);
             }
             break;
           // IS ONE OF (Semantic version), IS NOT ONE OF (Semantic version)
@@ -144,7 +172,7 @@ class RolloutEvaluator {
                     comparator: comparator,
                     comparisonValue: comparisonValue,
                     value: returnValue));
-                return MapEntry(returnValue, rule.variationId);
+                return produceResult(rolloutRule: rule);
               }
             } catch (e) {
               final message = _formatValidationErrorRule(
@@ -176,7 +204,7 @@ class RolloutEvaluator {
                     comparator: comparator,
                     comparisonValue: comparisonValue,
                     value: returnValue));
-                return MapEntry(returnValue, rule.variationId);
+                return produceResult(rolloutRule: rule);
               }
             } catch (e) {
               final message = _formatValidationErrorRule(
@@ -211,7 +239,7 @@ class RolloutEvaluator {
                     comparator: comparator,
                     comparisonValue: comparisonValue,
                     value: returnValue));
-                return MapEntry(returnValue, rule.variationId);
+                return produceResult(rolloutRule: rule);
               }
             } catch (e) {
               final message = _formatValidationErrorRule(
@@ -239,7 +267,7 @@ class RolloutEvaluator {
                   comparator: comparator,
                   comparisonValue: comparisonValue,
                   value: returnValue));
-              return MapEntry(returnValue, rule.variationId);
+              return produceResult(rolloutRule: rule);
             }
             break;
           // IS NOT ONE OF (Sensitive)
@@ -257,7 +285,7 @@ class RolloutEvaluator {
                   comparator: comparator,
                   comparisonValue: comparisonValue,
                   value: returnValue));
-              return MapEntry(returnValue, rule.variationId);
+              return produceResult(rolloutRule: rule);
             }
             break;
           default:
@@ -280,13 +308,13 @@ class RolloutEvaluator {
           bucket += rule.percentage;
           if (scaled < bucket) {
             logEntries.add('Evaluating %% options. Returning ${rule.value}');
-            return MapEntry(rule.value as Value, rule.variationId);
+            return produceResult(percentageItem: rule);
           }
         }
       }
 
       logEntries.add('Returning ${setting.value}');
-      return MapEntry(setting.value as Value, setting.variationId);
+      return produceResult();
     } finally {
       _logger.info(logEntries);
     }
