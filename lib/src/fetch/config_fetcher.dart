@@ -6,7 +6,6 @@ import '../error_reporter.dart';
 import '../json/entry.dart';
 import '../data_governance.dart';
 import '../configcat_options.dart';
-import '../mixins.dart';
 import '../json/config.dart';
 import '../constants.dart';
 import '../log/configcat_logger.dart';
