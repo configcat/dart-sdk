@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:configcat_client/configcat_client.dart';
 import 'package:http_mock_adapter/http_mock_adapter.dart';
 import 'package:test/test.dart';

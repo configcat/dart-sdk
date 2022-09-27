@@ -4,7 +4,6 @@ import 'package:configcat_client/src/constants.dart';
 import 'package:configcat_client/src/json/entry.dart';
 import 'package:configcat_client/src/json/config.dart';
 import 'package:configcat_client/src/json/preferences.dart';
-import 'package:configcat_client/src/json/setting.dart';
 import 'package:dio/dio.dart';
 import 'package:sprintf/sprintf.dart';
 
