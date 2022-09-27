@@ -11,7 +11,7 @@ void main() {
                   // Info level logging helps to inspect the feature flag evaluation process.
                   // Use the default Warning level to avoid too detailed logging in your application.
                   level: LogLevel.info))),
-      dispose: (client) => ConfigCatClient.close(client: client));
+      dispose: (client) => client.close());
   runApp(const MyApp());
 }
 

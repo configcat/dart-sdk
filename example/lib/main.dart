@@ -22,5 +22,5 @@ Future<void> main() async {
 
   print("isPOCFeatureEnabled: $isPOCFeatureEnabled");
 
-  ConfigCatClient.close();
+  client.close();
 }
