@@ -35,6 +35,7 @@ mixin PeriodicExecutor {
   Completer<void>? _canceller;
   Future<void> Function()? _task;
   Duration _interval = const Duration(seconds: 1);
+  CancellableDelayed? _delayed;
 
   void startPeriodic(Duration interval, Future<void> Function() task) {
     if (_canceller != null) return;
@@ -45,9 +46,11 @@ mixin PeriodicExecutor {
   }
 
   void cancelPeriodic() {
-    if ((_canceller?.isCompleted ?? true)) return;
-    _canceller?.complete();
-    _canceller = null;
+    if (!(_canceller?.isCompleted ?? true)) {
+      _canceller?.complete();
+      _canceller = null;
+    }
+    _delayed?.cancel();
   }
 
   Future<void> _execute() async {
@@ -63,6 +66,39 @@ mixin PeriodicExecutor {
     }
   }
 
-  Future<void> _delay(Duration duration) => Future.any(
-      [Future.delayed(duration), _canceller?.future ?? Future.value()]);
+  Future<void> _delay(Duration duration) {
+    final delayed = CancellableDelayed(duration);
+    _delayed = delayed;
+    return Future.any(
+        [delayed.future, _canceller?.future ?? Future.value()]);
+  }
+}
+
+class CancellableDelayed {
+  final Completer<bool> _completer = Completer();
+  late final Timer? _timer;
+
+  bool _isCompleted = false;
+  bool _isCanceled = false;
+
+  Future<bool> get future => _completer.future;
+
+  CancellableDelayed(Duration delay) {
+    _timer = Timer(delay, _complete);
+  }
+
+  void cancel() {
+    if (!_isCompleted && !_isCanceled) {
+      _timer?.cancel();
+      _isCanceled = true;
+      _completer.complete(false);
+    }
+  }
+
+  void _complete() {
+    if (!_isCompleted && !_isCanceled) {
+      _isCompleted = true;
+      _completer.complete(true);
+    }
+  }
 }
