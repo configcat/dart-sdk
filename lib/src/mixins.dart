@@ -69,8 +69,7 @@ mixin PeriodicExecutor {
   Future<void> _delay(Duration duration) {
     final delayed = CancellableDelayed(duration);
     _delayed = delayed;
-    return Future.any(
-        [delayed.future, _canceller?.future ?? Future.value()]);
+    return Future.any([delayed.future, _canceller?.future ?? Future.value()]);
   }
 }
 
