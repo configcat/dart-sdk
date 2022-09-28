@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:configcat_client/src/fetch/refresh_result.dart';
 import 'package:crypto/crypto.dart';
 
 import '../configcat_cache.dart';
@@ -15,6 +14,8 @@ import '../json/setting.dart';
 import 'config_fetcher.dart';
 import '../json/entry.dart';
 import '../error_reporter.dart';
+import 'refresh_result.dart';
+import 'periodic_executor.dart';
 
 class SettingResult {
   final Map<String, Setting> settings;
@@ -28,7 +29,7 @@ class SettingResult {
       SettingResult(settings: {}, fetchTime: distantPast);
 }
 
-class ConfigService with ContinuousFutureSynchronizer, PeriodicExecutor {
+class ConfigService with ContinuousFutureSynchronizer {
   late final String _cacheKey;
   late final PollingMode _mode;
   late final Hooks _hooks;
@@ -40,6 +41,7 @@ class ConfigService with ContinuousFutureSynchronizer, PeriodicExecutor {
   String _cachedJson = '';
   bool _offline = false;
   bool _initialized = false;
+  PeriodicExecutor? _periodicExecutor;
 
   ConfigService(
       {required String sdkKey,
@@ -100,14 +102,14 @@ class ConfigService with ContinuousFutureSynchronizer, PeriodicExecutor {
   void offline() {
     if (_offline) return;
     _offline = true;
-    cancelPeriodic();
+    _periodicExecutor?.cancel();
     _logger.debug("Switched to OFFLINE mode.");
   }
 
   bool isOffline() => _offline;
 
   void close() {
-    cancelPeriodic();
+    _periodicExecutor?.cancel();
     _fetcher.close();
   }
 
@@ -174,10 +176,10 @@ class ConfigService with ContinuousFutureSynchronizer, PeriodicExecutor {
   }
 
   void _startPoll(AutoPollingMode mode) {
-    startPeriodic(
-        mode.autoPollInterval,
+    _periodicExecutor = PeriodicExecutor(
         () async => await _fetchIfOlder(
-            DateTime.now().toUtc().subtract(mode.autoPollInterval)));
+            DateTime.now().toUtc().subtract(mode.autoPollInterval)),
+        mode.autoPollInterval);
   }
 
   void _setInitialized() {
