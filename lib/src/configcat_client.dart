@@ -96,7 +96,7 @@ class ConfigCatClient {
             'Config JSON is not present. Returning defaultValue: \'$defaultValue\'.';
         _errorReporter.error(err);
         hooks.invokeFlagEvaluated(
-            EvaluationDetails.makeError(key, defaultValue, err));
+            EvaluationDetails.makeError(key, defaultValue, err, user));
         return defaultValue;
       }
       final setting = result.settings[key];
@@ -105,7 +105,7 @@ class ConfigCatClient {
             'Value not found for key $key. Here are the available keys: ${result.settings.keys.join(', ')}';
         _errorReporter.error(err);
         hooks.invokeFlagEvaluated(
-            EvaluationDetails.makeError(key, defaultValue, err));
+            EvaluationDetails.makeError(key, defaultValue, err, user));
         return defaultValue;
       }
 
@@ -116,7 +116,7 @@ class ConfigCatClient {
           'Evaluating getValue(\'$key\') failed. Returning defaultValue: \'$defaultValue\'.';
       _errorReporter.error(err, e, s);
       hooks.invokeFlagEvaluated(
-          EvaluationDetails.makeError(key, defaultValue, err));
+          EvaluationDetails.makeError(key, defaultValue, err, user));
       return defaultValue;
     }
   }
@@ -136,7 +136,8 @@ class ConfigCatClient {
         final err =
             'Config JSON is not present. Returning defaultValue: \'$defaultValue\'.';
         _errorReporter.error(err);
-        final details = EvaluationDetails.makeError(key, defaultValue, err);
+        final details =
+            EvaluationDetails.makeError(key, defaultValue, err, user);
         hooks.invokeFlagEvaluated(details);
         return details;
       }
@@ -145,7 +146,8 @@ class ConfigCatClient {
         final err =
             'Value not found for key $key. Here are the available keys: ${result.settings.keys.join(', ')}';
         _errorReporter.error(err);
-        final details = EvaluationDetails.makeError(key, defaultValue, err);
+        final details =
+            EvaluationDetails.makeError(key, defaultValue, err, user);
         hooks.invokeFlagEvaluated(details);
         return details;
       }
@@ -155,7 +157,7 @@ class ConfigCatClient {
       final err =
           'Evaluating getValue(\'$key\') failed. Returning defaultValue: \'$defaultValue\'.';
       _errorReporter.error(err, e, s);
-      final details = EvaluationDetails.makeError(key, defaultValue, err);
+      final details = EvaluationDetails.makeError(key, defaultValue, err, user);
       hooks.invokeFlagEvaluated(details);
       return details;
     }

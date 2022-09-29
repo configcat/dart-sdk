@@ -30,7 +30,7 @@ class Setting {
 
   /// Collection of percentage rules that belongs to the feature flag / setting.
   @JsonKey(name: 'p', defaultValue: [])
-  final List<RolloutPercentageItem> percentageItems;
+  final List<PercentageRule> percentageItems;
 
   /// Collection of targeting rules that belongs to the feature flag / setting.
   @JsonKey(name: 'r', defaultValue: [])

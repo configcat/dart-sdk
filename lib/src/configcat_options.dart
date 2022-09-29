@@ -22,7 +22,7 @@ class EvaluationDetails<T> {
   final T value;
   final DateTime fetchTime;
   final RolloutRule? matchedEvaluationRule;
-  final RolloutPercentageItem? matchedEvaluationPercentageRule;
+  final PercentageRule? matchedEvaluationPercentageRule;
 
   EvaluationDetails(
       {required this.key,
@@ -36,11 +36,11 @@ class EvaluationDetails<T> {
       required this.matchedEvaluationPercentageRule});
 
   static EvaluationDetails<T> makeError<T>(
-      String key, T defaultValue, String error) {
+      String key, T defaultValue, String error, ConfigCatUser? user) {
     return EvaluationDetails<T>(
         key: key,
         variationId: "",
-        user: null,
+        user: user,
         isDefaultValue: true,
         error: error,
         value: defaultValue,

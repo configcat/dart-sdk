@@ -3,7 +3,7 @@ import 'package:json_annotation/json_annotation.dart';
 part 'percentage_rule.g.dart';
 
 @JsonSerializable()
-class RolloutPercentageItem {
+class PercentageRule {
   /// Value served when the rule is selected during evaluation.
   @JsonKey(name: 'v')
   final dynamic value;
@@ -16,10 +16,10 @@ class RolloutPercentageItem {
   @JsonKey(name: 'i', defaultValue: '')
   final String variationId;
 
-  RolloutPercentageItem(this.value, this.percentage, this.variationId);
+  PercentageRule(this.value, this.percentage, this.variationId);
 
-  factory RolloutPercentageItem.fromJson(Map<String, dynamic> json) =>
-      _$RolloutPercentageItemFromJson(json);
+  factory PercentageRule.fromJson(Map<String, dynamic> json) =>
+      _$PercentageRuleFromJson(json);
 
-  Map<String, dynamic> toJson() => _$RolloutPercentageItemToJson(this);
+  Map<String, dynamic> toJson() => _$PercentageRuleToJson(this);
 }

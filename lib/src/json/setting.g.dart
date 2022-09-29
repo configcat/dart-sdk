@@ -10,8 +10,7 @@ Setting _$SettingFromJson(Map<String, dynamic> json) => Setting(
       json['v'],
       json['t'] as int? ?? 0,
       (json['p'] as List<dynamic>?)
-              ?.map((e) =>
-                  RolloutPercentageItem.fromJson(e as Map<String, dynamic>))
+              ?.map((e) => PercentageRule.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
       (json['r'] as List<dynamic>?)

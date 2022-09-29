@@ -14,7 +14,7 @@ class EvaluationResult<T> {
   final String variationId;
   final T value;
   final RolloutRule? matchedEvaluationRule;
-  final RolloutPercentageItem? matchedEvaluationPercentageRule;
+  final PercentageRule? matchedEvaluationPercentageRule;
 
   EvaluationResult(
       {required this.key,
@@ -56,7 +56,7 @@ class RolloutEvaluator {
     logEntries.add('Evaluating getValue($key)');
 
     EvaluationResult<Value> produceResult(
-        {RolloutRule? rolloutRule, RolloutPercentageItem? percentageItem}) {
+        {RolloutRule? rolloutRule, PercentageRule? percentageItem}) {
       return EvaluationResult(
           key: key,
           variationId: rolloutRule?.variationId ??
