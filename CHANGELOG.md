@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 2.2.0 - 2022-10-13
 ### Added
-- Allow offline SDK initialization with `offline` configuration option.
+- Allow offline SDK initialization with an `offline` configuration option.
 
 ## 2.1.0 - 2022-09-30
 ### Changed
