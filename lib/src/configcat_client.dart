@@ -76,7 +76,8 @@ class ConfigCatClient {
                 fetcher: _fetcher,
                 logger: _logger,
                 cache: cache,
-                errorReporter: _errorReporter);
+                errorReporter: _errorReporter,
+                offline: options.offline);
   }
 
   /// Gets the value of a feature flag or setting as [T] identified by the given [key].

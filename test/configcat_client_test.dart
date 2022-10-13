@@ -391,6 +391,37 @@ void main() {
     expect(interceptor.allRequestCount(), equals(2));
   });
 
+  test('init offline', () async {
+    // Arrange
+    final body = createTestConfig({'stringValue': 'testValue'}).toJson();
+
+    final localClient = ConfigCatClient.get(
+        sdkKey: "init local",
+        options: ConfigCatOptions(
+            mode: PollingMode.manualPoll(), cache: cache, offline: true));
+    localClient.httpClient.interceptors.add(interceptor);
+    final localDioAdapter = DioAdapter(dio: client.httpClient);
+
+    localDioAdapter.onGet(getPath(), (server) {
+      server.reply(200, body);
+    });
+
+    // Act
+    await localClient.forceRefresh();
+
+    // Assert
+    expect(interceptor.allRequestCount(), equals(0));
+    expect(localClient.isOffline(), isTrue);
+
+    // Act
+    localClient.setOnline();
+    await localClient.forceRefresh();
+
+    // Assert
+    expect(interceptor.allRequestCount(), equals(1));
+    expect(localClient.isOffline(), isFalse);
+  });
+
   test('eval details', () async {
     // Arrange
     dioAdapter.onGet(getPath(), (server) {

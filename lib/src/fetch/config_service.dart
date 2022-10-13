@@ -50,7 +50,8 @@ class ConfigService with ContinuousFutureSynchronizer {
       required Fetcher fetcher,
       required ConfigCatLogger logger,
       required ConfigCatCache cache,
-      required ErrorReporter errorReporter}) {
+      required ErrorReporter errorReporter,
+      required bool offline}) {
     _cacheKey = sha1
         .convert(utf8.encode('dart_${configJsonName}_${sdkKey}_v2'))
         .toString();
@@ -60,6 +61,7 @@ class ConfigService with ContinuousFutureSynchronizer {
     _logger = logger;
     _cache = cache;
     _errorReporter = errorReporter;
+    _offline = offline;
 
     if (mode is AutoPollingMode) {
       _startPoll(mode);

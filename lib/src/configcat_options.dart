@@ -132,6 +132,7 @@ class ConfigCatOptions {
   final HttpClientAdapter? httpClientAdapter;
   final ConfigCatUser? defaultUser;
   final Hooks? hooks;
+  final bool offline;
 
   const ConfigCatOptions({
     this.baseUrl = '',
@@ -146,6 +147,7 @@ class ConfigCatOptions {
     this.override,
     this.defaultUser,
     this.hooks,
+    this.offline = false,
   });
 
   static const ConfigCatOptions defaultOptions = ConfigCatOptions();

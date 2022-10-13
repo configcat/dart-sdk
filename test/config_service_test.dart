@@ -36,7 +36,7 @@ void main() {
   });
 
   ConfigService _createService(PollingMode pollingMode,
-      {ConfigCatCache? customCache}) {
+      {ConfigCatCache? customCache, bool offline = false}) {
     return ConfigService(
         sdkKey: testSdkKey,
         mode: pollingMode,
@@ -44,7 +44,8 @@ void main() {
         fetcher: fetcher,
         logger: logger,
         cache: customCache ?? cache,
-        errorReporter: ErrorReporter(logger, Hooks()));
+        errorReporter: ErrorReporter(logger, Hooks()),
+        offline: offline);
   }
 
   group('Service Tests', () {
@@ -244,6 +245,35 @@ void main() {
 
       // Assert
       expect(interceptor.allRequestCount(), greaterThanOrEqualTo(6));
+
+      // Cleanup
+      service.close();
+    });
+
+    test('init offline', () async {
+      // Arrange
+      when(cache.read(any)).thenAnswer((_) => Future.value(''));
+
+      final service = _createService(
+          PollingMode.autoPoll(
+              autoPollInterval: const Duration(milliseconds: 200)),
+          offline: true);
+      dioAdapter.onGet(getPath(), (server) {
+        server.reply(200, createTestConfig({'key': 'test1'}).toJson());
+      });
+
+      // Act
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Assert
+      expect(interceptor.allRequestCount(), equals(0));
+
+      // Act
+      service.online();
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Assert
+      expect(interceptor.allRequestCount(), greaterThanOrEqualTo(3));
 
       // Cleanup
       service.close();
