@@ -63,7 +63,7 @@ class ConfigService with ContinuousFutureSynchronizer {
     _errorReporter = errorReporter;
     _offline = offline;
 
-    if (mode is AutoPollingMode) {
+    if (mode is AutoPollingMode && !offline) {
       _startPoll(mode);
     } else {
       _setInitialized();
