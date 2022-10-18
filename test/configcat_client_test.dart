@@ -23,8 +23,8 @@ void main() {
     when(cache.read(any)).thenAnswer((_) => Future.value(''));
     client = ConfigCatClient.get(
         sdkKey: testSdkKey,
-        options:
-            ConfigCatOptions(pollingMode: PollingMode.manualPoll(), cache: cache));
+        options: ConfigCatOptions(
+            pollingMode: PollingMode.manualPoll(), cache: cache));
     client.httpClient.interceptors.add(interceptor);
     dioAdapter = DioAdapter(dio: client.httpClient);
   });
@@ -398,7 +398,9 @@ void main() {
     final localClient = ConfigCatClient.get(
         sdkKey: "init local",
         options: ConfigCatOptions(
-            pollingMode: PollingMode.manualPoll(), cache: cache, offline: true));
+            pollingMode: PollingMode.manualPoll(),
+            cache: cache,
+            offline: true));
     localClient.httpClient.interceptors.add(interceptor);
     final localDioAdapter = DioAdapter(dio: client.httpClient);
 
