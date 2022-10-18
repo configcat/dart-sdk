@@ -162,7 +162,7 @@ class ConfigFetcher implements Fetcher {
   Future<FetchResponse> _doFetch(String eTag) async {
     Map<String, String> headers = {
       _userAgentHeaderName:
-          'ConfigCat-Dart/${_options.mode.getPollingIdentifier()}-$version',
+          'ConfigCat-Dart/${_options.pollingMode.getPollingIdentifier()}-$version',
       if (eTag.isNotEmpty) _ifNoneMatchHeaderName: eTag
     };
 

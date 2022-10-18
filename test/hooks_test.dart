@@ -14,7 +14,7 @@ void main() {
       final client = ConfigCatClient.get(
           sdkKey: testSdkKey,
           options: ConfigCatOptions(
-              mode: PollingMode.manualPoll(),
+              pollingMode: PollingMode.manualPoll(),
               hooks: Hooks(
                   onConfigChanged: (map) => configChanged = true,
                   onClientReady: () => ready = true,
@@ -47,7 +47,7 @@ void main() {
       var eval = false;
       final client = ConfigCatClient.get(
           sdkKey: testSdkKey,
-          options: ConfigCatOptions(mode: PollingMode.manualPoll()));
+          options: ConfigCatOptions(pollingMode: PollingMode.manualPoll()));
       final dioAdapter = DioAdapter(dio: client.httpClient);
 
       final body = createTestConfig({'stringValue': 'testValue'}).toJson();
@@ -77,7 +77,7 @@ void main() {
       var eval = false;
       final client = ConfigCatClient.get(
           sdkKey: testSdkKey,
-          options: ConfigCatOptions(mode: PollingMode.manualPoll()));
+          options: ConfigCatOptions(pollingMode: PollingMode.manualPoll()));
       final dioAdapter = DioAdapter(dio: client.httpClient);
 
       dioAdapter.onGet(getPath(), (server) {

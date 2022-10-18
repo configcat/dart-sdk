@@ -125,7 +125,7 @@ class ConfigCatOptions {
   final Duration connectTimeout;
   final Duration receiveTimeout;
   final Duration sendTimeout;
-  final PollingMode mode;
+  final PollingMode pollingMode;
   final ConfigCatCache? cache;
   final ConfigCatLogger? logger;
   final FlagOverrides? override;
@@ -137,7 +137,7 @@ class ConfigCatOptions {
   const ConfigCatOptions({
     this.baseUrl = '',
     this.dataGovernance = DataGovernance.global,
-    this.mode = PollingMode.defaultMode,
+    this.pollingMode = PollingMode.defaultMode,
     this.cache,
     this.logger,
     this.connectTimeout = const Duration(seconds: 10),

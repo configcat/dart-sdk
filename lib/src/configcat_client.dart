@@ -71,7 +71,7 @@ class ConfigCatClient {
             ? null
             : ConfigService(
                 sdkKey: sdkKey,
-                mode: options.mode,
+                mode: options.pollingMode,
                 hooks: _hooks,
                 fetcher: _fetcher,
                 logger: _logger,
