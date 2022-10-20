@@ -76,8 +76,8 @@ if (isMyAwesomeFeatureEnabled) {
 ```
 
 ## Sample/Demo app
-* [Sample Console app](https://github.com/ConfigCat/dart-sdk/tree/main/example/lib)
-* [Sample Flutter app](https://github.com/ConfigCat/dart-sdk/tree/main/example/flutter)
+* [Sample Console app](https://github.com/ConfigCat/dart-sdk/tree/main/samples/lib)
+* [Sample Flutter app](https://github.com/ConfigCat/dart-sdk/tree/main/samples/flutter)
 
 ## Polling Modes
 The ConfigCat SDK supports three different polling mechanisms to acquire the setting values from ConfigCat. After the latest setting values are downloaded, they are stored in an internal cache . After that, all requests are served from the cache. Read more about Polling Modes and how to use them at [ConfigCat Dart Docs](https://configcat.com/docs/sdk-reference/dart/).
