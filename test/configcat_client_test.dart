@@ -362,6 +362,26 @@ void main() {
     expect(client4, isNot(same(client3)));
   });
 
+  test('ensure close removes the closing instance only', () async {
+    // Act
+    final client1 = ConfigCatClient.get(sdkKey: "another");
+
+    client1.close();
+
+    // Act
+    final client2 = ConfigCatClient.get(sdkKey: "another");
+
+    // Assert
+    expect(client1, isNot(same(client2)));
+
+    // Act
+    client1.close();
+    final client3 = ConfigCatClient.get(sdkKey: "another");
+
+    // Assert
+    expect(client2, same(client3));
+  });
+
   test('online/offline', () async {
     // Arrange
     final body = createTestConfig({'stringValue': 'testValue'}).toJson();
