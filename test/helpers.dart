@@ -36,8 +36,7 @@ Entry createTestEntry(Map<String, Object> map) {
 }
 
 Entry createTestEntryWithTime(Map<String, Object> map, DateTime time) {
-  return Entry(
-      createTestConfig(map), map[0].toString(), time);
+  return Entry(createTestConfig(map), map[0].toString(), time);
 }
 
 String getPath() {

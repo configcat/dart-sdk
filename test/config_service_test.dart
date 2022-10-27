@@ -391,7 +391,8 @@ void main() {
 
     test('max wait timeout returns cached config', () async {
       // Arrange
-      final cached = jsonEncode(createTestEntryWithTime({'key': true}, distantPast).toJson());
+      final cached = jsonEncode(
+          createTestEntryWithTime({'key': true}, distantPast).toJson());
       when(cache.read(any)).thenAnswer((_) => Future.value(cached));
 
       final service = _createService(PollingMode.autoPoll(
@@ -399,10 +400,10 @@ void main() {
 
       dioAdapter.onGet(
           sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
-              (server) {
-            server.reply(200, createTestConfig({'key': false}).toJson(),
-                delay: const Duration(seconds: 2));
-          });
+          (server) {
+        server.reply(200, createTestConfig({'key': false}).toJson(),
+            delay: const Duration(seconds: 2));
+      });
 
       // Act
       final current = DateTime.now();
@@ -411,7 +412,7 @@ void main() {
       // Assert
       expect(DateTime.now().difference(current),
           lessThan(const Duration(milliseconds: 200)));
-      expect(result.settings['key']?.value , isTrue);
+      expect(result.settings['key']?.value, isTrue);
 
       // Cleanup
       service.close();
