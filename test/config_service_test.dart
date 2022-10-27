@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:configcat_client/configcat_client.dart';
+import 'package:configcat_client/src/constants.dart';
 import 'package:configcat_client/src/error_reporter.dart';
 import 'package:configcat_client/src/fetch/config_fetcher.dart';
 import 'package:configcat_client/src/fetch/config_service.dart';
@@ -383,6 +384,34 @@ void main() {
       // Assert
       expect(result2.isEmpty, isFalse);
       expect(interceptor.allRequestCount(), 1);
+
+      // Cleanup
+      service.close();
+    });
+
+    test('max wait timeout returns cached config', () async {
+      // Arrange
+      final cached = jsonEncode(createTestEntryWithTime({'key': true}, distantPast).toJson());
+      when(cache.read(any)).thenAnswer((_) => Future.value(cached));
+
+      final service = _createService(PollingMode.autoPoll(
+          maxInitWaitTime: const Duration(milliseconds: 100)));
+
+      dioAdapter.onGet(
+          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
+              (server) {
+            server.reply(200, createTestConfig({'key': false}).toJson(),
+                delay: const Duration(seconds: 2));
+          });
+
+      // Act
+      final current = DateTime.now();
+      final result = await service.getSettings();
+
+      // Assert
+      expect(DateTime.now().difference(current),
+          lessThan(const Duration(milliseconds: 200)));
+      expect(result.settings['key']?.value , isTrue);
 
       // Cleanup
       service.close();
