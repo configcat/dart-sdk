@@ -262,6 +262,23 @@ void main() {
     expect(values, equals({'value1': true, 'value2': false}));
   });
 
+  test('get all value details', () async {
+    // Arrange
+    final body = createTestConfig({'value1': true, 'value2': false}).toJson();
+    dioAdapter.onGet(getPath(), (server) {
+      server.reply(200, body);
+    });
+
+    // Act
+    await client.forceRefresh();
+    final details = await client.getAllValueDetails();
+
+    // Assert
+    expect(details.length, equals(2));
+    expect(details.first.value, isTrue);
+    expect(details[1].value, isFalse);
+  });
+
   test('get key and value', () async {
     // Arrange
     final body = createTestConfigWithVariationId({

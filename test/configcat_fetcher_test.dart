@@ -349,7 +349,7 @@ void main() {
 
       // Arrange
       final path =
-      sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
+          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
       dioAdapter.onGet(path, (server) {
         server.reply(404, null);
       });
@@ -373,7 +373,7 @@ void main() {
 
       // Arrange
       final path =
-      sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
+          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
       dioAdapter.onGet(path, (server) {
         server.reply(403, null);
       });

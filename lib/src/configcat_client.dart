@@ -111,8 +111,7 @@ class ConfigCatClient {
         return defaultValue;
       }
 
-      return _evaluate(key, setting, evalUser, result.fetchTime)
-          .value;
+      return _evaluate(key, setting, evalUser, result.fetchTime).value;
     } catch (e, s) {
       final err =
           'Evaluating getValue(\'$key\') failed. Returning defaultValue: \'$defaultValue\'.';
@@ -160,7 +159,8 @@ class ConfigCatClient {
       final err =
           'Evaluating getValue(\'$key\') failed. Returning defaultValue: \'$defaultValue\'.';
       _errorReporter.error(err, e, s);
-      final details = EvaluationDetails.makeError(key, defaultValue, err, evalUser);
+      final details =
+          EvaluationDetails.makeError(key, defaultValue, err, evalUser);
       hooks.invokeFlagEvaluated(details);
       return details;
     }
@@ -176,18 +176,21 @@ class ConfigCatClient {
     try {
       final result = await _getSettings();
       if (result.isEmpty) {
-        _errorReporter.error('Config JSON is not present. Returning empty list.');
+        _errorReporter
+            .error('Config JSON is not present. Returning empty list.');
         return [];
       }
       final detailsResult = List<EvaluationDetails>.empty(growable: true);
       result.settings.forEach((key, value) {
-        detailsResult.add(_evaluate(
-            key, value, evalUser, result.fetchTime));
+        detailsResult.add(_evaluate(key, value, evalUser, result.fetchTime));
       });
 
       return detailsResult;
     } catch (e, s) {
-      _errorReporter.error('An error occurred during getting all evaluation details. Returning empty list.', e, s);
+      _errorReporter.error(
+          'An error occurred during getting all evaluation details. Returning empty list.',
+          e,
+          s);
       return [];
     }
   }
@@ -197,7 +200,8 @@ class ConfigCatClient {
   /// [key] is the identifier of the feature flag or setting.
   /// In case of any failure, [defaultVariationId] will be returned.
   /// [user] is the user object to identify the caller.
-  @Deprecated("This method is obsolete and will be removed in a future major version. Please use [getValueDetails] instead.")
+  @Deprecated(
+      "This method is obsolete and will be removed in a future major version. Please use [getValueDetails] instead.")
   Future<String> getVariationId({
     required String key,
     required String defaultVariationId,
@@ -231,7 +235,8 @@ class ConfigCatClient {
   /// Gets the Variation IDs (analytics) of all feature flags or settings.
   ///
   /// [user] is the user object to identify the caller.
-  @Deprecated("This method is obsolete and will be removed in a future major version. Please use [getAllValueDetails] instead.")
+  @Deprecated(
+      "This method is obsolete and will be removed in a future major version. Please use [getAllValueDetails] instead.")
   Future<List<String>> getAllVariationIds({ConfigCatUser? user}) async {
     try {
       final settingsResult = await _getSettings();

@@ -629,10 +629,8 @@ void main() {
 
       // Assert
       expect(result.isSuccess, isFalse);
-      expect(
-          result.error,
-          equals(
-              "Unexpected HTTP response was received: 500 null"));
+      expect(result.error,
+          equals("Unexpected HTTP response was received: 500 null"));
       expect(settings1.settings, isEmpty);
 
       verify(cache.write(any, any)).called(1);
@@ -648,9 +646,9 @@ void main() {
       final service = _createService(PollingMode.manualPoll());
       dioAdapter.onGet(
           sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
-              (server) {
-            server.reply(404, {});
-          });
+          (server) {
+        server.reply(404, {});
+      });
 
       // Act
       final result = await service.refresh();

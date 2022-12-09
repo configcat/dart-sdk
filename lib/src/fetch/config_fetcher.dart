@@ -43,7 +43,8 @@ class FetchResponse {
   }
 
   factory FetchResponse.failure(String error, bool isTransientError) {
-    return FetchResponse._(_Status.failure, Entry.empty, error, isTransientError);
+    return FetchResponse._(
+        _Status.failure, Entry.empty, error, isTransientError);
   }
 
   factory FetchResponse.notModified() {
