@@ -90,6 +90,7 @@ class ConfigCatClient {
     required T defaultValue,
     ConfigCatUser? user,
   }) async {
+    final evalUser = user ?? _defaultUser;
     try {
       final result = await _getSettings();
       if (result.isEmpty) {
@@ -97,7 +98,7 @@ class ConfigCatClient {
             'Config JSON is not present. Returning defaultValue: \'$defaultValue\'.';
         _errorReporter.error(err);
         hooks.invokeFlagEvaluated(
-            EvaluationDetails.makeError(key, defaultValue, err, user));
+            EvaluationDetails.makeError(key, defaultValue, err, evalUser));
         return defaultValue;
       }
       final setting = result.settings[key];
@@ -106,18 +107,18 @@ class ConfigCatClient {
             'Value not found for key $key. Here are the available keys: ${result.settings.keys.join(', ')}';
         _errorReporter.error(err);
         hooks.invokeFlagEvaluated(
-            EvaluationDetails.makeError(key, defaultValue, err, user));
+            EvaluationDetails.makeError(key, defaultValue, err, evalUser));
         return defaultValue;
       }
 
-      return _evaluate(key, setting, user ?? _defaultUser, result.fetchTime)
+      return _evaluate(key, setting, evalUser, result.fetchTime)
           .value;
     } catch (e, s) {
       final err =
           'Evaluating getValue(\'$key\') failed. Returning defaultValue: \'$defaultValue\'.';
       _errorReporter.error(err, e, s);
       hooks.invokeFlagEvaluated(
-          EvaluationDetails.makeError(key, defaultValue, err, user));
+          EvaluationDetails.makeError(key, defaultValue, err, evalUser));
       return defaultValue;
     }
   }
@@ -131,6 +132,7 @@ class ConfigCatClient {
     required T defaultValue,
     ConfigCatUser? user,
   }) async {
+    final evalUser = user ?? _defaultUser;
     try {
       final result = await _getSettings();
       if (result.isEmpty) {
@@ -138,7 +140,7 @@ class ConfigCatClient {
             'Config JSON is not present. Returning defaultValue: \'$defaultValue\'.';
         _errorReporter.error(err);
         final details =
-            EvaluationDetails.makeError(key, defaultValue, err, user);
+            EvaluationDetails.makeError(key, defaultValue, err, evalUser);
         hooks.invokeFlagEvaluated(details);
         return details;
       }
@@ -148,19 +150,45 @@ class ConfigCatClient {
             'Value not found for key $key. Here are the available keys: ${result.settings.keys.join(', ')}';
         _errorReporter.error(err);
         final details =
-            EvaluationDetails.makeError(key, defaultValue, err, user);
+            EvaluationDetails.makeError(key, defaultValue, err, evalUser);
         hooks.invokeFlagEvaluated(details);
         return details;
       }
 
-      return _evaluate(key, setting, user ?? _defaultUser, result.fetchTime);
+      return _evaluate(key, setting, evalUser, result.fetchTime);
     } catch (e, s) {
       final err =
           'Evaluating getValue(\'$key\') failed. Returning defaultValue: \'$defaultValue\'.';
       _errorReporter.error(err, e, s);
-      final details = EvaluationDetails.makeError(key, defaultValue, err, user);
+      final details = EvaluationDetails.makeError(key, defaultValue, err, evalUser);
       hooks.invokeFlagEvaluated(details);
       return details;
+    }
+  }
+
+  /// Gets the values along with evaluation details of all feature flags and settings.
+  ///
+  /// [user] is the user object to identify the caller.
+  Future<List<EvaluationDetails>> getAllValueDetails({
+    ConfigCatUser? user,
+  }) async {
+    final evalUser = user ?? _defaultUser;
+    try {
+      final result = await _getSettings();
+      if (result.isEmpty) {
+        _errorReporter.error('Config JSON is not present. Returning empty list.');
+        return [];
+      }
+      final detailsResult = List<EvaluationDetails>.empty(growable: true);
+      result.settings.forEach((key, value) {
+        detailsResult.add(_evaluate(
+            key, value, evalUser, result.fetchTime));
+      });
+
+      return detailsResult;
+    } catch (e, s) {
+      _errorReporter.error('An error occurred during getting all evaluation details. Returning empty list.', e, s);
+      return [];
     }
   }
 
@@ -169,6 +197,7 @@ class ConfigCatClient {
   /// [key] is the identifier of the feature flag or setting.
   /// In case of any failure, [defaultVariationId] will be returned.
   /// [user] is the user object to identify the caller.
+  @Deprecated("This method is obsolete and will be removed in a future major version. Please use [getValueDetails] instead.")
   Future<String> getVariationId({
     required String key,
     required String defaultVariationId,
@@ -202,6 +231,7 @@ class ConfigCatClient {
   /// Gets the Variation IDs (analytics) of all feature flags or settings.
   ///
   /// [user] is the user object to identify the caller.
+  @Deprecated("This method is obsolete and will be removed in a future major version. Please use [getAllValueDetails] instead.")
   Future<List<String>> getAllVariationIds({ConfigCatUser? user}) async {
     try {
       final settingsResult = await _getSettings();
@@ -323,7 +353,7 @@ class ConfigCatClient {
   Future<RefreshResult> forceRefresh() {
     return _configService?.refresh() ??
         Future.value(RefreshResult(false,
-            "The SDK uses the LOCAL_ONLY flag override behavior which prevents making HTTP requests."));
+            'The SDK uses the LOCAL_ONLY flag override behavior which prevents making HTTP requests.'));
   }
 
   /// Sets the default user.

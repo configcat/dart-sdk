@@ -98,14 +98,14 @@ class ConfigService with ContinuousFutureSynchronizer {
     if (mode is AutoPollingMode) {
       _startPoll(mode);
     }
-    _logger.debug("Switched to ONLINE mode.");
+    _logger.debug('Switched to ONLINE mode.');
   }
 
   void offline() {
     if (_offline) return;
     _offline = true;
     _periodicExecutor?.cancel();
-    _logger.debug("Switched to OFFLINE mode.");
+    _logger.debug('Switched to OFFLINE mode.');
   }
 
   bool isOffline() => _offline;
@@ -139,7 +139,7 @@ class ConfigService with ContinuousFutureSynchronizer {
     // If we are in offline mode we are not allowed to initiate fetch.
     if (_offline) {
       return Pair(_cachedEntry,
-          "The SDK is in offline mode, it can't initiate HTTP calls.");
+          'The SDK is in offline mode, it can\'t initiate HTTP calls.');
     }
     // No fetch is running, initiate a new one.
     // Ensure only one fetch request is running at a time.
@@ -169,7 +169,7 @@ class ConfigService with ContinuousFutureSynchronizer {
       _cachedEntry = response.entry;
       await _writeCache(response.entry);
       _hooks.invokeConfigChanged(response.entry.config.entries);
-    } else if (response.isNotModified) {
+    } else if (response.isNotModified || response.isTransientError) {
       _cachedEntry = _cachedEntry.withTime(DateTime.now().toUtc());
       await _writeCache(_cachedEntry);
     }

@@ -22,8 +22,9 @@ class FetchResponse {
   final _Status _status;
   final Entry entry;
   final String? error;
+  final bool isTransientError;
 
-  FetchResponse._(this._status, this.entry, this.error);
+  FetchResponse._(this._status, this.entry, this.error, this.isTransientError);
 
   bool get isFetched {
     return _status == _Status.fetched;
@@ -38,15 +39,15 @@ class FetchResponse {
   }
 
   factory FetchResponse.success(Entry entry) {
-    return FetchResponse._(_Status.fetched, entry, null);
+    return FetchResponse._(_Status.fetched, entry, null, false);
   }
 
-  factory FetchResponse.failure(String error) {
-    return FetchResponse._(_Status.failure, Entry.empty, error);
+  factory FetchResponse.failure(String error, bool isTransientError) {
+    return FetchResponse._(_Status.failure, Entry.empty, error, isTransientError);
   }
 
   factory FetchResponse.notModified() {
-    return FetchResponse._(_Status.notModified, Entry.empty, null);
+    return FetchResponse._(_Status.notModified, Entry.empty, null, false);
   }
 }
 
@@ -181,15 +182,20 @@ class ConfigFetcher implements Fetcher {
       } else if (response.statusCode == 304) {
         _logger.debug('Fetch was successful: config not modified.');
         return FetchResponse.notModified();
+      } else if (response.statusCode == 404 || response.statusCode == 403) {
+        final error =
+            'Double-check your API KEY at https://app.configcat.com/apikey. Received unexpected response: ${response.statusCode} ${response.statusMessage}';
+        _errorReporter.error(error);
+        return FetchResponse.failure(error, false);
       } else {
         final error =
-            'Double-check your API KEY at https://app.configcat.com/apikey. Received unexpected response: ${response.statusCode}';
+            'Unexpected HTTP response was received: ${response.statusCode} ${response.statusMessage}';
         _errorReporter.error(error);
-        return FetchResponse.failure(error);
+        return FetchResponse.failure(error, true);
       }
     } catch (e, s) {
       _errorReporter.error('Exception occurred during fetching.', e, s);
-      return FetchResponse.failure(e.toString());
+      return FetchResponse.failure(e.toString(), true);
     }
   }
 }

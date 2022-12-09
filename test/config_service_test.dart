@@ -632,7 +632,36 @@ void main() {
       expect(
           result.error,
           equals(
-              "Double-check your API KEY at https://app.configcat.com/apikey. Received unexpected response: 500"));
+              "Unexpected HTTP response was received: 500 null"));
+      expect(settings1.settings, isEmpty);
+
+      verify(cache.write(any, any)).called(1);
+      expect(interceptor.allRequestCount(), 1);
+
+      // Cleanup
+      service.close();
+    });
+
+    test('failing refresh 404', () async {
+      // Arrange
+      when(cache.read(any)).thenAnswer((_) => Future.value(''));
+      final service = _createService(PollingMode.manualPoll());
+      dioAdapter.onGet(
+          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
+              (server) {
+            server.reply(404, {});
+          });
+
+      // Act
+      final result = await service.refresh();
+      final settings1 = await service.getSettings();
+
+      // Assert
+      expect(result.isSuccess, isFalse);
+      expect(
+          result.error,
+          equals(
+              "Double-check your API KEY at https://app.configcat.com/apikey. Received unexpected response: 404 null"));
       expect(settings1.settings, isEmpty);
 
       verifyNever(cache.write(any, any));

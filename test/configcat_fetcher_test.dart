@@ -335,6 +335,55 @@ void main() {
 
       // Assert
       expect(fetchedResponse.isFailed, isTrue);
+      expect(fetchedResponse.isTransientError, isTrue);
+      expect(fetchedResponse.entry.config, same(Config.empty));
+
+      // Cleanup
+      fetcher.close();
+      dioAdapter.close();
+    });
+
+    test('404 failed fetch response', () async {
+      final fetcher = _createFetcher();
+      final dioAdapter = DioAdapter(dio: fetcher.httpClient);
+
+      // Arrange
+      final path =
+      sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
+      dioAdapter.onGet(path, (server) {
+        server.reply(404, null);
+      });
+
+      // Act
+      final fetchedResponse = await fetcher.fetchConfiguration('');
+
+      // Assert
+      expect(fetchedResponse.isFailed, isTrue);
+      expect(fetchedResponse.isTransientError, isFalse);
+      expect(fetchedResponse.entry.config, same(Config.empty));
+
+      // Cleanup
+      fetcher.close();
+      dioAdapter.close();
+    });
+
+    test('403 failed fetch response', () async {
+      final fetcher = _createFetcher();
+      final dioAdapter = DioAdapter(dio: fetcher.httpClient);
+
+      // Arrange
+      final path =
+      sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
+      dioAdapter.onGet(path, (server) {
+        server.reply(403, null);
+      });
+
+      // Act
+      final fetchedResponse = await fetcher.fetchConfiguration('');
+
+      // Assert
+      expect(fetchedResponse.isFailed, isTrue);
+      expect(fetchedResponse.isTransientError, isFalse);
       expect(fetchedResponse.entry.config, same(Config.empty));
 
       // Cleanup
@@ -365,6 +414,7 @@ void main() {
 
       // Assert
       expect(fetchedResponse.isFailed, isTrue);
+      expect(fetchedResponse.isTransientError, isTrue);
       expect(fetchedResponse.entry.config, same(Config.empty));
 
       // Cleanup
