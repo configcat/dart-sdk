@@ -169,7 +169,7 @@ class ConfigService with ContinuousFutureSynchronizer {
       _cachedEntry = response.entry;
       await _writeCache(response.entry);
       _hooks.invokeConfigChanged(response.entry.config.entries);
-    } else if (response.isNotModified || response.isTransientError) {
+    } else if ((response.isNotModified || !response.isTransientError) && !_cachedEntry.isEmpty) {
       _cachedEntry = _cachedEntry.withTime(DateTime.now().toUtc());
       await _writeCache(_cachedEntry);
     }

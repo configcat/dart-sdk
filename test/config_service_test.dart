@@ -633,7 +633,7 @@ void main() {
           equals("Unexpected HTTP response was received: 500 null"));
       expect(settings1.settings, isEmpty);
 
-      verify(cache.write(any, any)).called(1);
+      verifyNever(cache.write(any, any));
       expect(interceptor.allRequestCount(), 1);
 
       // Cleanup
