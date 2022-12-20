@@ -28,6 +28,7 @@ environment:
 # versions available, run `flutter pub outdated`.
 dependencies:
   configcat_client: ^2.3.0
+  configcat_preferences_cache: ^1.0.0
   get_it: ^7.2.0
   flutter:
     sdk: flutter

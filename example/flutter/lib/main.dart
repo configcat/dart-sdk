@@ -1,4 +1,5 @@
 import 'package:configcat_client/configcat_client.dart';
+import 'package:configcat_preferences_cache/configcat_preferences_cache.dart';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 
@@ -7,6 +8,8 @@ void main() {
       ConfigCatClient.get(
           sdkKey: 'PKDVCLf-Hq-h-kCzMp-L7Q/HhOWfwVtZ0mb30i9wi17GQ',
           options: ConfigCatOptions(
+              // Use ConfigCat's shared preferences cache.
+              cache: ConfigCatPreferencesCache(),
               logger: ConfigCatLogger(
                   // Info level logging helps to inspect the feature flag evaluation process.
                   // Use the default Warning level to avoid too detailed logging in your application.
