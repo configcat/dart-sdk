@@ -308,11 +308,11 @@ void main() {
 
     // Act
     await client.forceRefresh();
-    final variationId =
-        await client.getVariationId(key: 'value', defaultVariationId: '');
+    final details =
+        await client.getValueDetails(key: 'value', defaultValue: 0);
 
     // Assert
-    expect(variationId, equals('test'));
+    expect(details.variationId, equals('test'));
   });
 
   test('variation id test default', () async {
@@ -323,11 +323,11 @@ void main() {
 
     // Act
     await client.forceRefresh();
-    final variationId =
-        await client.getVariationId(key: 'value', defaultVariationId: '');
+    final details =
+        await client.getValueDetails(key: 'value', defaultValue: null);
 
     // Assert
-    expect(variationId, equals(''));
+    expect(details.variationId, equals(''));
   });
 
   test('get all variation ids', () async {
@@ -342,10 +342,10 @@ void main() {
 
     // Act
     await client.forceRefresh();
-    final variationIds = await client.getAllVariationIds();
+    final details = await client.getAllValueDetails();
 
     // Assert
-    expect(variationIds, equals(['testId1', 'testId2']));
+    expect(details.map((e) => e.variationId), equals(['testId1', 'testId2']));
   });
 
   test('ensure singleton per sdk key', () async {

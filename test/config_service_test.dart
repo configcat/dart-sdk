@@ -36,7 +36,7 @@ void main() {
     dioAdapter.close();
   });
 
-  ConfigService _createService(PollingMode pollingMode,
+  ConfigService createService(PollingMode pollingMode,
       {ConfigCatCache? customCache, bool offline = false}) {
     return ConfigService(
         sdkKey: testSdkKey,
@@ -53,7 +53,7 @@ void main() {
     test('ensure only one fetch runs at a time', () async {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
-      final service = _createService(PollingMode.manualPoll());
+      final service = createService(PollingMode.manualPoll());
 
       dioAdapter.onGet(
           sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
@@ -82,7 +82,7 @@ void main() {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
 
-      final service = _createService(PollingMode.autoPoll());
+      final service = createService(PollingMode.autoPoll());
 
       dioAdapter
         ..onGet(sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
@@ -122,7 +122,7 @@ void main() {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
 
-      final service = _createService(
+      final service = createService(
           PollingMode.autoPoll(autoPollInterval: const Duration(seconds: 1)));
       dioAdapter
         ..onGet(sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
@@ -171,7 +171,7 @@ void main() {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
 
-      final service = _createService(PollingMode.autoPoll());
+      final service = createService(PollingMode.autoPoll());
       dioAdapter.onGet(
           sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
           (server) {
@@ -195,7 +195,7 @@ void main() {
       final cached = jsonEncode(createTestEntry({'key': true}).toJson());
       when(cache.read(any)).thenAnswer((_) => Future.value(cached));
 
-      final service = _createService(PollingMode.autoPoll(
+      final service = createService(PollingMode.autoPoll(
           autoPollInterval: const Duration(milliseconds: 200)));
       dioAdapter.onGet(
           sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
@@ -220,7 +220,7 @@ void main() {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
 
-      final service = _createService(PollingMode.autoPoll(
+      final service = createService(PollingMode.autoPoll(
           autoPollInterval: const Duration(milliseconds: 200)));
       dioAdapter.onGet(getPath(), (server) {
         server.reply(200, createTestConfig({'key': 'test1'}).toJson());
@@ -255,7 +255,7 @@ void main() {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
 
-      final service = _createService(
+      final service = createService(
           PollingMode.autoPoll(
               autoPollInterval: const Duration(milliseconds: 200)),
           offline: true);
@@ -284,7 +284,7 @@ void main() {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
 
-      final service = _createService(PollingMode.autoPoll(
+      final service = createService(PollingMode.autoPoll(
           autoPollInterval: const Duration(milliseconds: 100)));
       dioAdapter
         ..onGet(sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
@@ -322,7 +322,7 @@ void main() {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
 
-      final service = _createService(PollingMode.autoPoll(
+      final service = createService(PollingMode.autoPoll(
           maxInitWaitTime: const Duration(milliseconds: 100)));
 
       dioAdapter.onGet(
@@ -357,7 +357,7 @@ void main() {
       final cached = jsonEncode(createTestEntry({'key': true}).toJson());
       when(cache.read(any)).thenAnswer((_) => Future.value(cached));
 
-      final service = _createService(PollingMode.autoPoll(
+      final service = createService(PollingMode.autoPoll(
           maxInitWaitTime: const Duration(milliseconds: 300),
           autoPollInterval: const Duration(milliseconds: 100)));
 
@@ -395,7 +395,7 @@ void main() {
           createTestEntryWithTime({'key': true}, distantPast).toJson());
       when(cache.read(any)).thenAnswer((_) => Future.value(cached));
 
-      final service = _createService(PollingMode.autoPoll(
+      final service = createService(PollingMode.autoPoll(
           maxInitWaitTime: const Duration(milliseconds: 100)));
 
       dioAdapter.onGet(
@@ -423,7 +423,7 @@ void main() {
     test('refresh', () async {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
-      final service = _createService(PollingMode.lazyLoad(
+      final service = createService(PollingMode.lazyLoad(
           cacheRefreshInterval: const Duration(milliseconds: 100)));
       dioAdapter
         ..onGet(sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
@@ -462,7 +462,7 @@ void main() {
     test('reload', () async {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
-      final service = _createService(PollingMode.lazyLoad(
+      final service = createService(PollingMode.lazyLoad(
           cacheRefreshInterval: const Duration(milliseconds: 100)));
 
       dioAdapter
@@ -501,7 +501,7 @@ void main() {
       // Arrange
       final cache =
           CustomCache(jsonEncode(createTestEntry({'key': true}).toJson()));
-      final service = _createService(
+      final service = createService(
           PollingMode.lazyLoad(
               cacheRefreshInterval: const Duration(milliseconds: 200)),
           customCache: cache);
@@ -542,7 +542,7 @@ void main() {
       });
 
       // Act
-      final service = _createService(
+      final service = createService(
           PollingMode.lazyLoad(
               cacheRefreshInterval: const Duration(milliseconds: 200)),
           customCache: cache);
@@ -556,7 +556,7 @@ void main() {
       await Future.delayed(const Duration(milliseconds: 300));
       await service.getSettings();
 
-      final service2 = _createService(
+      final service2 = createService(
           PollingMode.lazyLoad(
               cacheRefreshInterval: const Duration(milliseconds: 200)),
           customCache: cache);
@@ -576,7 +576,7 @@ void main() {
     test('refresh', () async {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
-      final service = _createService(PollingMode.manualPoll());
+      final service = createService(PollingMode.manualPoll());
       dioAdapter
         ..onGet(sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
             (server) {
@@ -616,7 +616,7 @@ void main() {
     test('failing refresh', () async {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
-      final service = _createService(PollingMode.manualPoll());
+      final service = createService(PollingMode.manualPoll());
       dioAdapter.onGet(
           sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
           (server) {
@@ -643,7 +643,7 @@ void main() {
     test('failing refresh 404', () async {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
-      final service = _createService(PollingMode.manualPoll());
+      final service = createService(PollingMode.manualPoll());
       dioAdapter.onGet(
           sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
           (server) {
@@ -673,7 +673,7 @@ void main() {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
 
-      final service = _createService(PollingMode.manualPoll());
+      final service = createService(PollingMode.manualPoll());
 
       // Act
       await service.getSettings();

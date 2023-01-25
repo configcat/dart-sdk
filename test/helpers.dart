@@ -83,6 +83,7 @@ class RequestCounterInterceptor extends Interceptor {
         return requests[key];
       }
     }
+    return null;
   }
 
   int allRequestCount() {
