@@ -308,8 +308,7 @@ void main() {
 
     // Act
     await client.forceRefresh();
-    final details =
-        await client.getValueDetails(key: 'value', defaultValue: 0);
+    final details = await client.getValueDetails(key: 'value', defaultValue: 0);
 
     // Assert
     expect(details.variationId, equals('test'));

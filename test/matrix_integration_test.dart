@@ -89,7 +89,8 @@ Future<void> _runTest(String fileName, String sdkKey, _Kind kind) async {
           ? await client.getValue<dynamic>(
               key: settingKey, defaultValue: null, user: user)
           : (await client.getValueDetails<dynamic>(
-              key: settingKey, defaultValue: null, user: user)).variationId;
+                  key: settingKey, defaultValue: null, user: user))
+              .variationId;
 
       if (value.toString().toLowerCase() != testObject[i + 4].toLowerCase()) {
         errors.add(sprintf(
