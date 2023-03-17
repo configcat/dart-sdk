@@ -71,8 +71,8 @@ class RolloutEvaluator {
       if (user == null) {
         if (setting.rolloutRules.isNotEmpty ||
             setting.percentageItems.isNotEmpty) {
-          _logger.warning(
-              'UserObject missing! You should pass a UserObject to getValue(), in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/');
+          _logger.warning(3001,
+              'Cannot evaluate targeting rules and % options for setting \'$key\' (User Object is missing). You should pass a User Object to the evaluation methods like `getValue()` in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/');
         }
         logEntries.add('Returning ${setting.value}');
         return produceResult();
@@ -181,7 +181,7 @@ class RolloutEvaluator {
                   comparator: comparator,
                   comparisonValue: comparisonValue,
                   error: e);
-              _logger.warning(message);
+              _logger.warning(0, message);
               logEntries.add(message);
             }
             break;
@@ -213,7 +213,7 @@ class RolloutEvaluator {
                   comparator: comparator,
                   comparisonValue: comparisonValue,
                   error: e);
-              _logger.warning(message);
+              _logger.warning(0, message);
               logEntries.add(message);
             }
             break;
@@ -248,7 +248,7 @@ class RolloutEvaluator {
                   comparator: comparator,
                   comparisonValue: comparisonValue,
                   error: e);
-              _logger.warning(message);
+              _logger.warning(0, message);
               logEntries.add(message);
             }
             break;
@@ -316,7 +316,7 @@ class RolloutEvaluator {
       logEntries.add('Returning ${setting.value}');
       return produceResult();
     } finally {
-      _logger.info(logEntries);
+      _logger.info(5000, logEntries);
     }
   }
 

@@ -7,8 +7,8 @@ class ErrorReporter {
 
   ErrorReporter(this._logger, this._hooks);
 
-  void error(message, [dynamic error, StackTrace? stackTrace]) {
-    _logger.error(message, error, stackTrace);
+  void error(int eventId, message, [dynamic error, StackTrace? stackTrace]) {
+    _logger.error(eventId, message, error, stackTrace);
     _hooks.invokeError(message, error, stackTrace);
   }
 }

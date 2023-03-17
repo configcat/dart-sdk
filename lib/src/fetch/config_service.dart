@@ -98,14 +98,14 @@ class ConfigService with ContinuousFutureSynchronizer {
     if (mode is AutoPollingMode) {
       _startPoll(mode);
     }
-    _logger.debug('Switched to ONLINE mode.');
+    _logger.info(5200, 'Switched to ONLINE mode.');
   }
 
   void offline() {
     if (_offline) return;
     _offline = true;
     _periodicExecutor?.cancel();
-    _logger.debug('Switched to OFFLINE mode.');
+    _logger.info(5200, 'Switched to OFFLINE mode.');
   }
 
   bool isOffline() => _offline;
@@ -153,8 +153,8 @@ class ConfigService with ContinuousFutureSynchronizer {
       // After the maxInitWaitTime timeout the client will be initialized and while
       // the config is not ready the default value will be returned.
       return await _fetchConfig().timeout(mode.maxInitWaitTime, onTimeout: () {
-        _logger.warning(
-            'Max init wait time for the very first fetch reached (${mode.maxInitWaitTime.inMilliseconds}ms). Returning cached config.');
+        _logger.warning(4200,
+            '`maxInitWaitTime` for the very first fetch reached (${mode.maxInitWaitTime.inMilliseconds}ms). Returning cached config.');
         _setInitialized();
         return Pair(_cachedEntry, null);
       });
@@ -201,7 +201,7 @@ class ConfigService with ContinuousFutureSynchronizer {
       final decoded = jsonDecode(json);
       return Entry.fromJson(decoded);
     } catch (e, s) {
-      _errorReporter.error('An error occurred during the cache read.', e, s);
+      _errorReporter.error(2200, 'Error occurred while reading the cache.', e, s);
       return Entry.empty;
     }
   }
@@ -213,7 +213,7 @@ class ConfigService with ContinuousFutureSynchronizer {
       _cachedJson = json;
       await _cache.write(_cacheKey, json);
     } catch (e, s) {
-      _errorReporter.error('An error occurred during the cache write.', e, s);
+      _errorReporter.error(2201, 'Error occurred while writing the cache.', e, s);
     }
   }
 }
