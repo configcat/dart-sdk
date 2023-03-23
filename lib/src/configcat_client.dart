@@ -104,7 +104,7 @@ class ConfigCatClient {
       final setting = result.settings[key];
       if (setting == null) {
         final err =
-            'Failed to evaluate setting \'$key\' (the key was not found in config JSON). Returning the `defaultValue` parameter that you specified in your application: \'$defaultValue\'. Available keys: ${result.settings.keys.join(', ')}.';
+            'Failed to evaluate setting \'$key\' (the key was not found in config JSON). Returning the `defaultValue` parameter that you specified in your application: \'$defaultValue\'. Available keys: [${result.settings.keys.join(', ')}].';
         _errorReporter.error(1001, err);
         hooks.invokeFlagEvaluated(
             EvaluationDetails.makeError(key, defaultValue, err, evalUser));
@@ -146,7 +146,7 @@ class ConfigCatClient {
       final setting = result.settings[key];
       if (setting == null) {
         final err =
-            'Failed to evaluate setting \'$key\' (the key was not found in config JSON). Returning the `defaultValue` parameter that you specified in your application: \'$defaultValue\'. Available keys: ${result.settings.keys.join(', ')}.';
+            'Failed to evaluate setting \'$key\' (the key was not found in config JSON). Returning the `defaultValue` parameter that you specified in your application: \'$defaultValue\'. Available keys: [${result.settings.keys.join(', ')}].';
         _errorReporter.error(1001, err);
         final details =
             EvaluationDetails.makeError(key, defaultValue, err, evalUser);
@@ -217,7 +217,7 @@ class ConfigCatClient {
       final setting = result.settings[key];
       if (setting == null) {
         _errorReporter.error(1001,
-            'Failed to evaluate setting \'$key\' (the key was not found in config JSON). Returning the `defaultVariationId` parameter that you specified in your application: \'$defaultVariationId\'. Available keys: ${result.settings.keys.join(', ')}.');
+            'Failed to evaluate setting \'$key\' (the key was not found in config JSON). Returning the `defaultVariationId` parameter that you specified in your application: \'$defaultVariationId\'. Available keys: [${result.settings.keys.join(', ')}].');
         return defaultVariationId;
       }
 
