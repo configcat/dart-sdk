@@ -95,9 +95,9 @@ class ConfigFetcher implements Fetcher {
             : euOnlyBaseUrl;
 
     _httpClient = Dio(BaseOptions(
-        connectTimeout: options.connectTimeout.inMilliseconds,
-        receiveTimeout: options.receiveTimeout.inMilliseconds,
-        sendTimeout: options.sendTimeout.inMilliseconds,
+        connectTimeout: options.connectTimeout,
+        receiveTimeout: options.receiveTimeout,
+        sendTimeout: options.sendTimeout,
         responseType: ResponseType.plain,
         validateStatus: (status) =>
             status != null && (status >= 200 && status < 600)));
