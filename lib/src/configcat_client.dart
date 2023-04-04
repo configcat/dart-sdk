@@ -95,7 +95,7 @@ class ConfigCatClient {
       final result = await _getSettings();
       if (result.isEmpty) {
         final err =
-            'Config JSON is not present. Returning the `defaultValue` parameter that you specified in your application: \'$defaultValue\'.';
+            'Config JSON is not present when evaluating setting \'$key\'. Returning the `defaultValue` parameter that you specified in your application: \'$defaultValue\'.';
         _errorReporter.error(1000, err);
         hooks.invokeFlagEvaluated(
             EvaluationDetails.makeError(key, defaultValue, err, evalUser));
@@ -136,7 +136,7 @@ class ConfigCatClient {
       final result = await _getSettings();
       if (result.isEmpty) {
         final err =
-            'Config JSON is not present. Returning the `defaultValue` parameter that you specified in your application: \'$defaultValue\'.';
+            'Config JSON is not present when evaluating setting \'$key\'. Returning the `defaultValue` parameter that you specified in your application: \'$defaultValue\'.';
         _errorReporter.error(1000, err);
         final details =
             EvaluationDetails.makeError(key, defaultValue, err, evalUser);
@@ -211,7 +211,7 @@ class ConfigCatClient {
       final result = await _getSettings();
       if (result.isEmpty) {
         _errorReporter.error(1000,
-            'Config JSON is not present. Returning the `defaultVariationId` parameter that you specified in your application: \'$defaultVariationId\'.');
+            'Config JSON is not present when evaluating setting \'$key\'. Returning the `defaultVariationId` parameter that you specified in your application: \'$defaultVariationId\'.');
         return defaultVariationId;
       }
       final setting = result.settings[key];
