@@ -194,8 +194,21 @@ class ConfigFetcher implements Fetcher {
         _errorReporter.error(1101, error);
         return FetchResponse.failure(error, true);
       }
+    } on DioError catch (e, s) {
+      if (e.type == DioErrorType.connectionTimeout ||
+          e.type == DioErrorType.receiveTimeout ||
+          e.type == DioErrorType.sendTimeout) {
+        final error =
+            'Request timed out while trying to fetch config JSON. Connection timeout: ${_options.connectTimeout.inSeconds}s, Receive timeout: ${_options.receiveTimeout.inSeconds}s, Send timeout: ${_options.sendTimeout.inSeconds}s';
+        _errorReporter.error(1102, error, e, s);
+        return FetchResponse.failure(error, true);
+      }
+      _errorReporter.error(1103,
+          'Unexpected error occurred while trying to fetch config JSON.', e, s);
+      return FetchResponse.failure(e.toString(), true);
     } catch (e, s) {
-      _errorReporter.error(1103, 'Unexpected error occurred while trying to fetch config JSON.', e, s);
+      _errorReporter.error(1103,
+          'Unexpected error occurred while trying to fetch config JSON.', e, s);
       return FetchResponse.failure(e.toString(), true);
     }
   }

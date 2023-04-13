@@ -629,8 +629,10 @@ void main() {
 
       // Assert
       expect(result.isSuccess, isFalse);
-      expect(result.error,
-          equals("Unexpected HTTP response was received while trying to fetch config JSON: 500 null"));
+      expect(
+          result.error,
+          equals(
+              "Unexpected HTTP response was received while trying to fetch config JSON: 500 null"));
       expect(settings1.settings, isEmpty);
 
       verifyNever(cache.write(any, any));

@@ -400,11 +400,43 @@ void main() {
           sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
       dioAdapter.onGet(path, (server) {
         server.throws(
-          200,
+          500,
           DioError(
             requestOptions: RequestOptions(
               path: path,
             ),
+          ),
+        );
+      });
+
+      // Act
+      final fetchedResponse = await fetcher.fetchConfiguration('');
+
+      // Assert
+      expect(fetchedResponse.isFailed, isTrue);
+      expect(fetchedResponse.isTransientError, isTrue);
+      expect(fetchedResponse.entry.config, same(Config.empty));
+
+      // Cleanup
+      fetcher.close();
+      dioAdapter.close();
+    });
+
+    test('timeout error', () async {
+      final fetcher = _createFetcher();
+      final dioAdapter = DioAdapter(dio: fetcher.httpClient);
+
+      // Arrange
+      final path =
+      sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
+      dioAdapter.onGet(path, (server) {
+        server.throws(
+          500,
+          DioError(
+            requestOptions: RequestOptions(
+              path: path,
+            ),
+            type: DioErrorType.connectionTimeout
           ),
         );
       });

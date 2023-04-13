@@ -201,7 +201,8 @@ class ConfigService with ContinuousFutureSynchronizer {
       final decoded = jsonDecode(json);
       return Entry.fromJson(decoded);
     } catch (e, s) {
-      _errorReporter.error(2200, 'Error occurred while reading the cache.', e, s);
+      _errorReporter.error(
+          2200, 'Error occurred while reading the cache.', e, s);
       return Entry.empty;
     }
   }
@@ -213,7 +214,8 @@ class ConfigService with ContinuousFutureSynchronizer {
       _cachedJson = json;
       await _cache.write(_cacheKey, json);
     } catch (e, s) {
-      _errorReporter.error(2201, 'Error occurred while writing the cache.', e, s);
+      _errorReporter.error(
+          2201, 'Error occurred while writing the cache.', e, s);
     }
   }
 }
