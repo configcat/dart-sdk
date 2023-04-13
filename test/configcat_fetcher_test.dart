@@ -428,16 +428,15 @@ void main() {
 
       // Arrange
       final path =
-      sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
+          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
       dioAdapter.onGet(path, (server) {
         server.throws(
           500,
           DioError(
-            requestOptions: RequestOptions(
-              path: path,
-            ),
-            type: DioErrorType.connectionTimeout
-          ),
+              requestOptions: RequestOptions(
+                path: path,
+              ),
+              type: DioErrorType.connectionTimeout),
         );
       });
 
