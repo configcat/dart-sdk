@@ -199,7 +199,7 @@ class ConfigFetcher implements Fetcher {
           e.type == DioErrorType.receiveTimeout ||
           e.type == DioErrorType.sendTimeout) {
         final error =
-            'Request timed out while trying to fetch config JSON. Connection timeout: ${_options.connectTimeout.inSeconds}s, Receive timeout: ${_options.receiveTimeout.inSeconds}s, Send timeout: ${_options.sendTimeout.inSeconds}s';
+            'Request timed out while trying to fetch config JSON. Timeout values: [connect: ${_options.connectTimeout.inSeconds}s, receive: ${_options.receiveTimeout.inSeconds}s, send: ${_options.sendTimeout.inSeconds}s]';
         _errorReporter.error(1102, error, e, s);
         return FetchResponse.failure(error, true);
       }
