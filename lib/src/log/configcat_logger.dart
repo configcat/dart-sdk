@@ -19,25 +19,25 @@ class ConfigCatLogger {
 
   void debug(message, [dynamic error, StackTrace? stackTrace]) {
     if (LogLevel.debug.index >= _globalLevel.index && !_isClosed) {
-      _internal.debug("ConfigCat - $message", error, stackTrace);
+      _internal.debug("ConfigCat - [0] $message", error, stackTrace);
     }
   }
 
-  void error(message, [dynamic error, StackTrace? stackTrace]) {
+  void error(int eventId, message, [dynamic error, StackTrace? stackTrace]) {
     if (LogLevel.error.index >= _globalLevel.index && !_isClosed) {
-      _internal.error("ConfigCat - $message", error, stackTrace);
+      _internal.error("ConfigCat - [$eventId] $message", error, stackTrace);
     }
   }
 
-  void info(message, [dynamic error, StackTrace? stackTrace]) {
+  void info(int eventId, message, [dynamic error, StackTrace? stackTrace]) {
     if (LogLevel.info.index >= _globalLevel.index && !_isClosed) {
-      _internal.info("ConfigCat - $message", error, stackTrace);
+      _internal.info("ConfigCat - [$eventId] $message", error, stackTrace);
     }
   }
 
-  void warning(message, [dynamic error, StackTrace? stackTrace]) {
+  void warning(int eventId, message, [dynamic error, StackTrace? stackTrace]) {
     if (LogLevel.warning.index >= _globalLevel.index && !_isClosed) {
-      _internal.warning("ConfigCat - $message", error, stackTrace);
+      _internal.warning("ConfigCat - [$eventId] $message", error, stackTrace);
     }
   }
 

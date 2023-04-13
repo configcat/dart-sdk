@@ -36,8 +36,8 @@ class ConfigCatClient {
 
     var client = _instanceRepository[sdkKey];
     if (client != null && options != ConfigCatOptions.defaultOptions) {
-      client._logger.warning(
-          "Client for '$sdkKey' is already created and will be reused; options passed are being ignored.");
+      client._logger.warning(3000,
+          "There is an existing client instance for the specified SDK Key. No new client instance will be created and the specified options are ignored. Returning the existing client instance. SDK Key: '$sdkKey'.");
     }
     client ??= _instanceRepository[sdkKey] = ConfigCatClient._(sdkKey, options);
     return client;
@@ -95,8 +95,8 @@ class ConfigCatClient {
       final result = await _getSettings();
       if (result.isEmpty) {
         final err =
-            'Config JSON is not present. Returning defaultValue: \'$defaultValue\'.';
-        _errorReporter.error(err);
+            'Config JSON is not present when evaluating setting \'$key\'. Returning the `defaultValue` parameter that you specified in your application: \'$defaultValue\'.';
+        _errorReporter.error(1000, err);
         hooks.invokeFlagEvaluated(
             EvaluationDetails.makeError(key, defaultValue, err, evalUser));
         return defaultValue;
@@ -104,8 +104,8 @@ class ConfigCatClient {
       final setting = result.settings[key];
       if (setting == null) {
         final err =
-            'Value not found for key $key. Here are the available keys: ${result.settings.keys.join(', ')}';
-        _errorReporter.error(err);
+            'Failed to evaluate setting \'$key\' (the key was not found in config JSON). Returning the `defaultValue` parameter that you specified in your application: \'$defaultValue\'. Available keys: [${result.settings.keys.map((e) => '\'$e\'').join(', ')}].';
+        _errorReporter.error(1001, err);
         hooks.invokeFlagEvaluated(
             EvaluationDetails.makeError(key, defaultValue, err, evalUser));
         return defaultValue;
@@ -114,8 +114,8 @@ class ConfigCatClient {
       return _evaluate(key, setting, evalUser, result.fetchTime).value;
     } catch (e, s) {
       final err =
-          'Evaluating getValue(\'$key\') failed. Returning defaultValue: \'$defaultValue\'.';
-      _errorReporter.error(err, e, s);
+          'Error occurred in the `getValue` method while evaluating setting \'$key\'. Returning the `defaultValue` parameter that you specified in your application: \'$defaultValue\'.';
+      _errorReporter.error(1002, err, e, s);
       hooks.invokeFlagEvaluated(
           EvaluationDetails.makeError(key, defaultValue, err, evalUser));
       return defaultValue;
@@ -136,8 +136,8 @@ class ConfigCatClient {
       final result = await _getSettings();
       if (result.isEmpty) {
         final err =
-            'Config JSON is not present. Returning defaultValue: \'$defaultValue\'.';
-        _errorReporter.error(err);
+            'Config JSON is not present when evaluating setting \'$key\'. Returning the `defaultValue` parameter that you specified in your application: \'$defaultValue\'.';
+        _errorReporter.error(1000, err);
         final details =
             EvaluationDetails.makeError(key, defaultValue, err, evalUser);
         hooks.invokeFlagEvaluated(details);
@@ -146,8 +146,8 @@ class ConfigCatClient {
       final setting = result.settings[key];
       if (setting == null) {
         final err =
-            'Value not found for key $key. Here are the available keys: ${result.settings.keys.join(', ')}';
-        _errorReporter.error(err);
+            'Failed to evaluate setting \'$key\' (the key was not found in config JSON). Returning the `defaultValue` parameter that you specified in your application: \'$defaultValue\'. Available keys: [${result.settings.keys.map((e) => '\'$e\'').join(', ')}].';
+        _errorReporter.error(1001, err);
         final details =
             EvaluationDetails.makeError(key, defaultValue, err, evalUser);
         hooks.invokeFlagEvaluated(details);
@@ -157,8 +157,8 @@ class ConfigCatClient {
       return _evaluate(key, setting, evalUser, result.fetchTime);
     } catch (e, s) {
       final err =
-          'Evaluating getValue(\'$key\') failed. Returning defaultValue: \'$defaultValue\'.';
-      _errorReporter.error(err, e, s);
+          'Error occurred in the `getValueDetails` method while evaluating setting \'$key\'. Returning the `defaultValue` parameter that you specified in your application: \'$defaultValue\'.';
+      _errorReporter.error(1002, err, e, s);
       final details =
           EvaluationDetails.makeError(key, defaultValue, err, evalUser);
       hooks.invokeFlagEvaluated(details);
@@ -176,8 +176,8 @@ class ConfigCatClient {
     try {
       final result = await _getSettings();
       if (result.isEmpty) {
-        _errorReporter
-            .error('Config JSON is not present. Returning empty list.');
+        _errorReporter.error(
+            1000, 'Config JSON is not present. Returning empty list.');
         return [];
       }
       final detailsResult = List<EvaluationDetails>.empty(growable: true);
@@ -188,7 +188,8 @@ class ConfigCatClient {
       return detailsResult;
     } catch (e, s) {
       _errorReporter.error(
-          'An error occurred during getting all evaluation details. Returning empty list.',
+          1002,
+          'Error occurred in the `getAllValueDetails` method. Returning empty list.',
           e,
           s);
       return [];
@@ -210,14 +211,14 @@ class ConfigCatClient {
     try {
       final result = await _getSettings();
       if (result.isEmpty) {
-        _errorReporter.error(
-            'Config JSON is not present. Returning defaultVariationId: \'$defaultVariationId\'.');
+        _errorReporter.error(1000,
+            'Config JSON is not present when evaluating setting \'$key\'. Returning the `defaultVariationId` parameter that you specified in your application: \'$defaultVariationId\'.');
         return defaultVariationId;
       }
       final setting = result.settings[key];
       if (setting == null) {
-        _errorReporter.error(
-            'Variation ID not found for key $key. Here are the available keys: ${result.settings.keys.join(', ')}');
+        _errorReporter.error(1001,
+            'Failed to evaluate setting \'$key\' (the key was not found in config JSON). Returning the `defaultVariationId` parameter that you specified in your application: \'$defaultVariationId\'. Available keys: [${result.settings.keys.map((e) => '\'$e\'').join(', ')}].');
         return defaultVariationId;
       }
 
@@ -225,7 +226,8 @@ class ConfigCatClient {
           .variationId;
     } catch (e, s) {
       _errorReporter.error(
-          'Evaluating getVariationId(\'$key\') failed. Returning defaultVariationId: \'$defaultVariationId\'.',
+          1002,
+          'Error occurred in the `getVariationId` method while evaluating setting \'$key\'. Returning the `defaultVariationId` parameter that you specified in your application: \'$defaultVariationId\'.',
           e,
           s);
       return defaultVariationId;
@@ -254,7 +256,8 @@ class ConfigCatClient {
       return result;
     } catch (e, s) {
       _errorReporter.error(
-          'An error occurred during getting all the variation ids. Returning empty list.',
+          1002,
+          'Error occurred in the `getAllVariationIds` method. Returning empty list.',
           e,
           s);
       return [];
@@ -272,7 +275,8 @@ class ConfigCatClient {
       return result.settings.keys.toList();
     } catch (e, s) {
       _errorReporter.error(
-          'An error occurred during getting all the setting keys. Returning empty list.',
+          1002,
+          'Error occurred in the `getAllKeys` method. Returning empty list.',
           e,
           s);
       return [];
@@ -299,7 +303,8 @@ class ConfigCatClient {
       return result;
     } catch (e, s) {
       _errorReporter.error(
-          'An error occurred during getting all values. Returning empty map.',
+          1002,
+          'Error occurred in the `getAllValues` method. Returning empty map.',
           e,
           s);
       return {};
@@ -312,7 +317,8 @@ class ConfigCatClient {
     try {
       final result = await _getSettings();
       if (result.isEmpty) {
-        _errorReporter.error('Config JSON is not present. Returning null.');
+        _errorReporter.error(
+            1000, 'Config JSON is not present. Returning null.');
         return null;
       }
 
@@ -337,7 +343,8 @@ class ConfigCatClient {
       return null;
     } catch (e, s) {
       _errorReporter.error(
-          'Could not find the setting for the given variation ID: \'$variationId\'',
+          2011,
+          'Could not find the setting for the specified variation ID: \'$variationId\'.',
           e,
           s);
       return null;

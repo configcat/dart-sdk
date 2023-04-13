@@ -15,15 +15,15 @@ void main() {
 
     // Act
     logger.debug('debug');
-    logger.info('info');
-    logger.warning('warning');
-    logger.error('error');
+    logger.info(5000, 'info');
+    logger.warning(3000, 'warning');
+    logger.error(1000, 'error');
 
     // Assert
-    verify(internal.debug('ConfigCat - debug')).called(1);
-    verify(internal.info('ConfigCat - info')).called(1);
-    verify(internal.warning('ConfigCat - warning')).called(1);
-    verify(internal.error('ConfigCat - error')).called(1);
+    verify(internal.debug('ConfigCat - [0] debug')).called(1);
+    verify(internal.info('ConfigCat - [5000] info')).called(1);
+    verify(internal.warning('ConfigCat - [3000] warning')).called(1);
+    verify(internal.error('ConfigCat - [1000] error')).called(1);
   });
 
   test('logger info level tests', () {
@@ -34,15 +34,15 @@ void main() {
 
     // Act
     logger.debug('debug');
-    logger.info('info');
-    logger.warning('warning');
-    logger.error('error');
+    logger.info(5000, 'info');
+    logger.warning(3000, 'warning');
+    logger.error(1000, 'error');
 
     // Assert
-    verifyNever(internal.debug('ConfigCat - debug'));
-    verify(internal.info('ConfigCat - info')).called(1);
-    verify(internal.warning('ConfigCat - warning')).called(1);
-    verify(internal.error('ConfigCat - error')).called(1);
+    verifyNever(internal.debug('ConfigCat - [0] debug'));
+    verify(internal.info('ConfigCat - [5000] info')).called(1);
+    verify(internal.warning('ConfigCat - [3000] warning')).called(1);
+    verify(internal.error('ConfigCat - [1000] error')).called(1);
   });
 
   test('logger warning level tests', () {
@@ -53,15 +53,15 @@ void main() {
 
     // Act
     logger.debug('debug');
-    logger.info('info');
-    logger.warning('warning');
-    logger.error('error');
+    logger.info(5000, 'info');
+    logger.warning(3000, 'warning');
+    logger.error(1000, 'error');
 
     // Assert
-    verifyNever(internal.debug('ConfigCat - debug'));
-    verifyNever(internal.info('ConfigCat - info'));
-    verify(internal.warning('ConfigCat - warning')).called(1);
-    verify(internal.error('ConfigCat - error')).called(1);
+    verifyNever(internal.debug('ConfigCat - [0] debug'));
+    verifyNever(internal.info('ConfigCat - [5000] info'));
+    verify(internal.warning('ConfigCat - [3000] warning')).called(1);
+    verify(internal.error('ConfigCat - [1000] error')).called(1);
   });
 
   test('logger error level tests', () {
@@ -72,15 +72,15 @@ void main() {
 
     // Act
     logger.debug('debug');
-    logger.info('info');
-    logger.warning('warning');
-    logger.error('error');
+    logger.info(5000, 'info');
+    logger.warning(3000, 'warning');
+    logger.error(1000, 'error');
 
     // Assert
-    verifyNever(internal.debug('ConfigCat - debug'));
-    verifyNever(internal.info('ConfigCat - info'));
-    verifyNever(internal.warning('ConfigCat - warning'));
-    verify(internal.error('ConfigCat - error')).called(1);
+    verifyNever(internal.debug('ConfigCat - [0] debug'));
+    verifyNever(internal.info('ConfigCat - [5000] info'));
+    verifyNever(internal.warning('ConfigCat - [3000] warning'));
+    verify(internal.error('ConfigCat - [1000] error')).called(1);
   });
 
   test('logger nothing level tests', () {
@@ -91,14 +91,14 @@ void main() {
 
     // Act
     logger.debug('debug');
-    logger.info('info');
-    logger.warning('warning');
-    logger.error('error');
+    logger.info(5000, 'info');
+    logger.warning(3000, 'warning');
+    logger.error(1000, 'error');
 
     // Assert
-    verifyNever(internal.debug('ConfigCat - debug'));
-    verifyNever(internal.info('ConfigCat - info'));
-    verifyNever(internal.warning('ConfigCat - warning'));
-    verifyNever(internal.error('ConfigCat - error'));
+    verifyNever(internal.debug('ConfigCat - [0] debug'));
+    verifyNever(internal.info('ConfigCat - [5000] info'));
+    verifyNever(internal.warning('ConfigCat - [3000] warning'));
+    verifyNever(internal.error('ConfigCat - [1000] error'));
   });
 }

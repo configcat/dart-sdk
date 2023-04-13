@@ -629,8 +629,10 @@ void main() {
 
       // Assert
       expect(result.isSuccess, isFalse);
-      expect(result.error,
-          equals("Unexpected HTTP response was received: 500 null"));
+      expect(
+          result.error,
+          equals(
+              "Unexpected HTTP response was received while trying to fetch config JSON: 500 null"));
       expect(settings1.settings, isEmpty);
 
       verifyNever(cache.write(any, any));
@@ -659,7 +661,7 @@ void main() {
       expect(
           result.error,
           equals(
-              "Double-check your API KEY at https://app.configcat.com/apikey. Received unexpected response: 404 null"));
+              "Your SDK Key seems to be wrong. You can find the valid SDK Key at https://app.configcat.com/sdkkey. Received unexpected response: 404 null"));
       expect(settings1.settings, isEmpty);
 
       verifyNever(cache.write(any, any));

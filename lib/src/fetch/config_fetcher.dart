@@ -147,8 +147,8 @@ class ConfigFetcher implements Fetcher {
       return response;
     } else {
       if (preferences.redirect == _RedirectMode.shouldRedirect) {
-        _logger.warning(
-            'Your \'dataGovernance\' parameter at ConfigCatClient initialization is not in sync with your preferences on the ConfigCat Dashboard: https://app.configcat.com/organization/data-governance. Only Organization Admins can access this preference.');
+        _logger.warning(3002,
+            'The `dataGovernance` parameter specified at the client initialization is not in sync with the preferences on the ConfigCat Dashboard. Read more: https://configcat.com/docs/advanced/data-governance/');
       }
 
       if (executionCount > 0) {
@@ -156,8 +156,8 @@ class ConfigFetcher implements Fetcher {
       }
     }
 
-    _logger.error(
-        'Redirect loop during config.json fetch. Please contact support@configcat.com.');
+    _logger.error(1104,
+        'Redirection loop encountered while trying to fetch config JSON. Please contact us at https://configcat.com/support/');
     return response;
   }
 
@@ -185,17 +185,30 @@ class ConfigFetcher implements Fetcher {
         return FetchResponse.notModified();
       } else if (response.statusCode == 404 || response.statusCode == 403) {
         final error =
-            'Double-check your API KEY at https://app.configcat.com/apikey. Received unexpected response: ${response.statusCode} ${response.statusMessage}';
-        _errorReporter.error(error);
+            'Your SDK Key seems to be wrong. You can find the valid SDK Key at https://app.configcat.com/sdkkey. Received unexpected response: ${response.statusCode} ${response.statusMessage}';
+        _errorReporter.error(1100, error);
         return FetchResponse.failure(error, false);
       } else {
         final error =
-            'Unexpected HTTP response was received: ${response.statusCode} ${response.statusMessage}';
-        _errorReporter.error(error);
+            'Unexpected HTTP response was received while trying to fetch config JSON: ${response.statusCode} ${response.statusMessage}';
+        _errorReporter.error(1101, error);
         return FetchResponse.failure(error, true);
       }
+    } on DioError catch (e, s) {
+      if (e.type == DioErrorType.connectionTimeout ||
+          e.type == DioErrorType.receiveTimeout ||
+          e.type == DioErrorType.sendTimeout) {
+        final error =
+            'Request timed out while trying to fetch config JSON. Timeout values: [connect: ${_options.connectTimeout.inSeconds}s, receive: ${_options.receiveTimeout.inSeconds}s, send: ${_options.sendTimeout.inSeconds}s]';
+        _errorReporter.error(1102, error, e, s);
+        return FetchResponse.failure(error, true);
+      }
+      _errorReporter.error(1103,
+          'Unexpected error occurred while trying to fetch config JSON.', e, s);
+      return FetchResponse.failure(e.toString(), true);
     } catch (e, s) {
-      _errorReporter.error('Exception occurred during fetching.', e, s);
+      _errorReporter.error(1103,
+          'Unexpected error occurred while trying to fetch config JSON.', e, s);
       return FetchResponse.failure(e.toString(), true);
     }
   }
