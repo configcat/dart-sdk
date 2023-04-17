@@ -23,7 +23,7 @@ class SettingResult {
 
   SettingResult({required this.settings, required this.fetchTime});
 
-  bool get isEmpty => settings.isEmpty;
+  bool get isEmpty => identical(this, empty);
 
   static SettingResult empty =
       SettingResult(settings: {}, fetchTime: distantPast);
@@ -75,14 +75,18 @@ class ConfigService with ContinuousFutureSynchronizer {
     if (mode is LazyLoadingMode) {
       final entry = await _fetchIfOlder(
           DateTime.now().toUtc().subtract(mode.cacheRefreshInterval));
-      return SettingResult(
-          settings: entry.first.config.entries,
-          fetchTime: entry.first.fetchTime);
+      return !entry.first.isEmpty
+        ? SettingResult(
+            settings: entry.first.config.entries,
+            fetchTime: entry.first.fetchTime)
+        : SettingResult.empty;
     } else {
       final entry = await _fetchIfOlder(distantPast, preferCached: true);
-      return SettingResult(
-          settings: entry.first.config.entries,
-          fetchTime: entry.first.fetchTime);
+      return !entry.first.isEmpty
+        ? SettingResult(
+            settings: entry.first.config.entries,
+            fetchTime: entry.first.fetchTime)
+        : SettingResult.empty;
     }
   }
 

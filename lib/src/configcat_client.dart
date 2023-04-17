@@ -243,6 +243,8 @@ class ConfigCatClient {
     try {
       final settingsResult = await _getSettings();
       if (settingsResult.isEmpty) {
+        _errorReporter.error(
+            1000, 'Config JSON is not present. Returning empty list.');
         return [];
       }
 
@@ -269,6 +271,8 @@ class ConfigCatClient {
     try {
       final result = await _getSettings();
       if (result.isEmpty) {
+        _errorReporter.error(
+            1000, 'Config JSON is not present. Returning empty list.');
         return [];
       }
 
@@ -290,6 +294,8 @@ class ConfigCatClient {
     try {
       final settingsResult = await _getSettings();
       if (settingsResult.isEmpty) {
+        _errorReporter.error(
+            1000, 'Config JSON is not present. Returning empty map.');
         return {};
       }
 
@@ -340,11 +346,13 @@ class ConfigCatClient {
         }
       }
 
+      _errorReporter.error(
+          2011, 'Could not find the setting for the specified variation ID: \'$variationId\'.');
       return null;
     } catch (e, s) {
       _errorReporter.error(
-          2011,
-          'Could not find the setting for the specified variation ID: \'$variationId\'.',
+          1002,
+          'Error occurred in the `getKeyAndValue` method. Returning null.',
           e,
           s);
       return null;
