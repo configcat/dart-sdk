@@ -346,8 +346,8 @@ class ConfigCatClient {
         }
       }
 
-      _errorReporter.error(
-          2011, 'Could not find the setting for the specified variation ID: \'$variationId\'.');
+      _errorReporter.error(2011,
+          'Could not find the setting for the specified variation ID: \'$variationId\'.');
       return null;
     } catch (e, s) {
       _errorReporter.error(

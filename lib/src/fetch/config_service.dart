@@ -76,17 +76,17 @@ class ConfigService with ContinuousFutureSynchronizer {
       final entry = await _fetchIfOlder(
           DateTime.now().toUtc().subtract(mode.cacheRefreshInterval));
       return !entry.first.isEmpty
-        ? SettingResult(
-            settings: entry.first.config.entries,
-            fetchTime: entry.first.fetchTime)
-        : SettingResult.empty;
+          ? SettingResult(
+              settings: entry.first.config.entries,
+              fetchTime: entry.first.fetchTime)
+          : SettingResult.empty;
     } else {
       final entry = await _fetchIfOlder(distantPast, preferCached: true);
       return !entry.first.isEmpty
-        ? SettingResult(
-            settings: entry.first.config.entries,
-            fetchTime: entry.first.fetchTime)
-        : SettingResult.empty;
+          ? SettingResult(
+              settings: entry.first.config.entries,
+              fetchTime: entry.first.fetchTime)
+          : SettingResult.empty;
     }
   }
 
