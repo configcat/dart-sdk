@@ -7,7 +7,7 @@ repository: https://github.com/configcat/dart-sdk
 issue_tracker: https://github.com/configcat/dart-sdk/issues
 
 environment:
-  sdk: '>=2.13.0 <4.0.0'
+  sdk: '>=2.17.0 <4.0.0'
 
 dependencies:
   crypto: ^3.0.3
