@@ -401,7 +401,7 @@ void main() {
       dioAdapter.onGet(path, (server) {
         server.throws(
           500,
-          DioError(
+          DioException(
             requestOptions: RequestOptions(
               path: path,
             ),
@@ -432,11 +432,11 @@ void main() {
       dioAdapter.onGet(path, (server) {
         server.throws(
           500,
-          DioError(
+          DioException(
               requestOptions: RequestOptions(
                 path: path,
               ),
-              type: DioErrorType.connectionTimeout),
+              type: DioExceptionType.connectionTimeout),
         );
       });
 
