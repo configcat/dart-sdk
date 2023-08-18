@@ -1,4 +1,5 @@
-const version = '2.5.2';
+const version = '3.0.0';
+const configJsonCacheVersion = 'v2';
 const configJsonName = 'config_v5.json';
 final DateTime distantPast = DateTime.utc(1970, 01, 01);
 final DateTime distantFuture =

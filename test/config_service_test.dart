@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:configcat_client/configcat_client.dart';
 import 'package:configcat_client/src/constants.dart';
 import 'package:configcat_client/src/error_reporter.dart';
@@ -192,7 +190,7 @@ void main() {
 
     test('ensure cached fetch time is respected on interval calc', () async {
       // Arrange
-      final cached = jsonEncode(createTestEntry({'key': true}).toJson());
+      final cached = createTestEntry({'key': true}).serialize();
       when(cache.read(any)).thenAnswer((_) => Future.value(cached));
 
       final service = createService(PollingMode.autoPoll(
@@ -354,7 +352,7 @@ void main() {
 
     test('max wait time ignored when the cache is not expired yet', () async {
       // Arrange
-      final cached = jsonEncode(createTestEntry({'key': true}).toJson());
+      final cached = createTestEntry({'key': true}).serialize();
       when(cache.read(any)).thenAnswer((_) => Future.value(cached));
 
       final service = createService(PollingMode.autoPoll(
@@ -391,8 +389,8 @@ void main() {
 
     test('max wait timeout returns cached config', () async {
       // Arrange
-      final cached = jsonEncode(
-          createTestEntryWithTime({'key': true}, distantPast).toJson());
+      final cached =
+          createTestEntryWithTime({'key': true}, distantPast).serialize();
       when(cache.read(any)).thenAnswer((_) => Future.value(cached));
 
       final service = createService(PollingMode.autoPoll(
@@ -499,8 +497,7 @@ void main() {
 
     test('ensure cached fetch time is respected on TTL calc', () async {
       // Arrange
-      final cache =
-          CustomCache(jsonEncode(createTestEntry({'key': true}).toJson()));
+      final cache = CustomCache(createTestEntry({'key': true}).serialize());
       final service = createService(
           PollingMode.lazyLoad(
               cacheRefreshInterval: const Duration(milliseconds: 200)),
@@ -532,8 +529,7 @@ void main() {
 
     test('ensure cached fetch time is respected on TTL with 301', () async {
       // Arrange
-      final cache =
-          CustomCache(jsonEncode(createTestEntry({'key': true}).toJson()));
+      final cache = CustomCache(createTestEntry({'key': true}).serialize());
 
       dioAdapter.onGet(
           sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),

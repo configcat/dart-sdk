@@ -6,7 +6,6 @@ abstract class PollingMode {
   ///
   /// [autoPollInterval] sets at least how often this policy should fetch the latest configuration and refresh the cache.
   /// [maxInitWaitTime] sets the maximum waiting time between initialization and the first config acquisition in seconds.
-  /// [listener] sets a configuration changed listener.
   factory PollingMode.autoPoll(
       {autoPollInterval = const Duration(seconds: 60),
       maxInitWaitTime = const Duration(seconds: 5)}) {

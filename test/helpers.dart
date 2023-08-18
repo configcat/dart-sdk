@@ -1,7 +1,9 @@
+import 'dart:convert';
+
 import 'package:configcat_client/configcat_client.dart';
 import 'package:configcat_client/src/fetch/config_fetcher.dart';
 import 'package:configcat_client/src/constants.dart';
-import 'package:configcat_client/src/json/entry.dart';
+import 'package:configcat_client/src/entry.dart';
 import 'package:configcat_client/src/json/config.dart';
 import 'package:configcat_client/src/json/preferences.dart';
 import 'package:dio/dio.dart';
@@ -31,16 +33,18 @@ Config createTestConfigWithRules() {
 }
 
 Entry createTestEntry(Map<String, Object> map) {
-  return Entry(
-      createTestConfig(map), map[0].toString(), DateTime.now().toUtc());
+  Config config = createTestConfig(map);
+  return Entry(jsonEncode(config.toJson()), config, map[0].toString(),
+      DateTime.now().toUtc());
 }
 
 Entry createTestEntryWithTime(Map<String, Object> map, DateTime time) {
-  return Entry(createTestConfig(map), map[0].toString(), time);
+  Config config = createTestConfig(map);
+  return Entry(jsonEncode(config.toJson()), config, map[0].toString(), time);
 }
 
-String getPath() {
-  return sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
+String getPath({String sdkKey = testSdkKey}) {
+  return sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, sdkKey]);
 }
 
 Future<Duration> until(
