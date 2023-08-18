@@ -23,30 +23,30 @@ class Entry {
 
   static Entry fromConfigJson(String configJson, String eTag, DateTime time) {
     final decoded = jsonDecode(configJson);
-    Config config = Config.fromJson(decoded);
+    final config = Config.fromJson(decoded);
     return Entry(configJson, config, eTag, time);
   }
 
   static Entry fromCached(String cached) {
-    int timeIndex = cached.indexOf('\n');
+    final timeIndex = cached.indexOf('\n');
     if (timeIndex == -1) {
       throw FormatException("Number of values is fewer than expected.");
     }
 
-    int eTagIndex = cached.indexOf('\n', timeIndex + 1);
+    final eTagIndex = cached.indexOf('\n', timeIndex + 1);
     if (eTagIndex == -1) {
       throw FormatException("Number of values is fewer than expected.");
     }
 
-    String timeString = cached.substring(0, timeIndex);
-    int? time = int.tryParse(timeString);
+    final timeString = cached.substring(0, timeIndex);
+    final time = int.tryParse(timeString);
     if (time == null) {
       throw FormatException("Invalid fetch time: $timeString");
     }
 
-    DateTime fetchTime = DateTime.fromMillisecondsSinceEpoch(time, isUtc: true);
-    String eTag = cached.substring(timeIndex + 1, eTagIndex);
-    String configJson = cached.substring(eTagIndex + 1);
+    final fetchTime = DateTime.fromMillisecondsSinceEpoch(time, isUtc: true);
+    final eTag = cached.substring(timeIndex + 1, eTagIndex);
+    final configJson = cached.substring(eTagIndex + 1);
 
     return fromConfigJson(configJson, eTag, fetchTime);
   }
