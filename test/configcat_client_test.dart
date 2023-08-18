@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:configcat_client/configcat_client.dart';
 import 'package:configcat_client/src/fetch/config_fetcher.dart';
 import 'package:configcat_client/src/json/config.dart';
@@ -211,7 +209,7 @@ void main() {
 
   test('returns cached value on failure', () async {
     // Arrange
-    final body = jsonEncode(createTestEntry({'value': 42}));
+    final body = createTestEntry({'value': 42}).serialize();
     when(cache.read(any)).thenAnswer((_) => Future.value(body));
     dioAdapter.onGet(getPath(), (server) {
       server.reply(500, null);
@@ -234,7 +232,7 @@ void main() {
 
   test('get all keys', () async {
     // Arrange
-    final body = createTestConfig({'value1': true, 'value2': false}).toJson();
+    final body = createTestConfig({'value1': true, 'value2': false});
     dioAdapter.onGet(getPath(), (server) {
       server.reply(200, body);
     });

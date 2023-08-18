@@ -12,7 +12,7 @@ import '../constants.dart';
 import '../log/configcat_logger.dart';
 import '../json/setting.dart';
 import 'config_fetcher.dart';
-import '../json/entry.dart';
+import '../entry.dart';
 import '../error_reporter.dart';
 import 'refresh_result.dart';
 import 'periodic_executor.dart';
@@ -38,7 +38,7 @@ class ConfigService with ContinuousFutureSynchronizer {
   late final ConfigCatCache _cache;
   late final ErrorReporter _errorReporter;
   Entry _cachedEntry = Entry.empty;
-  String _cachedJson = '';
+  String _cachedEntryString = '';
   bool _offline = false;
   bool _initialized = false;
   PeriodicExecutor? _periodicExecutor;
@@ -53,7 +53,8 @@ class ConfigService with ContinuousFutureSynchronizer {
       required ErrorReporter errorReporter,
       required bool offline}) {
     _cacheKey = sha1
-        .convert(utf8.encode('dart_${configJsonName}_${sdkKey}_v2'))
+        .convert(
+            utf8.encode('${sdkKey}_${configJsonName}_$configJsonCacheVersion'))
         .toString();
     _mode = mode;
     _hooks = hooks;
@@ -198,12 +199,11 @@ class ConfigService with ContinuousFutureSynchronizer {
 
   Future<Entry> _readCache() async {
     try {
-      final json = await _cache.read(_cacheKey);
-      if (json.isEmpty) return Entry.empty;
-      if (json == _cachedJson) return Entry.empty;
-      _cachedJson = json;
-      final decoded = jsonDecode(json);
-      return Entry.fromJson(decoded);
+      final entry = await _cache.read(_cacheKey);
+      if (entry.isEmpty) return Entry.empty;
+      if (entry == _cachedEntryString) return Entry.empty;
+      _cachedEntryString = entry;
+      return Entry.fromCached(entry);
     } catch (e, s) {
       _errorReporter.error(
           2200, 'Error occurred while reading the cache.', e, s);
@@ -213,10 +213,9 @@ class ConfigService with ContinuousFutureSynchronizer {
 
   Future<void> _writeCache(Entry value) async {
     try {
-      final map = value.toJson();
-      final json = jsonEncode(map);
-      _cachedJson = json;
-      await _cache.write(_cacheKey, json);
+      final entry = value.serialize();
+      _cachedEntryString = entry;
+      await _cache.write(_cacheKey, entry);
     } catch (e, s) {
       _errorReporter.error(
           2201, 'Error occurred while writing the cache.', e, s);

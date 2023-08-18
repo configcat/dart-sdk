@@ -1,12 +1,10 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:dio/dio.dart';
 
 import '../error_reporter.dart';
-import '../json/entry.dart';
+import '../entry.dart';
 import '../data_governance.dart';
 import '../configcat_options.dart';
-import '../json/config.dart';
 import '../constants.dart';
 import '../log/configcat_logger.dart';
 
@@ -175,11 +173,9 @@ class ConfigFetcher implements Fetcher {
       );
       if (_successStatusCodes.contains(response.statusCode)) {
         final eTag = response.headers.value(_eTagHeaderName) ?? '';
-        final decoded = jsonDecode(response.data.toString());
-        final config = Config.fromJson(decoded);
         _logger.debug('Fetch was successful: new config fetched.');
-        return FetchResponse.success(
-            Entry(config, eTag, DateTime.now().toUtc()));
+        return FetchResponse.success(Entry.fromConfigJson(
+            response.data.toString(), eTag, DateTime.now().toUtc()));
       } else if (response.statusCode == 304) {
         _logger.debug('Fetch was successful: config not modified.');
         return FetchResponse.notModified();
