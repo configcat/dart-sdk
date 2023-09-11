@@ -16,7 +16,7 @@ jobs:
   analyze-format:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Set up Dart
       uses: dart-lang/setup-dart@v1
@@ -36,7 +36,7 @@ jobs:
       matrix:
         sdk-version: [ stable, beta, dev, 2.19.0 ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Dart
         uses: dart-lang/setup-dart@v1
@@ -53,7 +53,7 @@ jobs:
     needs: [analyze-format, test]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Dart
         uses: dart-lang/setup-dart@v1
