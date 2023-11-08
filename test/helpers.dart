@@ -10,7 +10,8 @@ import 'package:dio/dio.dart';
 import 'package:sprintf/sprintf.dart';
 
 const urlTemplate = '%s/configuration-files/%s/$configJsonName';
-const testSdkKey = 'test';
+const testSdkKey =
+    'configcat-sdk-1/TEST_KEY-0123456789012/1234567890123456789012';
 const etag = 'test-etag';
 
 Config createTestConfig(Map<String, Object> map) {

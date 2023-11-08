@@ -150,5 +150,9 @@ class ConfigCatOptions {
     this.offline = false,
   });
 
+  bool isBaseUrlCustom() {
+    return baseUrl.isNotEmpty;
+  }
+
   static const ConfigCatOptions defaultOptions = ConfigCatOptions();
 }

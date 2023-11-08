@@ -16,7 +16,7 @@ void main() {
   test('local only', () async {
     // Arrange
     final client = ConfigCatClient.get(
-        sdkKey: 'localhost',
+        sdkKey: testSdkKey,
         options: ConfigCatOptions(
             override: FlagOverrides(
                 dataSource: OverrideDataSource.map(

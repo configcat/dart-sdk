@@ -57,8 +57,10 @@ void main() {
 
   group('cache key generation', () {
     final inputs = {
-      'test1': '147c5b4c2b2d7c77e1605b1a4309f0ea6684a0c6',
-      'test2': 'c09513b1756de9e4bc48815ec7a142b2441ed4d5',
+      'configcat-sdk-1/TEST_KEY-0123456789012/1234567890123456789012':
+          'dbd2c54f946f95ed3d76e788950f8a3a6c01e0a6',
+      'configcat-sdk-1/TEST_KEY2-123456789012/1234567890123456789012':
+          '71a778682cbfa4bb87862ab4733c37de35ebcbee',
     };
 
     inputs.forEach((sdkKey, cacheKey) {

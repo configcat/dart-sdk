@@ -31,6 +31,62 @@ void main() {
     dioAdapter.close();
   });
 
+  test('sdk key is not empty', () async {
+    expect(
+        () => ConfigCatClient.get(sdkKey: ""),
+        throwsA(predicate((e) =>
+            e is ArgumentError && e.message == 'SDK Key cannot be empty.')));
+  });
+
+  test('sdk key validation', () async {
+    //TEST VALID KEYS
+    client = ConfigCatClient.get(
+        sdkKey: "sdk-key-90123456789012/1234567890123456789012");
+    expect(client, isNotNull);
+    client = ConfigCatClient.get(
+        sdkKey:
+            "configcat-sdk-1/sdk-key-90123456789012/1234567890123456789012");
+    expect(client, isNotNull);
+    client = ConfigCatClient.get(
+        sdkKey: "configcat-proxy/sdk-key-90123456789012",
+        options: ConfigCatOptions(baseUrl: "https://my-configcat-proxy"));
+    expect(client, isNotNull);
+    ConfigCatClient.closeAll();
+
+    // //TEST INVALID KEYS
+    var wrongSDKKeys = {
+      "sdk-key-90123456789012",
+      "sdk-key-9012345678901/1234567890123456789012",
+      "sdk-key-90123456789012/123456789012345678901",
+      "sdk-key-90123456789012/12345678901234567890123",
+      "sdk-key-901234567890123/1234567890123456789012",
+      "configcat-sdk-1/sdk-key-90123456789012",
+      "configcat-sdk-1/sdk-key-9012345678901/1234567890123456789012",
+      "configcat-sdk-1/sdk-key-90123456789012/123456789012345678901",
+      "configcat-sdk-1/sdk-key-90123456789012/12345678901234567890123",
+      "configcat-sdk-1/sdk-key-901234567890123/1234567890123456789012",
+      "configcat-sdk-2/sdk-key-90123456789012/1234567890123456789012",
+      "configcat-proxy/",
+      "configcat-proxy/sdk-key-90123456789012"
+    };
+
+    wrongSDKKeys.forEach((sdkKey) {
+      expect(
+          () => ConfigCatClient.get(sdkKey: sdkKey),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message == "SDK Key '$sdkKey' is invalid.")));
+    });
+
+    expect(
+        () => ConfigCatClient.get(
+            sdkKey: "configcat-proxy/",
+            options: ConfigCatOptions(baseUrl: "https://my-configcat-proxy")),
+        throwsA(predicate((e) =>
+            e is ArgumentError &&
+            e.message == "SDK Key 'configcat-proxy/' is invalid.")));
+  });
+
   test('get string', () async {
     // Arrange
     final body = createTestConfig({'stringValue': 'testValue'}).toJson();
@@ -355,22 +411,30 @@ void main() {
 
   test('ensure close works', () async {
     // Act
-    final client = ConfigCatClient.get(sdkKey: "another");
-    final client2 = ConfigCatClient.get(sdkKey: "another");
+    final client = ConfigCatClient.get(
+        sdkKey:
+            'configcat-sdk-1/TEST_KEY-03-0123456789/1234567890123456789012');
+    final client2 = ConfigCatClient.get(
+        sdkKey:
+            'configcat-sdk-1/TEST_KEY-03-0123456789/1234567890123456789012');
 
     // Assert
     expect(client2, same(client));
 
     // Act
     client2.close();
-    final client3 = ConfigCatClient.get(sdkKey: "another");
+    final client3 = ConfigCatClient.get(
+        sdkKey:
+            'configcat-sdk-1/TEST_KEY-03-0123456789/1234567890123456789012');
 
     // Assert
     expect(client3, isNot(same(client2)));
 
     // Act
     ConfigCatClient.closeAll();
-    final client4 = ConfigCatClient.get(sdkKey: "another");
+    final client4 = ConfigCatClient.get(
+        sdkKey:
+            'configcat-sdk-1/TEST_KEY-03-0123456789/1234567890123456789012');
 
     // Assert
     expect(client4, isNot(same(client3)));
@@ -378,19 +442,19 @@ void main() {
 
   test('ensure close removes the closing instance only', () async {
     // Act
-    final client1 = ConfigCatClient.get(sdkKey: "another");
+    final client1 = ConfigCatClient.get(sdkKey: testSdkKey);
 
     client1.close();
 
     // Act
-    final client2 = ConfigCatClient.get(sdkKey: "another");
+    final client2 = ConfigCatClient.get(sdkKey: testSdkKey);
 
     // Assert
     expect(client1, isNot(same(client2)));
 
     // Act
     client1.close();
-    final client3 = ConfigCatClient.get(sdkKey: "another");
+    final client3 = ConfigCatClient.get(sdkKey: testSdkKey);
 
     // Assert
     expect(client2, same(client3));
@@ -430,7 +494,7 @@ void main() {
     final body = createTestConfig({'stringValue': 'testValue'}).toJson();
 
     final localClient = ConfigCatClient.get(
-        sdkKey: "init local",
+        sdkKey: 'configcat-sdk-1/TEST_KEY-01-0123456789/1234567890123456789012',
         options: ConfigCatOptions(
             pollingMode: PollingMode.manualPoll(),
             cache: cache,
@@ -464,7 +528,7 @@ void main() {
 
     var ready = false;
     final localClient = ConfigCatClient.get(
-        sdkKey: "init local",
+        sdkKey: 'configcat-sdk-1/TEST_KEY-02-0123456789/1234567890123456789012',
         options: ConfigCatOptions(
             pollingMode: PollingMode.autoPoll(),
             cache: cache,

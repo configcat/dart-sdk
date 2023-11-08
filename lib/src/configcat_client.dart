@@ -31,7 +31,10 @@ class ConfigCatClient {
       {required String sdkKey,
       ConfigCatOptions options = ConfigCatOptions.defaultOptions}) {
     if (sdkKey.isEmpty) {
-      throw ArgumentError('The SDK key cannot be empty.');
+      throw ArgumentError('SDK Key cannot be empty.');
+    }
+    if (!_isValidKey(sdkKey, options.isBaseUrlCustom())) {
+      throw ArgumentError("SDK Key '$sdkKey' is invalid.");
     }
 
     var client = _instanceRepository[sdkKey];
@@ -325,6 +328,26 @@ class ConfigCatClient {
   void close() {
     _closeResources();
     _instanceRepository.removeWhere((key, value) => value == this);
+  }
+
+  static bool _isValidKey(String sdkKey, bool isCustomBaseURL) {
+    if (isCustomBaseURL &&
+        sdkKey.length > sdkKeyProxyPrefix.length &&
+        sdkKey.startsWith(sdkKeyProxyPrefix)) {
+      return true;
+    }
+    List<String> splitSDKKey = sdkKey.split("/");
+    //22/22 rules
+    if (splitSDKKey.length == 2 &&
+        splitSDKKey[0].length == sdkKeySectionLength &&
+        splitSDKKey[1].length == sdkKeySectionLength) {
+      return true;
+    }
+    //configcat-sdk-1/22/22 rules
+    return splitSDKKey.length == 3 &&
+        splitSDKKey[0] == sdkKeyPrefix &&
+        splitSDKKey[1].length == sdkKeySectionLength &&
+        splitSDKKey[2].length == sdkKeySectionLength;
   }
 
   void _closeResources() {
