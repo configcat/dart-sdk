@@ -1,23 +1,27 @@
 import 'package:json_annotation/json_annotation.dart';
 
-import 'percentage_rule.dart';
-import 'rollout_rule.dart';
+import 'percentage_option.dart';
+import 'targeting_rule.dart';
+import 'settings_value.dart';
 
 part 'setting.g.dart';
 
-extension SettingConvert on Object {
-  /// Creates a basic [Setting] instance from an [Object].
-  Setting toSetting() {
-    return Setting(this, 0, [], [], '');
-  }
-}
+// TODO do we need this?
+// extension SettingConvert on Object {
+//   /// Creates a basic [Setting] instance from an [Object].
+//   Setting toSetting() {
+//     return Setting(this, 0, [], [], '');
+//   }
+// }
 
+//TODO add segments and salt as non seriazible variable
 /// Describes a ConfigCat Feature Flag / Setting
 @JsonSerializable()
 class Setting {
+
   /// Value of the feature flag / setting.
   @JsonKey(name: 'v')
-  final dynamic value;
+  final SettingsValue settingsValue;
 
   /// Type of the feature flag / setting.
   ///
@@ -28,23 +32,21 @@ class Setting {
   @JsonKey(name: 't', defaultValue: 0)
   final int type;
 
-  /// Collection of percentage rules that belongs to the feature flag / setting.
+  /// Collection of percentage options that belongs to the feature flag / setting.
   @JsonKey(name: 'p', defaultValue: [])
-  final List<PercentageRule> percentageItems;
+  final List<PercentageOption>? percentageOptions;
 
   /// Collection of targeting rules that belongs to the feature flag / setting.
   @JsonKey(name: 'r', defaultValue: [])
-  final List<RolloutRule> rolloutRules;
+  final List<TargetingRule>? targetingRules;
 
   /// Variation ID (for analytical purposes).
   @JsonKey(name: 'i', defaultValue: '')
   final String variationId;
 
-  Setting(this.value, this.type, this.percentageItems, this.rolloutRules,
-      this.variationId);
+  Setting(this.settingsValue, this.type, this.percentageOptions,
+      this.targetingRules, this.variationId);
 
-  factory Setting.fromJson(Map<String, dynamic> json) =>
-      _$SettingFromJson(json);
-
+  factory Setting.fromJson(Map<String, dynamic> json) => _$SettingFromJson(json);
   Map<String, dynamic> toJson() => _$SettingToJson(this);
 }

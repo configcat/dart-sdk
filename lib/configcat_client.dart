@@ -28,6 +28,7 @@ export 'src/override/flag_overrides.dart';
 export 'src/fetch/refresh_result.dart';
 
 // json models
+//TODO update based on changes
 export 'src/json/setting.dart';
-export 'src/json/percentage_rule.dart';
+export 'src/json/percentage_option.dart';
 export 'src/json/rollout_rule.dart';

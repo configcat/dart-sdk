@@ -4,7 +4,7 @@ import 'package:crypto/crypto.dart';
 import 'package:pub_semver/pub_semver.dart';
 
 import 'json/rollout_rule.dart';
-import 'json/percentage_rule.dart';
+import 'json/percentage_option.dart';
 import 'configcat_user.dart';
 import 'json/setting.dart';
 import 'log/configcat_logger.dart';
