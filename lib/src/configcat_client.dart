@@ -1,21 +1,29 @@
 import 'package:configcat_client/src/constants.dart';
 import 'package:configcat_client/src/fetch/refresh_result.dart';
+import 'package:configcat_client/src/json/settings_value.dart';
 import 'package:dio/dio.dart';
 
-import 'error_reporter.dart';
-import 'fetch/config_fetcher.dart';
+import 'configcat_cache.dart';
 import 'configcat_options.dart';
 import 'configcat_user.dart';
+import 'error_reporter.dart';
+import 'fetch/config_fetcher.dart';
+import 'fetch/config_service.dart';
+import 'json/setting.dart';
+import 'log/configcat_logger.dart';
 import 'override/behaviour.dart';
 import 'override/flag_overrides.dart';
 import 'rollout_evaluator.dart';
-import 'configcat_cache.dart';
-import 'json/setting.dart';
-import 'log/configcat_logger.dart';
-import 'fetch/config_service.dart';
 
 /// ConfigCat SDK client.
 class ConfigCatClient {
+  static const _settingTypes = [
+    'Boolean',
+    'String',
+    'Integer',
+    'Double',
+  ];
+
   late final ConfigCatLogger _logger;
   late final ConfigService? _configService;
   late final RolloutEvaluator _rolloutEvaluator;
@@ -263,18 +271,25 @@ class ConfigCatClient {
 
       for (final entry in result.settings.entries) {
         if (entry.value.variationId == variationId) {
-          return MapEntry(entry.key, entry.value.value);
+          return MapEntry(entry.key,
+              _parseSettingValue(entry.value.settingsValue, entry.value.type));
         }
 
-        for (final rolloutRule in entry.value.rolloutRules) {
-          if (rolloutRule.variationId == variationId) {
-            return MapEntry(entry.key, rolloutRule.value);
+        for (final targetingRule in entry.value.targetingRules) {
+          if (targetingRule.servedValue.variationId == variationId) {
+            return MapEntry(
+                entry.key,
+                _parseSettingValue(
+                    targetingRule.servedValue.settingsValue, entry.value.type));
           }
         }
 
-        for (final percentageRule in entry.value.percentageItems) {
-          if (percentageRule.variationId == variationId) {
-            return MapEntry(entry.key, percentageRule.value);
+        for (final percentageOption in entry.value.percentageOptions) {
+          if (percentageOption.variationId == variationId) {
+            return MapEntry(
+                entry.key,
+                _parseSettingValue(
+                    percentageOption.settingsValue, entry.value.type));
           }
         }
       }
@@ -391,12 +406,34 @@ class ConfigCatClient {
         user: user,
         isDefaultValue: false,
         error: null,
-        value: eval.value,
+        value: _parseSettingValue(eval.value, setting.type),
         fetchTime: fetchTime,
-        matchedEvaluationRule: eval.matchedEvaluationRule,
-        matchedEvaluationPercentageRule: eval.matchedEvaluationPercentageRule);
+        matchedTargetingRule: eval.targetingRule,
+        matchedPercentageOption: eval.percentageOption);
 
     _hooks.invokeFlagEvaluated(details);
     return details;
+  }
+
+  T _parseSettingValue<T>(SettingsValue settingsValue, int settingType) {
+    if (!(T is bool || T is String || T is int || T is double)) {
+      throw ArgumentError(
+          "Only String, Integer, Double or Boolean types are supported.");
+    }
+
+    if (T is bool && settingType == 0 && settingsValue.booleanValue != null) {
+      return settingsValue.booleanValue as T;
+    }
+    if (T is String && settingType == 1 && settingsValue.stringValue != null) {
+      return settingsValue.stringValue as T;
+    }
+    if (T is int && settingType == 2 && settingsValue.intValue != null) {
+      return settingsValue.intValue as T;
+    }
+    if (T is double && settingType == 3 && settingsValue.doubleValue != null) {
+      return settingsValue.doubleValue as T;
+    }
+    throw ArgumentError(
+        "The type of a setting must match the type of the setting's default value. Setting's type was {${_settingTypes[settingType]}} but the default value's type was {${T.runtimeType}}. Please use a default value which corresponds to the setting type {${_settingTypes[settingType]}}.");
   }
 }

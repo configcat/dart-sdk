@@ -1,27 +1,28 @@
 import 'dart:convert';
 
+import 'package:configcat_client/src/json/settings_value.dart';
 import 'package:crypto/crypto.dart';
 import 'package:pub_semver/pub_semver.dart';
 
-import 'json/rollout_rule.dart';
-import 'json/percentage_option.dart';
 import 'configcat_user.dart';
+import 'json/percentage_option.dart';
+import 'json/targeting_rule.dart';
 import 'json/setting.dart';
 import 'log/configcat_logger.dart';
 
-class EvaluationResult<T> {
+class EvaluationResult {
   final String key;
   final String variationId;
-  final T value;
-  final RolloutRule? matchedEvaluationRule;
-  final PercentageRule? matchedEvaluationPercentageRule;
+  final SettingsValue value;
+  final TargetingRule? targetingRule;
+  final PercentageOption? percentageOption;
 
   EvaluationResult(
       {required this.key,
       required this.variationId,
       required this.value,
-      required this.matchedEvaluationRule,
-      required this.matchedEvaluationPercentageRule});
+      required this.targetingRule,
+      required this.percentageOption});
 }
 enum SegmentComparator {
   isInSegment(id: 0,name:  "IS IN SEGMENT"),

@@ -1,4 +1,6 @@
 import 'package:configcat_client/src/constants.dart';
+import 'package:configcat_client/src/json/percentage_option.dart';
+import 'package:configcat_client/src/json/targeting_rule.dart';
 import 'package:dio/dio.dart';
 
 import 'configcat_cache.dart';
@@ -9,8 +11,7 @@ import 'polling_mode.dart';
 import 'configcat_client.dart';
 import 'override/flag_overrides.dart';
 import 'configcat_user.dart';
-import 'json/rollout_rule.dart';
-import 'json/percentage_option.dart';
+
 
 /// Additional information about flag evaluation.
 class EvaluationDetails<T> {
@@ -21,8 +22,8 @@ class EvaluationDetails<T> {
   final String? error;
   final T value;
   final DateTime fetchTime;
-  final RolloutRule? matchedEvaluationRule;
-  final PercentageRule? matchedEvaluationPercentageRule;
+  final TargetingRule? matchedTargetingRule;
+  final PercentageOption? matchedPercentageOption;
 
   EvaluationDetails(
       {required this.key,
@@ -32,8 +33,8 @@ class EvaluationDetails<T> {
       required this.error,
       required this.value,
       required this.fetchTime,
-      required this.matchedEvaluationRule,
-      required this.matchedEvaluationPercentageRule});
+      required this.matchedTargetingRule,
+      required this.matchedPercentageOption});
 
   static EvaluationDetails<T> makeError<T>(
       String key, T defaultValue, String error, ConfigCatUser? user) {
@@ -45,8 +46,8 @@ class EvaluationDetails<T> {
         error: error,
         value: defaultValue,
         fetchTime: distantPast,
-        matchedEvaluationRule: null,
-        matchedEvaluationPercentageRule: null);
+        matchedTargetingRule: null,
+        matchedPercentageOption: null);
   }
 }
 

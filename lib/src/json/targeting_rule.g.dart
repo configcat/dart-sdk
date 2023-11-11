@@ -14,9 +14,7 @@ TargetingRule _$TargetingRuleFromJson(Map<String, dynamic> json) =>
       (json['p'] as List<dynamic>?)
           ?.map((e) => PercentageOption.fromJson(e as Map<String, dynamic>))
           .toList(),
-      json['s'] == null
-          ? null
-          : ServedValue.fromJson(json['s'] as Map<String, dynamic>),
+      ServedValue.fromJson(json['s'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$TargetingRuleToJson(TargetingRule instance) =>

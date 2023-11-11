@@ -6,13 +6,29 @@ import 'settings_value.dart';
 
 part 'setting.g.dart';
 
-// TODO do we need this?
-// extension SettingConvert on Object {
-//   /// Creates a basic [Setting] instance from an [Object].
-//   Setting toSetting() {
-//     return Setting(this, 0, [], [], '');
-//   }
-// }
+extension SettingConvert on Object {
+  /// Creates a basic [Setting] instance from an [Object].
+  Setting toSetting() {
+    SettingsValue settingsValue;
+    int settingType;
+    if(this is bool){
+      settingsValue = SettingsValue(this as bool?, null, null, null);
+      settingType = 0;
+    } else if(this is String){
+      settingsValue = SettingsValue(null, this as String?, null, null);
+      settingType = 1;
+    } else if(this is int){
+      settingsValue = SettingsValue( null, null,this as int?, null);
+      settingType = 2;
+    } else if(this is double){
+      settingsValue = SettingsValue(null, null, null, this as double?);
+      settingType = 3;
+    } else {
+      throw ArgumentError("Only String, Integer, Double or Boolean types are supported.");
+    }
+      return Setting(settingsValue, settingType, List.empty(), List.empty(), "");
+  }
+}
 
 //TODO add segments and salt as non seriazible variable
 /// Describes a ConfigCat Feature Flag / Setting
@@ -34,11 +50,11 @@ class Setting {
 
   /// Collection of percentage options that belongs to the feature flag / setting.
   @JsonKey(name: 'p', defaultValue: [])
-  final List<PercentageOption>? percentageOptions;
+  final List<PercentageOption> percentageOptions;
 
   /// Collection of targeting rules that belongs to the feature flag / setting.
   @JsonKey(name: 'r', defaultValue: [])
-  final List<TargetingRule>? targetingRules;
+  final List<TargetingRule> targetingRules;
 
   /// Variation ID (for analytical purposes).
   @JsonKey(name: 'i', defaultValue: '')

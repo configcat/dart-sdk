@@ -16,7 +16,7 @@ class TargetingRule {
   final List<PercentageOption>? percentageOptions;
 
   @JsonKey(name: 's')
-  final ServedValue? servedValue;
+  final ServedValue servedValue;
 
   TargetingRule(this.conditions, this.percentageOptions, this.servedValue);
 
