@@ -4,7 +4,6 @@ part 'settings_value.g.dart';
 
 @JsonSerializable()
 class SettingsValue {
-
   @JsonKey(name: 'b')
   final bool? booleanValue;
 
@@ -17,9 +16,11 @@ class SettingsValue {
   @JsonKey(name: 'd')
   final double? doubleValue;
 
-  SettingsValue(this.booleanValue, this.stringValue, this.intValue, this.doubleValue);
+  SettingsValue(
+      this.booleanValue, this.stringValue, this.intValue, this.doubleValue);
 
-  factory SettingsValue.fromJson(Map<String, dynamic> json) => _$SettingsValueFromJson(json);
+  factory SettingsValue.fromJson(Map<String, dynamic> json) =>
+      _$SettingsValueFromJson(json);
 
   Map<String, dynamic> toJson() => _$SettingsValueToJson(this);
 }

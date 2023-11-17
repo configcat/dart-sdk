@@ -1,6 +1,7 @@
 import 'package:json_annotation/json_annotation.dart';
 
 import 'percentage_option.dart';
+import 'segment.dart';
 import 'targeting_rule.dart';
 import 'settings_value.dart';
 
@@ -11,30 +12,30 @@ extension SettingConvert on Object {
   Setting toSetting() {
     SettingsValue settingsValue;
     int settingType;
-    if(this is bool){
+    if (this is bool) {
       settingsValue = SettingsValue(this as bool?, null, null, null);
       settingType = 0;
-    } else if(this is String){
+    } else if (this is String) {
       settingsValue = SettingsValue(null, this as String?, null, null);
       settingType = 1;
-    } else if(this is int){
-      settingsValue = SettingsValue( null, null,this as int?, null);
+    } else if (this is int) {
+      settingsValue = SettingsValue(null, null, this as int?, null);
       settingType = 2;
-    } else if(this is double){
+    } else if (this is double) {
       settingsValue = SettingsValue(null, null, null, this as double?);
       settingType = 3;
     } else {
-      throw ArgumentError("Only String, Integer, Double or Boolean types are supported.");
+      throw ArgumentError(
+          "Only String, Integer, Double or Boolean types are supported.");
     }
-      return Setting(settingsValue, settingType, List.empty(), List.empty(), "");
+    return Setting(
+        settingsValue, settingType, List.empty(), List.empty(), "", "", "", List.empty());
   }
 }
 
-//TODO add segments and salt as non seriazible variable
 /// Describes a ConfigCat Feature Flag / Setting
 @JsonSerializable()
 class Setting {
-
   /// Value of the feature flag / setting.
   @JsonKey(name: 'v')
   final SettingsValue settingsValue;
@@ -60,9 +61,24 @@ class Setting {
   @JsonKey(name: 'i', defaultValue: '')
   final String variationId;
 
-  Setting(this.settingsValue, this.type, this.percentageOptions,
-      this.targetingRules, this.variationId);
+  /// The User Object attribute which serves as the basis of percentage options evaluation.
+  @JsonKey(name: 'a')
+  final String percentageAttribute;
 
-  factory Setting.fromJson(Map<String, dynamic> json) => _$SettingFromJson(json);
+  String salt = "";
+  List<Segment> segments = List.empty();
+
+  Setting(
+      this.settingsValue,
+      this.type,
+      this.percentageOptions,
+      this.targetingRules,
+      this.variationId,
+      this.percentageAttribute,
+      this.salt,
+      this.segments);
+
+  factory Setting.fromJson(Map<String, dynamic> json) =>
+      _$SettingFromJson(json);
   Map<String, dynamic> toJson() => _$SettingToJson(this);
 }

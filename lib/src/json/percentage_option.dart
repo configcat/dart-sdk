@@ -6,7 +6,6 @@ part 'percentage_option.g.dart';
 
 @JsonSerializable()
 class PercentageOption {
-
   /// Value served when the rule is selected during evaluation.
   @JsonKey(name: 'v')
   final SettingsValue settingsValue;
@@ -21,7 +20,7 @@ class PercentageOption {
 
   PercentageOption(this.settingsValue, this.percentage, this.variationId);
 
-  factory PercentageOption.fromJson(Map<String, dynamic> json) => _$PercentageOptionFromJson(json);
+  factory PercentageOption.fromJson(Map<String, dynamic> json) =>
+      _$PercentageOptionFromJson(json);
   Map<String, dynamic> toJson() => _$PercentageOptionToJson(this);
-
 }

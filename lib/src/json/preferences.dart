@@ -1,11 +1,9 @@
 import 'package:json_annotation/json_annotation.dart';
 
-
 part 'preferences.g.dart';
 
 @JsonSerializable()
 class Preferences {
-
   @JsonKey(name: 'u')
   final String baseUrl;
 
@@ -17,9 +15,10 @@ class Preferences {
 
   Preferences(this.baseUrl, this.redirect, this.salt);
 
+  static Preferences empty = Preferences("", 0, "");
+
   factory Preferences.fromJson(Map<String, dynamic> json) =>
       _$PreferencesFromJson(json);
 
   Map<String, dynamic> toJson() => _$PreferencesToJson(this);
-
 }

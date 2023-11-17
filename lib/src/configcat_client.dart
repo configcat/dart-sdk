@@ -122,7 +122,9 @@ class ConfigCatClient {
         return defaultValue;
       }
 
-      return _evaluate(key, setting, evalUser, result.fetchTime).value;
+      return _evaluate(
+              key, setting, evalUser, result.fetchTime, result.settings)
+          .value;
     } catch (e, s) {
       final err =
           'Error occurred in the `getValue` method while evaluating setting \'$key\'. Returning the `defaultValue` parameter that you specified in your application: \'$defaultValue\'.';
@@ -165,7 +167,8 @@ class ConfigCatClient {
         return details;
       }
 
-      return _evaluate(key, setting, evalUser, result.fetchTime);
+      return _evaluate(
+          key, setting, evalUser, result.fetchTime, result.settings);
     } catch (e, s) {
       final err =
           'Error occurred in the `getValueDetails` method while evaluating setting \'$key\'. Returning the `defaultValue` parameter that you specified in your application: \'$defaultValue\'.';
@@ -193,7 +196,8 @@ class ConfigCatClient {
       }
       final detailsResult = List<EvaluationDetails>.empty(growable: true);
       result.settings.forEach((key, value) {
-        detailsResult.add(_evaluate(key, value, evalUser, result.fetchTime));
+        detailsResult.add(
+            _evaluate(key, value, evalUser, result.fetchTime, result.settings));
       });
 
       return detailsResult;
@@ -242,8 +246,8 @@ class ConfigCatClient {
 
       final result = <String, dynamic>{};
       settingsResult.settings.forEach((key, value) {
-        result[key] = _evaluate(
-                key, value, user ?? _defaultUser, settingsResult.fetchTime)
+        result[key] = _evaluate(key, value, user ?? _defaultUser,
+                settingsResult.fetchTime, settingsResult.settings)
             .value;
       });
 
@@ -276,11 +280,11 @@ class ConfigCatClient {
         }
 
         for (final targetingRule in entry.value.targetingRules) {
-          if (targetingRule.servedValue.variationId == variationId) {
+          if (targetingRule.servedValue != null && targetingRule.servedValue?.variationId == variationId) {
             return MapEntry(
                 entry.key,
                 _parseSettingValue(
-                    targetingRule.servedValue.settingsValue, entry.value.type));
+                    targetingRule.servedValue!.settingsValue, entry.value.type));
           }
         }
 
@@ -397,9 +401,9 @@ class ConfigCatClient {
     return await _configService?.getSettings() ?? SettingResult.empty;
   }
 
-  EvaluationDetails<T> _evaluate<T>(
-      String key, Setting setting, ConfigCatUser? user, DateTime fetchTime) {
-    final eval = _rolloutEvaluator.evaluate<T>(setting, key, user);
+  EvaluationDetails<T> _evaluate<T>(String key, Setting setting,
+      ConfigCatUser? user, DateTime fetchTime, Map<String, Setting> settings) {
+    final eval = _rolloutEvaluator.evaluate(setting, key, user, settings);
     final details = EvaluationDetails<T>(
         key: key,
         variationId: eval.variationId,
@@ -408,8 +412,8 @@ class ConfigCatClient {
         error: null,
         value: _parseSettingValue(eval.value, setting.type),
         fetchTime: fetchTime,
-        matchedTargetingRule: eval.targetingRule,
-        matchedPercentageOption: eval.percentageOption);
+        matchedTargetingRule: eval.matchedTargetingRule,
+        matchedPercentageOption: eval.matchedPercentageOption);
 
     _hooks.invokeFlagEvaluated(details);
     return details;

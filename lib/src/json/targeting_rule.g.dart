@@ -8,8 +8,8 @@ part of 'targeting_rule.dart';
 
 TargetingRule _$TargetingRuleFromJson(Map<String, dynamic> json) =>
     TargetingRule(
-      (json['c'] as List<dynamic>?)
-          ?.map((e) => Condition.fromJson(e as Map<String, dynamic>))
+      (json['c'] as List<dynamic>)
+          .map((e) => Condition.fromJson(e as Map<String, dynamic>))
           .toList(),
       (json['p'] as List<dynamic>?)
           ?.map((e) => PercentageOption.fromJson(e as Map<String, dynamic>))

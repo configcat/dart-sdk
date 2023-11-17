@@ -18,6 +18,11 @@ Setting _$SettingFromJson(Map<String, dynamic> json) => Setting(
               .toList() ??
           [],
       json['i'] as String? ?? '',
+      json['a'] as String,
+      json['salt'] as String,
+      (json['segments'] as List<dynamic>)
+          .map((e) => Segment.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
 
 Map<String, dynamic> _$SettingToJson(Setting instance) => <String, dynamic>{
@@ -26,4 +31,7 @@ Map<String, dynamic> _$SettingToJson(Setting instance) => <String, dynamic>{
       'p': instance.percentageOptions,
       'r': instance.targetingRules,
       'i': instance.variationId,
+      'a': instance.percentageAttribute,
+      'salt': instance.salt,
+      'segments': instance.segments,
     };

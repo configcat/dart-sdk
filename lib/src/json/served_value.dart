@@ -6,7 +6,6 @@ part 'served_value.g.dart';
 
 @JsonSerializable()
 class ServedValue {
-
   @JsonKey(name: 'v')
   final SettingsValue settingsValue;
 
@@ -15,6 +14,7 @@ class ServedValue {
 
   ServedValue(this.settingsValue, this.variationId);
 
-  factory ServedValue.fromJson(Map<String, dynamic> json) => _$ServedValueFromJson(json);
+  factory ServedValue.fromJson(Map<String, dynamic> json) =>
+      _$ServedValueFromJson(json);
   Map<String, dynamic> toJson() => _$ServedValueToJson(this);
 }

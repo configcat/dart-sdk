@@ -6,7 +6,6 @@ part 'prerequisite_flag_condition.g.dart';
 
 @JsonSerializable()
 class PrerequisiteFlagCondition {
-
   @JsonKey(name: 'f')
   final String? prerequisiteFlagKey;
 
@@ -23,6 +22,7 @@ class PrerequisiteFlagCondition {
   PrerequisiteFlagCondition(
       this.prerequisiteFlagKey, this.prerequisiteComparator, this.value);
 
-  factory PrerequisiteFlagCondition.fromJson(Map<String, dynamic> json) => _$PrerequisiteFlagConditionFromJson(json);
+  factory PrerequisiteFlagCondition.fromJson(Map<String, dynamic> json) =>
+      _$PrerequisiteFlagConditionFromJson(json);
   Map<String, dynamic> toJson() => _$PrerequisiteFlagConditionToJson(this);
 }

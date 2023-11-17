@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:dio/dio.dart';
 
 import '../error_reporter.dart';
@@ -6,6 +7,9 @@ import '../entry.dart';
 import '../data_governance.dart';
 import '../configcat_options.dart';
 import '../constants.dart';
+import '../json/config.dart';
+import '../json/segment.dart';
+import '../json/setting.dart';
 import '../log/configcat_logger.dart';
 
 enum _Status { fetched, notModified, failure }
@@ -127,7 +131,8 @@ class ConfigFetcher implements Fetcher {
     final response = await _doFetch(eTag);
 
     final preferences = response.entry.config.preferences;
-    if (!response.isFetched || preferences == null) {
+
+    if (!response.isFetched) {
       return response;
     }
 
@@ -174,8 +179,18 @@ class ConfigFetcher implements Fetcher {
       if (_successStatusCodes.contains(response.statusCode)) {
         final eTag = response.headers.value(_eTagHeaderName) ?? '';
         _logger.debug('Fetch was successful: new config fetched.');
-        return FetchResponse.success(Entry.fromConfigJson(
-            response.data.toString(), eTag, DateTime.now().toUtc()));
+        var configJson = response.data.toString();
+        Config config;
+        try {
+          config = _deserializeConfig(configJson);
+        } catch (e) {
+          String error =
+              "Fetching config JSON was successful but the HTTP response content was invalid.";
+          _errorReporter.error(1105, error);
+          return FetchResponse.failure(error, false);
+        }
+        return FetchResponse.success(
+            Entry(configJson, config, eTag, DateTime.now().toUtc()));
       } else if (response.statusCode == 304) {
         _logger.debug('Fetch was successful: config not modified.');
         return FetchResponse.notModified();
@@ -207,5 +222,21 @@ class ConfigFetcher implements Fetcher {
           'Unexpected error occurred while trying to fetch config JSON.', e, s);
       return FetchResponse.failure(e.toString(), true);
     }
+  }
+
+  static Config _deserializeConfig(String configJson) {
+    final decoded = jsonDecode(configJson);
+    Config config = Config.fromJson(decoded);
+    String salt = config.preferences.salt;
+    if (salt.isEmpty) {
+      throw ArgumentError("Config JSON salt is missing.");
+    }
+    List<Segment> segments = config.segments;
+
+    for (Setting setting in config.entries.values) {
+      setting.salt = salt;
+      setting.segments = segments;
+    }
+    return config;
   }
 }

@@ -12,7 +12,6 @@ import 'configcat_client.dart';
 import 'override/flag_overrides.dart';
 import 'configcat_user.dart';
 
-
 /// Additional information about flag evaluation.
 class EvaluationDetails<T> {
   final String key;

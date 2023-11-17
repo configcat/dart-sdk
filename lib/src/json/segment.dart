@@ -4,7 +4,6 @@ import 'user_condition.dart';
 
 part 'segment.g.dart';
 
-//TODO add CondotionAccessor?
 @JsonSerializable()
 class Segment {
 
