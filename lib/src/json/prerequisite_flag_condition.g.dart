@@ -9,7 +9,7 @@ part of 'prerequisite_flag_condition.dart';
 PrerequisiteFlagCondition _$PrerequisiteFlagConditionFromJson(
         Map<String, dynamic> json) =>
     PrerequisiteFlagCondition(
-      json['f'] as String?,
+      json['f'] as String,
       json['c'] as int? ?? 0,
       json['v'] == null
           ? null

@@ -15,7 +15,6 @@ import 'json/settings_value.dart';
 import 'json/user_condition.dart';
 import 'log/configcat_logger.dart';
 
-
 class EvaluationResult {
   final String variationId;
   final SettingsValue value;
@@ -263,10 +262,7 @@ class RolloutEvaluator {
       if (userCondition != null) {
         try {
           conditionsEvaluationResult = _evaluateUserCondition(
-              userCondition,
-              evaluationContext,
-              configSalt,
-              contextSalt);
+              userCondition, evaluationContext, configSalt, contextSalt);
         } on RolloutEvaluatorException catch (rolloutEvaluatorException) {
           error = rolloutEvaluatorException.message;
           conditionsEvaluationResult = false;
@@ -275,10 +271,7 @@ class RolloutEvaluator {
       } else if (segmentCondition != null) {
         try {
           conditionsEvaluationResult = _evaluateSegmentCondition(
-              segmentCondition,
-              evaluationContext,
-              configSalt,
-              segments);
+              segmentCondition, evaluationContext, configSalt, segments);
         } on RolloutEvaluatorException catch (rolloutEvaluatorException) {
           error = rolloutEvaluatorException.message;
           conditionsEvaluationResult = false;
@@ -320,17 +313,18 @@ class RolloutEvaluator {
     //TODO evaluateLogger.append(LogHelper.formatUserCondition(userCondition));
 
     if (evaluationContext.user == null) {
-
       if (!evaluationContext.isUserMissing) {
         evaluationContext.isUserMissing = true;
-        _logger.warning(3001, "Cannot evaluate targeting rules and % options for setting '${evaluationContext.key}' (User Object is missing). You should pass a User Object to the evaluation methods like `getValue()`/`getValueAsync()` in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/");
+        _logger.warning(3001,
+            "Cannot evaluate targeting rules and % options for setting '${evaluationContext.key}' (User Object is missing). You should pass a User Object to the evaluation methods like `getValue()`/`getValueAsync()` in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/");
       }
       throw RolloutEvaluatorException(userObjectIsMissing);
     }
 
     String comparisonAttribute = userCondition.comparisonAttribute;
-    UserComparator comparator = UserComparator.values
-        .firstWhere((element) => element.id == userCondition.comparator, orElse: () => throw ArgumentError(comparisonOperatorIsInvalid));
+    UserComparator comparator = UserComparator.values.firstWhere(
+        (element) => element.id == userCondition.comparator,
+        orElse: () => throw ArgumentError(comparisonOperatorIsInvalid));
     String? userAttributeValue =
         evaluationContext.user!.getAttribute(comparisonAttribute);
 
@@ -446,7 +440,7 @@ class RolloutEvaluator {
       userContainsValues = jsonDecode(userAttributeValue);
     } catch (e) {
       String reason = "'$userAttributeValue' is not a valid JSON string array";
-     //TODO _logger.warn(3004, ConfigCatLogMessages.getUserAttributeInvalid(context.getKey(), userCondition, reason, comparisonAttribute));
+      //TODO _logger.warn(3004, ConfigCatLogMessages.getUserAttributeInvalid(context.getKey(), userCondition, reason, comparisonAttribute));
       throw RolloutEvaluatorException(
           "$cannotEvaluateTheUserPrefix$comparisonAttribute$cannotEvaluateTheUserAttributeInvalid$reason)");
     }
@@ -644,7 +638,9 @@ class RolloutEvaluator {
 
   String _getSaltedUserValue(
       String userValue, String configSalt, String contextSalt) {
-    return  sha256.convert(utf8.encode(userValue + configSalt + contextSalt)).toString();
+    return sha256
+        .convert(utf8.encode(userValue + configSalt + contextSalt))
+        .toString();
   }
 
   bool _evaluateNumbers(String userAttributeValue, UserCondition userCondition,
@@ -745,17 +741,136 @@ class RolloutEvaluator {
     return !containsResult;
   }
 
-  bool _evaluateSegmentCondition(SegmentCondition segmentCondition,
-      EvaluationContext context, String? configSalt, List<Segment>? segments) {
-    //TODO implement
-    return false;
+  bool _evaluateSegmentCondition(
+      SegmentCondition segmentCondition,
+      EvaluationContext evaluationContext,
+      String configSalt,
+      List<Segment> segments) {
+    int segmentIndex = segmentCondition.segmentIndex;
+    Segment? segment;
+    if (segmentIndex < segments.length) {
+      segment = segments[segmentIndex];
+    }
+    // TODO fix logger evaluateLogger.append(LogHelper.formatSegmentFlagCondition(segmentCondition, segment));
+
+    if (evaluationContext.user == null) {
+      if (!evaluationContext.isUserMissing) {
+        evaluationContext.isUserMissing = true;
+        _logger.warning(3001,
+            "Cannot evaluate targeting rules and % options for setting '${evaluationContext.key}' (User Object is missing). You should pass a User Object to the evaluation methods like `getValue()`/`getValueAsync()` in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/");
+      }
+      throw RolloutEvaluatorException(userObjectIsMissing);
+    }
+
+    if (segment == null) {
+      throw ArgumentError("Segment reference is invalid.");
+    }
+    String? segmentName = segment.name;
+    if (segmentName == null || segmentName.isEmpty) {
+      throw ArgumentError("Segment name is missing.");
+    }
+    //TODO fix logger evaluateLogger.logSegmentEvaluationStart(segmentName);
+
+    bool result;
+    try {
+      bool segmentRulesResult = _evaluateConditions(segment.segmentRules, null,
+          evaluationContext, configSalt, segmentName, segments);
+
+      SegmentComparator segmentComparator = SegmentComparator.values.firstWhere(
+          (element) => element.id == segmentCondition.segmentComparator,
+          orElse: () =>
+              throw ArgumentError("Segment comparison operator is invalid."));
+
+      switch (segmentComparator) {
+        case SegmentComparator.isInSegment:
+          result = segmentRulesResult;
+          break;
+        case SegmentComparator.isNotInSegment:
+          result = !segmentRulesResult;
+          break;
+        default:
+          throw ArgumentError("Segment comparison operator is invalid.");
+      }
+      //TODO fix logger evaluateLogger.logSegmentEvaluationResult(segmentCondition, segment, result, segmentRulesResult);
+    } on RolloutEvaluatorException catch (evaluatorException) {
+      //TODO add logger evaluateLogger.logSegmentEvaluationError(segmentCondition, segment, evaluatorException.getMessage());
+      rethrow;
+    }
+
+    return result;
   }
 
   bool _evaluatePrerequisiteFlagCondition(
       PrerequisiteFlagCondition prerequisiteFlagCondition,
       EvaluationContext evaluationContext) {
-    //TODO implement
-    return false;
+    //TODO evaluateLogger.append(LogHelper.formatPrerequisiteFlagCondition(prerequisiteFlagCondition));
+
+    String prerequisiteFlagKey = prerequisiteFlagCondition.prerequisiteFlagKey;
+    Setting? prerequisiteFlagSetting =
+        evaluationContext.settings[prerequisiteFlagKey];
+    if (prerequisiteFlagKey.isEmpty ||
+        prerequisiteFlagSetting == null) {
+      throw ArgumentError("Prerequisite flag key is missing or invalid.");
+    }
+
+    int settingType = prerequisiteFlagSetting.type;
+    if ((settingType == 0 &&
+            prerequisiteFlagCondition.value?.booleanValue == null) ||
+        (settingType == 1 &&
+            prerequisiteFlagCondition.value?.stringValue == null) ||
+        (settingType == 2 &&
+            prerequisiteFlagCondition.value?.intValue == null) ||
+        (settingType == 3 &&
+            prerequisiteFlagCondition.value?.doubleValue == null)) {
+      throw ArgumentError(
+          "Type mismatch between comparison value '${prerequisiteFlagCondition.value}' and prerequisite flag '$prerequisiteFlagKey'.");
+    }
+
+    List<String>? visitedKeys = evaluationContext.visitedKeys;
+    visitedKeys ??= [];
+    visitedKeys.add(evaluationContext.key);
+    if (visitedKeys.contains(prerequisiteFlagKey)) {
+      String dependencyCycle = _LogHelper.formatCircularDependencyList(
+          visitedKeys, prerequisiteFlagKey);
+      throw ArgumentError(
+          "Circular dependency detected between the following depending flags: $dependencyCycle.");
+    }
+
+    //TODO fix me evaluateLogger.logPrerequisiteFlagEvaluationStart(prerequisiteFlagKey);
+
+    EvaluationContext prerequisiteFlagContext = EvaluationContext(
+        prerequisiteFlagKey,
+        evaluationContext.user,
+        visitedKeys,
+        evaluationContext.settings);
+
+    EvaluationResult evaluateResult =
+        _evaluateSetting(prerequisiteFlagSetting, prerequisiteFlagContext);
+
+    PrerequisiteComparator prerequisiteComparator =
+        PrerequisiteComparator.values.firstWhere(
+            (element) =>
+                element.id == prerequisiteFlagCondition.prerequisiteComparator,
+            orElse: () => throw ArgumentError(
+                "Prerequisite Flag comparison operator is invalid."));
+    SettingsValue? conditionValue = prerequisiteFlagCondition.value;
+    bool result;
+
+    switch (prerequisiteComparator) {
+      case PrerequisiteComparator.equals:
+        result = conditionValue == evaluateResult.value;
+        break;
+      case PrerequisiteComparator.notEquals:
+        result = conditionValue != evaluateResult.value;
+        break;
+      default:
+        throw ArgumentError(
+            "Prerequisite Flag comparison operator is invalid.");
+    }
+
+    //TODO fix Logger evaluateLogger.logPrerequisiteFlagEvaluationResult(prerequisiteFlagCondition, evaluateResult.value, result);
+
+    return result;
   }
 
   EvaluationResult? _evaluatePercentageOptions(
@@ -852,5 +967,21 @@ class _LogEntries {
   @override
   String toString() {
     return entries.join('\n');
+  }
+}
+
+class _LogHelper {
+  static String formatCircularDependencyList(
+      List<String> visitedKeys, String key) {
+    StringBuffer builder = StringBuffer();
+    for (String visitedKey in visitedKeys) {
+      builder.write("'");
+      builder.write(visitedKey);
+      builder.write("' -> ");
+    }
+    builder.write("'");
+    builder.write(key);
+    builder.write("'");
+    return builder.toString();
   }
 }

@@ -6,7 +6,6 @@ part 'segment.g.dart';
 
 @JsonSerializable()
 class Segment {
-
   @JsonKey(name: 'n')
   final String? name;
 
@@ -15,7 +14,7 @@ class Segment {
 
   Segment(this.name, this.segmentRules);
 
-  factory Segment.fromJson(Map<String, dynamic> json) => _$SegmentFromJson(json);
+  factory Segment.fromJson(Map<String, dynamic> json) =>
+      _$SegmentFromJson(json);
   Map<String, dynamic> toJson() => _$SegmentToJson(this);
-
 }

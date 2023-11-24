@@ -7,7 +7,7 @@ part 'prerequisite_flag_condition.g.dart';
 @JsonSerializable()
 class PrerequisiteFlagCondition {
   @JsonKey(name: 'f')
-  final String? prerequisiteFlagKey;
+  final String prerequisiteFlagKey;
 
   /// The operator used in the comparison.
   ///

@@ -5,7 +5,7 @@ part 'segment_condition.g.dart';
 @JsonSerializable()
 class SegmentCondition {
   @JsonKey(name: 's')
-  final int? segmentIndex;
+  final int segmentIndex;
 
   /// The operator used in the comparison.
   ///

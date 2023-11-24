@@ -28,8 +28,8 @@ extension SettingConvert on Object {
       throw ArgumentError(
           "Only String, Integer, Double or Boolean types are supported.");
     }
-    return Setting(
-        settingsValue, settingType, List.empty(), List.empty(), "", "", "", List.empty());
+    return Setting(settingsValue, settingType, List.empty(), List.empty(), "",
+        "", "", List.empty());
   }
 }
 

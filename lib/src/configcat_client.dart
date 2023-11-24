@@ -280,11 +280,12 @@ class ConfigCatClient {
         }
 
         for (final targetingRule in entry.value.targetingRules) {
-          if (targetingRule.servedValue != null && targetingRule.servedValue?.variationId == variationId) {
+          if (targetingRule.servedValue != null &&
+              targetingRule.servedValue?.variationId == variationId) {
             return MapEntry(
                 entry.key,
-                _parseSettingValue(
-                    targetingRule.servedValue!.settingsValue, entry.value.type));
+                _parseSettingValue(targetingRule.servedValue!.settingsValue,
+                    entry.value.type));
           }
         }
 
