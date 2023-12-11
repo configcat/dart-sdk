@@ -1,6 +1,9 @@
 import 'dart:convert';
+import 'dart:math';
 
+import 'package:configcat_client/src/log/logger.dart';
 import 'package:crypto/crypto.dart';
+import 'package:intl/intl.dart';
 import 'package:pub_semver/pub_semver.dart';
 
 import 'configcat_user.dart';
@@ -123,51 +126,38 @@ class RolloutEvaluator {
   RolloutEvaluator(this._logger);
 
   EvaluationResult evaluate(Setting setting, String key, ConfigCatUser? user,
-      Map<String, Setting> settings) {
-    final logEntries = _LogEntries();
-    logEntries.add('Evaluating getValue($key)');
-
+      Map<String, Setting> settings, EvaluateLogger evaluateLogger) {
     try {
-      //TODO add eval log start
+      evaluateLogger.logEvaluation(key);
 
       if (user != null) {
-        //TODO user eval log
-        logEntries.add('User object: $user');
+        evaluateLogger.logUserObject(user);
       }
-      //TODO eval incs
+      evaluateLogger.increaseIndentLevel();
 
       EvaluationContext evaluationContext =
           EvaluationContext(key, user, null, settings);
       EvaluationResult evaluationResult =
-          _evaluateSetting(setting, evaluationContext);
+          _evaluateSetting(setting, evaluationContext, evaluateLogger);
 
-      // TODO fix log
-      logEntries.add('Returning ${evaluationResult}');
-      //TODO eval dec
+      evaluateLogger.logReturnValue(evaluationResult.value.toString());
+      evaluateLogger.decreaseIndentLevel();
       return evaluationResult;
     } finally {
-      _logger.info(5000, logEntries);
+      _logger.info(5000, evaluateLogger.toPrint());
     }
   }
 
-  String _formatMatchRule<Value>(
-      {required String comparisonAttribute,
-      required String userValue,
-      required UserComparator comparator,
-      required String comparisonValue,
-      required Value? value}) {
-    return 'Evaluating rule: [$comparisonAttribute:$userValue] [${comparator.name}] [$comparisonValue] => match, returning: $value';
-  }
-
-  EvaluationResult _evaluateSetting(
-      Setting setting, EvaluationContext evaluationContext) {
+  EvaluationResult _evaluateSetting(Setting setting,
+      EvaluationContext evaluationContext, EvaluateLogger evaluateLogger) {
     EvaluationResult? evaluationResult;
     if (setting.targetingRules.isNotEmpty) {
-      evaluationResult = _evaluateTargetingRules(setting, evaluationContext);
+      evaluationResult =
+          _evaluateTargetingRules(setting, evaluationContext, evaluateLogger);
     }
     if (evaluationResult == null && setting.percentageOptions.isNotEmpty) {
       evaluationResult = _evaluatePercentageOptions(setting.percentageOptions,
-          setting.percentageAttribute, evaluationContext, null);
+          setting.percentageAttribute, evaluationContext, null, evaluateLogger);
     }
     evaluationResult ??= EvaluationResult(
         variationId: setting.variationId,
@@ -178,9 +168,9 @@ class RolloutEvaluator {
     return evaluationResult;
   }
 
-  EvaluationResult? _evaluateTargetingRules(
-      Setting setting, EvaluationContext evaluationContext) {
-    //TODO         evaluateLogger.logTargetingRules();
+  EvaluationResult? _evaluateTargetingRules(Setting setting,
+      EvaluationContext evaluationContext, EvaluateLogger evaluateLogger) {
+    evaluateLogger.logTargetingRules();
     for (TargetingRule rule in setting.targetingRules) {
       bool evaluateConditionsResult;
       String? error;
@@ -191,7 +181,8 @@ class RolloutEvaluator {
             evaluationContext,
             setting.salt,
             evaluationContext.key,
-            setting.segments);
+            setting.segments,
+            evaluateLogger);
       } on RolloutEvaluatorException catch (rolloutEvaluatorException) {
         error = rolloutEvaluatorException.message;
         evaluateConditionsResult = false;
@@ -199,7 +190,7 @@ class RolloutEvaluator {
 
       if (!evaluateConditionsResult) {
         if (error != null) {
-          // TODO FIXME evaluateLogger.logTargetingRuleIgnored();
+          evaluateLogger.logTargetingRuleIgnored();
         }
         continue;
       }
@@ -215,14 +206,18 @@ class RolloutEvaluator {
         throw ArgumentError("Targeting rule THEN part is missing or invalid.");
       }
 
-      // TODO evaluateLogger.increaseIndentLevel();
+      evaluateLogger.increaseIndentLevel();
       EvaluationResult? evaluatePercentageOptionsResult =
-          _evaluatePercentageOptions(rule.percentageOptions!,
-              setting.percentageAttribute, evaluationContext, rule);
-      // TODO EVAL evaluateLogger.decreaseIndentLevel();
+          _evaluatePercentageOptions(
+              rule.percentageOptions!,
+              setting.percentageAttribute,
+              evaluationContext,
+              rule,
+              evaluateLogger);
+      evaluateLogger.decreaseIndentLevel();
 
       if (evaluatePercentageOptionsResult == null) {
-        // TODO evaluateLogger.logTargetingRuleIgnored();
+        evaluateLogger.logTargetingRuleIgnored();
         continue;
       }
 
@@ -238,7 +233,8 @@ class RolloutEvaluator {
       EvaluationContext evaluationContext,
       String configSalt,
       String contextSalt,
-      List<Segment> segments) {
+      List<Segment> segments,
+      EvaluateLogger evaluateLogger) {
     bool firstConditionFlag = true;
     bool conditionsEvaluationResult = false;
     String? error;
@@ -246,23 +242,22 @@ class RolloutEvaluator {
     for (ConditionAccessor condition in conditions) {
       if (firstConditionFlag) {
         firstConditionFlag = false;
-        // TODO evaluateLogger.newLine();
-        // evaluateLogger.append("- IF ");
-        // evaluateLogger.increaseIndentLevel();
+        evaluateLogger.newLine();
+        evaluateLogger.append("- IF ");
+        evaluateLogger.increaseIndentLevel();
       } else {
-        // TODO evaluateLogger.increaseIndentLevel();
-        // evaluateLogger.newLine();
-        // evaluateLogger.append("AND ");
+        evaluateLogger.increaseIndentLevel();
+        evaluateLogger.newLine();
+        evaluateLogger.append("AND ");
       }
 
-      //TODO solve conditions ?
       final userCondition = condition.userCondition;
       final segmentCondition = condition.segmentCondition;
       final prerequisiteFlagCondition = condition.prerequisiteFlagCondition;
       if (userCondition != null) {
         try {
-          conditionsEvaluationResult = _evaluateUserCondition(
-              userCondition, evaluationContext, configSalt, contextSalt);
+          conditionsEvaluationResult = _evaluateUserCondition(userCondition,
+              evaluationContext, configSalt, contextSalt, evaluateLogger);
         } on RolloutEvaluatorException catch (rolloutEvaluatorException) {
           error = rolloutEvaluatorException.message;
           conditionsEvaluationResult = false;
@@ -271,7 +266,11 @@ class RolloutEvaluator {
       } else if (segmentCondition != null) {
         try {
           conditionsEvaluationResult = _evaluateSegmentCondition(
-              segmentCondition, evaluationContext, configSalt, segments);
+              segmentCondition,
+              evaluationContext,
+              configSalt,
+              segments,
+              evaluateLogger);
         } on RolloutEvaluatorException catch (rolloutEvaluatorException) {
           error = rolloutEvaluatorException.message;
           conditionsEvaluationResult = false;
@@ -280,7 +279,7 @@ class RolloutEvaluator {
       } else if (prerequisiteFlagCondition != null) {
         try {
           conditionsEvaluationResult = _evaluatePrerequisiteFlagCondition(
-              prerequisiteFlagCondition, evaluationContext);
+              prerequisiteFlagCondition, evaluationContext, evaluateLogger);
         } on RolloutEvaluatorException catch (rolloutEvaluatorException) {
           error = rolloutEvaluatorException.message;
           conditionsEvaluationResult = false;
@@ -289,15 +288,16 @@ class RolloutEvaluator {
       }
 
       if (targetingRule == null || conditions.length > 1) {
-        //TODO evaluateLogger.logConditionConsequence(conditionsEvaluationResult);
+        evaluateLogger.logConditionConsequence(conditionsEvaluationResult);
       }
-      //TODO evaluateLogger.decreaseIndentLevel();
+      evaluateLogger.decreaseIndentLevel();
       if (!conditionsEvaluationResult) {
         break;
       }
     }
     if (targetingRule != null) {
-      // TODO logger evaluateLogger.logTargetingRuleConsequence(targetingRule, error, conditionsEvaluationResult, newLine);
+      evaluateLogger.logTargetingRuleConsequence(
+          targetingRule, error, conditionsEvaluationResult, newLine);
     }
     if (error != null) {
       throw RolloutEvaluatorException(error);
@@ -309,8 +309,9 @@ class RolloutEvaluator {
       UserCondition userCondition,
       EvaluationContext evaluationContext,
       String configSalt,
-      String contextSalt) {
-    //TODO evaluateLogger.append(LogHelper.formatUserCondition(userCondition));
+      String contextSalt,
+      EvaluateLogger evaluateLogger) {
+    evaluateLogger.append(_LogHelper.formatUserCondition(userCondition));
 
     if (evaluationContext.user == null) {
       if (!evaluationContext.isUserMissing) {
@@ -329,7 +330,8 @@ class RolloutEvaluator {
         evaluationContext.user!.getAttribute(comparisonAttribute);
 
     if (userAttributeValue == null || userAttributeValue.isEmpty) {
-      //TODO  logger.warn(3003, ConfigCatLogMessages.getUserAttributeMissing(context.getKey(), userCondition, comparisonAttribute));
+      _logger.warning(3003,
+          "Cannot evaluate condition (${_LogHelper.formatUserCondition(userCondition)}) for setting '${evaluationContext.key}' (the User.$comparisonAttribute attribute is missing). You should set the User.$comparisonAttribute attribute in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/");
       throw RolloutEvaluatorException(cannotEvaluateTheUserPrefix +
           comparisonAttribute +
           cannotEvaluateTheUserAttributeMissing);
@@ -440,7 +442,10 @@ class RolloutEvaluator {
       userContainsValues = jsonDecode(userAttributeValue);
     } catch (e) {
       String reason = "'$userAttributeValue' is not a valid JSON string array";
-      //TODO _logger.warn(3004, ConfigCatLogMessages.getUserAttributeInvalid(context.getKey(), userCondition, reason, comparisonAttribute));
+      // TODO fix me when user object reworked
+      // _logger.warning(3004,
+      //     "Cannot evaluate condition (" + _LogHelper.formatUserCondition(userCondition) + ") for setting '" +  + "' (" + reason + "). Please check the User." + attributeName + " attribute and make sure that its value corresponds to the comparison operator."
+      //     ConfigCatLogMessages.getUserAttributeInvalid(context.getKey(), userCondition, reason, comparisonAttribute));
       throw RolloutEvaluatorException(
           "$cannotEvaluateTheUserPrefix$comparisonAttribute$cannotEvaluateTheUserAttributeInvalid$reason)");
     }
@@ -604,7 +609,7 @@ class RolloutEvaluator {
     } catch (e) {
       String reason =
           "'$userAttributeValue' is not a valid Unix timestamp (number of seconds elapsed since Unix epoch)";
-      //TODO fix Logger this.logger.warn(3004, ConfigCatLogMessages.getUserAttributeInvalid(context.getKey(), userCondition, reason, comparisonAttribute));
+      //TODO fixme when user object reworked Logger this.logger.warn(3004, ConfigCatLogMessages.getUserAttributeInvalid(context.getKey(), userCondition, reason, comparisonAttribute));
       throw RolloutEvaluatorException(
           "$cannotEvaluateTheUserPrefix$comparisonAttribute$cannotEvaluateTheUserAttributeInvalid$reason)");
     }
@@ -663,7 +668,7 @@ class RolloutEvaluator {
           (comparator == UserComparator.numberGreaterEquals &&
               uvDouble >= cvDouble));
     } catch (e) {
-      //TODO fix message
+      //TODO fix message when user reworked
       String reason = "'$userAttributeValue' is not a valid decimal number";
       // this.logger.warn(3004, ConfigCatLogMessages.getUserAttributeInvalid(context.getKey(), userCondition, reason, comparisonAttribute));
       throw RolloutEvaluatorException(
@@ -687,7 +692,7 @@ class RolloutEvaluator {
           (comparator == UserComparator.semverGreaterEquals &&
               userValueVersion >= comparisonVersion));
     } catch (e) {
-      //TODO fix logger
+      //TODO fix logger user object rework
       String reason = "'$userAttributeValue' is not a valid semantic version";
       //this.logger.warn(3004, ConfigCatLogMessages.getUserAttributeInvalid(context.getKey(), userCondition, reason, comparisonAttribute));
       throw RolloutEvaluatorException(
@@ -745,13 +750,15 @@ class RolloutEvaluator {
       SegmentCondition segmentCondition,
       EvaluationContext evaluationContext,
       String configSalt,
-      List<Segment> segments) {
+      List<Segment> segments,
+      EvaluateLogger evaluateLogger) {
     int segmentIndex = segmentCondition.segmentIndex;
     Segment? segment;
     if (segmentIndex < segments.length) {
       segment = segments[segmentIndex];
     }
-    // TODO fix logger evaluateLogger.append(LogHelper.formatSegmentFlagCondition(segmentCondition, segment));
+    evaluateLogger.append(
+        _LogHelper.formatSegmentFlagCondition(segmentCondition, segment));
 
     if (evaluationContext.user == null) {
       if (!evaluationContext.isUserMissing) {
@@ -769,12 +776,12 @@ class RolloutEvaluator {
     if (segmentName == null || segmentName.isEmpty) {
       throw ArgumentError("Segment name is missing.");
     }
-    //TODO fix logger evaluateLogger.logSegmentEvaluationStart(segmentName);
+    evaluateLogger.logSegmentEvaluationStart(segmentName);
 
     bool result;
     try {
       bool segmentRulesResult = _evaluateConditions(segment.segmentRules, null,
-          evaluationContext, configSalt, segmentName, segments);
+          evaluationContext, configSalt, segmentName, segments, evaluateLogger);
 
       SegmentComparator segmentComparator = SegmentComparator.values.firstWhere(
           (element) => element.id == segmentCondition.segmentComparator,
@@ -791,9 +798,11 @@ class RolloutEvaluator {
         default:
           throw ArgumentError("Segment comparison operator is invalid.");
       }
-      //TODO fix logger evaluateLogger.logSegmentEvaluationResult(segmentCondition, segment, result, segmentRulesResult);
+      evaluateLogger.logSegmentEvaluationResult(
+          segmentCondition, segment, result, segmentRulesResult);
     } on RolloutEvaluatorException catch (evaluatorException) {
-      //TODO add logger evaluateLogger.logSegmentEvaluationError(segmentCondition, segment, evaluatorException.getMessage());
+      evaluateLogger.logSegmentEvaluationError(
+          segmentCondition, segment, evaluatorException.message);
       rethrow;
     }
 
@@ -802,14 +811,15 @@ class RolloutEvaluator {
 
   bool _evaluatePrerequisiteFlagCondition(
       PrerequisiteFlagCondition prerequisiteFlagCondition,
-      EvaluationContext evaluationContext) {
-    //TODO evaluateLogger.append(LogHelper.formatPrerequisiteFlagCondition(prerequisiteFlagCondition));
+      EvaluationContext evaluationContext,
+      EvaluateLogger evaluateLogger) {
+    evaluateLogger.append(
+        _LogHelper.formatPrerequisiteFlagCondition(prerequisiteFlagCondition));
 
     String prerequisiteFlagKey = prerequisiteFlagCondition.prerequisiteFlagKey;
     Setting? prerequisiteFlagSetting =
         evaluationContext.settings[prerequisiteFlagKey];
-    if (prerequisiteFlagKey.isEmpty ||
-        prerequisiteFlagSetting == null) {
+    if (prerequisiteFlagKey.isEmpty || prerequisiteFlagSetting == null) {
       throw ArgumentError("Prerequisite flag key is missing or invalid.");
     }
 
@@ -836,7 +846,7 @@ class RolloutEvaluator {
           "Circular dependency detected between the following depending flags: $dependencyCycle.");
     }
 
-    //TODO fix me evaluateLogger.logPrerequisiteFlagEvaluationStart(prerequisiteFlagKey);
+    evaluateLogger.logPrerequisiteFlagEvaluationStart(prerequisiteFlagKey);
 
     EvaluationContext prerequisiteFlagContext = EvaluationContext(
         prerequisiteFlagKey,
@@ -844,8 +854,8 @@ class RolloutEvaluator {
         visitedKeys,
         evaluationContext.settings);
 
-    EvaluationResult evaluateResult =
-        _evaluateSetting(prerequisiteFlagSetting, prerequisiteFlagContext);
+    EvaluationResult evaluateResult = _evaluateSetting(
+        prerequisiteFlagSetting, prerequisiteFlagContext, evaluateLogger);
 
     PrerequisiteComparator prerequisiteComparator =
         PrerequisiteComparator.values.firstWhere(
@@ -868,7 +878,8 @@ class RolloutEvaluator {
             "Prerequisite Flag comparison operator is invalid.");
     }
 
-    //TODO fix Logger evaluateLogger.logPrerequisiteFlagEvaluationResult(prerequisiteFlagCondition, evaluateResult.value, result);
+    evaluateLogger.logPrerequisiteFlagEvaluationResult(
+        prerequisiteFlagCondition, evaluateResult.value, result);
 
     return result;
   }
@@ -877,12 +888,14 @@ class RolloutEvaluator {
       List<PercentageOption> percentageOptions,
       String percentageOptionAttribute,
       EvaluationContext evaluationContext,
-      TargetingRule? parentTargetingRule) {
+      TargetingRule? parentTargetingRule,
+      EvaluateLogger evaluateLogger) {
     if (evaluationContext.user == null) {
-      //TODO eval log user missings
+      evaluateLogger.logPercentageOptionUserMissing();
       if (!evaluationContext.isUserMissing) {
         evaluationContext.isUserMissing = true;
-        //TODO logger.warn 3001
+        _logger.warning(3001,
+            "Cannot evaluate targeting rules and % options for setting '${evaluationContext.key}' (User Object is missing). You should pass a User Object to the evaluation methods like `getValue()`/`getValueAsync()` in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/");
       }
       return null;
     }
@@ -895,17 +908,17 @@ class RolloutEvaluator {
       percentageOptionAttributeValue =
           evaluationContext.user!.getAttribute(percentageOptionAttributeName);
       if (percentageOptionAttributeValue == null) {
-        //TODO eval log
-        //evaluateLogger.logPercentageOptionUserAttributeMissing(percentageOptionAttributeName);
+        evaluateLogger.logPercentageOptionUserAttributeMissing(
+            percentageOptionAttributeName);
         if (!evaluationContext.isUserAttributeMissing) {
           evaluationContext.isUserAttributeMissing = true;
-          // TODO fix logger
-          //this.logger.warn(3003, ConfigCatLogMessages.getUserAttributeMissing(context.getKey(), percentageOptionAttributeName));
+          _logger.warning(3003,
+              "Cannot evaluate % options for setting '${evaluationContext.key}' (the User.$percentageOptionAttributeName attribute is missing). You should set the User.$percentageOptionAttributeName attribute in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/");
         }
         return null;
       }
     }
-    //TODO evaluateLogger.logPercentageOptionEvaluation(percentageOptionAttributeName);
+    evaluateLogger.logPercentageOptionEvaluation(percentageOptionAttributeName);
 
     final hashCandidate =
         evaluationContext.key + percentageOptionAttributeValue;
@@ -913,40 +926,29 @@ class RolloutEvaluator {
     final hash = userValueHash.toString().substring(0, 7);
     final num = int.parse(hash, radix: 16);
     final scaled = num % 100;
+    evaluateLogger.logPercentageOptionEvaluationHash(
+        percentageOptionAttributeName, scaled);
+
     double bucket = 0;
 
     if (percentageOptions.isNotEmpty) {
-      for (final rule in percentageOptions) {
-        bucket += rule.percentage;
+      for (final indexedRule in percentageOptions.indexed) {
+        bucket += indexedRule.$2.percentage;
         if (scaled < bucket) {
-          //TODO fix log
-          // logEntries.add('Evaluating %% options. Returning ${rule.value}');
+          evaluateLogger.logPercentageEvaluationReturnValue(
+              scaled,
+              indexedRule.$1,
+              indexedRule.$2.percentage,
+              indexedRule.$2.settingsValue);
           return EvaluationResult(
-              variationId: rule.variationId,
-              value: rule.settingsValue,
+              variationId: indexedRule.$2.variationId,
+              value: indexedRule.$2.settingsValue,
               matchedTargetingRule: parentTargetingRule,
-              matchedPercentageOption: rule);
+              matchedPercentageOption: indexedRule.$2);
         }
       }
     }
     return null;
-  }
-
-  String _formatNoMatchRule(
-      {required String comparisonAttribute,
-      required String userValue,
-      required UserComparator comparator,
-      required String comparisonValue}) {
-    return 'Evaluating rule: [$comparisonAttribute:$userValue] [${comparator.name}] [$comparisonValue] => no match';
-  }
-
-  String _formatValidationErrorRule(
-      {required String comparisonAttribute,
-      required String userValue,
-      required UserComparator comparator,
-      required String comparisonValue,
-      required dynamic error}) {
-    return 'Evaluating rule: [$comparisonAttribute:$userValue] [${comparator.name}] [$comparisonValue] => Skip rule. Validation error: $error';
   }
 
   Version _parseVersion(String text) {
@@ -957,20 +959,271 @@ class RolloutEvaluator {
   }
 }
 
-class _LogEntries {
-  final List<String> entries = [];
+class EvaluateLogger {
+  int _indentLevel = 0;
+  late bool _isLoggable;
 
-  add(String entry) {
-    entries.add(entry);
+  EvaluateLogger(LogLevel logLeve) {
+    _isLoggable = logLeve.index <= LogLevel.info.index;
   }
 
-  @override
-  String toString() {
-    return entries.join('\n');
+  final StringBuffer _stringBuffer = StringBuffer();
+
+  increaseIndentLevel() {
+    if (!_isLoggable) {
+      return;
+    }
+    _indentLevel++;
+  }
+
+  decreaseIndentLevel() {
+    if (!_isLoggable) {
+      return;
+    }
+    if (_indentLevel > 0) {
+      _indentLevel--;
+    }
+  }
+
+  newLine() {
+    if (!_isLoggable) {
+      return;
+    }
+    _stringBuffer.write("\n");
+    for (int i = 0; i < _indentLevel; i++) {
+      _stringBuffer.write("  ");
+    }
+  }
+
+  append(final String line) {
+    if (!_isLoggable) {
+      return;
+    }
+    _stringBuffer.write(line);
+  }
+
+  String toPrint() {
+    if (!_isLoggable) {
+      return "";
+    }
+    return _stringBuffer.toString();
+  }
+
+  logUserObject(final ConfigCatUser user) {
+    if (!_isLoggable) {
+      return;
+    }
+    append(" for User '$user'");
+  }
+
+  logEvaluation(String key) {
+    if (!_isLoggable) {
+      return;
+    }
+    append("Evaluating '$key'");
+  }
+
+  logPercentageOptionUserMissing() {
+    if (!_isLoggable) {
+      return;
+    }
+    newLine();
+    append("Skipping % options because the User Object is missing.");
+  }
+
+  logPercentageOptionUserAttributeMissing(
+      String percentageOptionsAttributeName) {
+    if (!_isLoggable) {
+      return;
+    }
+    newLine();
+    append(
+        "Skipping % options because the User.$percentageOptionsAttributeName attribute is missing.");
+  }
+
+  logPercentageOptionEvaluation(String percentageOptionsAttributeName) {
+    if (!_isLoggable) {
+      return;
+    }
+    newLine();
+    append(
+        "Evaluating % options based on the User.$percentageOptionsAttributeName attribute:");
+  }
+
+  logPercentageOptionEvaluationHash(
+      String percentageOptionsAttributeName, int hashValue) {
+    if (!_isLoggable) {
+      return;
+    }
+    newLine();
+    append(
+        "- Computing hash in the [0..99] range from User.$percentageOptionsAttributeName => $hashValue (this value is sticky and consistent across all SDKs)");
+  }
+
+  logReturnValue(String returnValue) {
+    if (!_isLoggable) {
+      return;
+    }
+    newLine();
+    append("Returning '$returnValue'.");
+  }
+
+  logTargetingRules() {
+    if (!_isLoggable) {
+      return;
+    }
+    newLine();
+    append("Evaluating targeting rules and applying the first match if any:");
+  }
+
+  logConditionConsequence(bool result) {
+    if (!_isLoggable) {
+      return;
+    }
+    append(" => $result");
+    if (!result) {
+      append(", skipping the remaining AND conditions");
+    }
+  }
+
+  logTargetingRuleIgnored() {
+    if (!_isLoggable) {
+      return;
+    }
+    increaseIndentLevel();
+    newLine();
+    append(
+        "The current targeting rule is ignored and the evaluation continues with the next rule.");
+    decreaseIndentLevel();
+  }
+
+  logTargetingRuleConsequence(TargetingRule targetingRule, String? error,
+      bool isMatch, bool isNewLine) {
+    if (!_isLoggable) {
+      return;
+    }
+    increaseIndentLevel();
+    String valueFormat = "% options";
+    if (targetingRule.servedValue != null) {
+      valueFormat = "'${targetingRule.servedValue?.settingsValue}'";
+    }
+    if (isNewLine) {
+      newLine();
+    } else {
+      append(" ");
+    }
+    append("THEN $valueFormat => ");
+    if (error != null && error.isNotEmpty) {
+      append(error);
+    } else {
+      if (isMatch) {
+        append("MATCH, applying rule");
+      } else {
+        append("no match");
+      }
+    }
+    decreaseIndentLevel();
+  }
+
+  logPercentageEvaluationReturnValue(
+      int hashValue, int i, double percentage, SettingsValue settingsValue) {
+    if (!_isLoggable) {
+      return;
+    }
+    String percentageOptionValue = settingsValue != null
+        ? settingsValue.toString()
+        : _LogHelper._invalidName;
+    newLine();
+    append(
+        "- Hash value $hashValue selects % option ${i + 1} ($percentage%), '$percentageOptionValue'.");
+  }
+
+  logSegmentEvaluationStart(String segmentName) {
+    if (!_isLoggable) {
+      return;
+    }
+    newLine();
+    append("(");
+    increaseIndentLevel();
+    newLine();
+    append("Evaluating segment '$segmentName':");
+  }
+
+  logSegmentEvaluationResult(SegmentCondition segmentCondition, Segment segment,
+      bool result, bool segmentResult) {
+    if (!_isLoggable) {
+      return;
+    }
+    newLine();
+    String segmentResultComparator = segmentResult
+        ? SegmentComparator.isInSegment.name
+        : SegmentComparator.isNotInSegment.name;
+    append("Segment evaluation result: User $segmentResultComparator.");
+    newLine();
+    append(
+        "Condition (${_LogHelper.formatSegmentFlagCondition(segmentCondition, segment)}) evaluates to $result.");
+    decreaseIndentLevel();
+    newLine();
+    append(")");
+  }
+
+  logSegmentEvaluationError(
+      SegmentCondition segmentCondition, Segment segment, String error) {
+    if (!_isLoggable) {
+      return;
+    }
+    newLine();
+
+    append("Segment evaluation result: $error.");
+    newLine();
+    append(
+        "Condition (${_LogHelper.formatSegmentFlagCondition(segmentCondition, segment)}) failed to evaluate.");
+    decreaseIndentLevel();
+    newLine();
+    append(")");
+  }
+
+  logPrerequisiteFlagEvaluationStart(String prerequisiteFlagKey) {
+    if (!_isLoggable) {
+      return;
+    }
+    newLine();
+    append("(");
+    increaseIndentLevel();
+    newLine();
+    append("Evaluating prerequisite flag '$prerequisiteFlagKey':");
+  }
+
+  logPrerequisiteFlagEvaluationResult(
+      PrerequisiteFlagCondition prerequisiteFlagCondition,
+      SettingsValue prerequisiteFlagValue,
+      bool result) {
+    if (!_isLoggable) {
+      return;
+    }
+    newLine();
+    String prerequisiteFlagValueFormat = prerequisiteFlagValue != null
+        ? prerequisiteFlagValue.toString()
+        : _LogHelper._invalidName;
+    append(
+        "Prerequisite flag evaluation result: '$prerequisiteFlagValueFormat'.");
+    newLine();
+    append(
+        "Condition (${_LogHelper.formatPrerequisiteFlagCondition(prerequisiteFlagCondition)}) evaluates to $result.");
+    decreaseIndentLevel();
+    newLine();
+    append(")");
   }
 }
 
 class _LogHelper {
+  static final String _hashedValue = "<hashed value>";
+  static final String _invalidValue = "<invalid value>";
+  static final String _invalidName = "<invalid name>";
+  static final String _invalidReference = "<invalid reference>";
+
+  static final int _maxListElement = 10;
+
   static String formatCircularDependencyList(
       List<String> visitedKeys, String key) {
     StringBuffer builder = StringBuffer();
@@ -983,5 +1236,164 @@ class _LogHelper {
     builder.write(key);
     builder.write("'");
     return builder.toString();
+  }
+
+  static String formatUserCondition(UserCondition userCondition) {
+    UserComparator userComparator = UserComparator.values.firstWhere(
+        (element) => element.id == userCondition.comparator,
+        orElse: () => throw ArgumentError(comparisonOperatorIsInvalid));
+    String comparisonValue;
+    switch (userComparator) {
+      case UserComparator.isOneOf:
+      case UserComparator.isNotOneOf:
+      case UserComparator.containsAnyOf:
+      case UserComparator.notContainsAnyOf:
+      case UserComparator.semverIsOneOf:
+      case UserComparator.semverIsNotOneOf:
+      case UserComparator.textStartsWith:
+      case UserComparator.textNotStartsWith:
+      case UserComparator.textEndsWith:
+      case UserComparator.textNotEndsWith:
+      case UserComparator.textArrayContains:
+      case UserComparator.textArrayNotContains:
+        comparisonValue = _formatStringListComparisonValue(
+            userCondition.stringArrayValue, false);
+        break;
+      case UserComparator.semverLess:
+      case UserComparator.semverLessEquals:
+      case UserComparator.semverGreater:
+      case UserComparator.semverGreaterEquals:
+      case UserComparator.textEquals:
+      case UserComparator.textNotEquals:
+        comparisonValue =
+            _formatStringComparisonValue(userCondition.stringValue, false);
+        break;
+      case UserComparator.numberEquals:
+      case UserComparator.numberNotEquals:
+      case UserComparator.numberLess:
+      case UserComparator.numberLessEquals:
+      case UserComparator.numberGreater:
+      case UserComparator.numberGreaterEquals:
+        comparisonValue =
+            _formatDoubleComparisonValue(userCondition.doubleValue, false);
+        break;
+      case UserComparator.sensitiveIsOneOf:
+      case UserComparator.sensitiveIsNotOneOf:
+      case UserComparator.hashedStartsWith:
+      case UserComparator.hashedNotStartsWith:
+      case UserComparator.hashedEndsWith:
+      case UserComparator.hashedNotEndsWith:
+      case UserComparator.hashedArrayContains:
+      case UserComparator.hashedArrayNotContains:
+        comparisonValue = _formatStringListComparisonValue(
+            userCondition.stringArrayValue, true);
+        break;
+      case UserComparator.dateBefore:
+      case UserComparator.dateAfter:
+        comparisonValue =
+            _formatDoubleComparisonValue(userCondition.doubleValue, true);
+        break;
+      case UserComparator.hashedEquals:
+      case UserComparator.hashedNotEquals:
+        comparisonValue =
+            _formatStringComparisonValue(userCondition.stringValue, true);
+        break;
+      default:
+        comparisonValue = _invalidName;
+    }
+
+    return "User.${userCondition.comparisonAttribute} ${userComparator.name} $comparisonValue";
+  }
+
+  static String formatSegmentFlagCondition(
+      SegmentCondition segmentCondition, Segment? segment) {
+    String? segmentName;
+    if (segment != null) {
+      segmentName = segment.name;
+      if (segmentName == null || segmentName.isEmpty) {
+        segmentName = _invalidName;
+      }
+    } else {
+      segmentName = _invalidReference;
+    }
+    SegmentComparator segmentComparator = SegmentComparator.values.firstWhere(
+        (element) => element.id == segmentCondition.segmentComparator,
+        orElse: () =>
+            throw ArgumentError("Segment comparison operator is invalid."));
+    return "User ${segmentComparator.name} '$segmentName'";
+  }
+
+  static String formatPrerequisiteFlagCondition(
+      PrerequisiteFlagCondition prerequisiteFlagCondition) {
+    String prerequisiteFlagKey = prerequisiteFlagCondition.prerequisiteFlagKey;
+    PrerequisiteComparator prerequisiteComparator =
+        PrerequisiteComparator.values.firstWhere(
+            (element) =>
+                element.id == prerequisiteFlagCondition.prerequisiteComparator,
+            orElse: () => throw ArgumentError(
+                "Prerequisite Flag comparison operator is invalid."));
+    SettingsValue? prerequisiteValue = prerequisiteFlagCondition.value;
+    String comparisonValue = prerequisiteValue == null
+        ? _invalidValue
+        : prerequisiteValue.toString();
+    return "Flag '$prerequisiteFlagKey' ${prerequisiteComparator.name} '$comparisonValue'";
+  }
+
+  static String _formatStringListComparisonValue(
+      List<String>? comparisonValue, bool isSensitive) {
+    if (comparisonValue == null || comparisonValue.isEmpty) {
+      return _invalidValue;
+    }
+
+    String formattedList;
+    if (isSensitive) {
+      String sensitivePostFix =
+          comparisonValue.length == 1 ? "value" : "values";
+      formattedList = "<${comparisonValue.length} hashed $sensitivePostFix>";
+    } else {
+      String listPostFix = "";
+      if (comparisonValue.length > _maxListElement) {
+        int count = comparisonValue.length - _maxListElement;
+        String countPostFix = count == 1 ? "value" : "values";
+        listPostFix = ", ... <$count  more $countPostFix>";
+      }
+      List<String> subList = comparisonValue.sublist(
+          0, min(_maxListElement, comparisonValue.length));
+      StringBuffer formatListBuilder = StringBuffer();
+      int subListSize = subList.length;
+      for (int i = 0; i < subListSize; i++) {
+        formatListBuilder.write("'");
+        formatListBuilder.write(subList[i]);
+        formatListBuilder.write("'");
+        if (i != subListSize - 1) {
+          formatListBuilder.write(", ");
+        }
+      }
+      formatListBuilder.write(listPostFix);
+      formattedList = formatListBuilder.toString();
+    }
+
+    return "[$formattedList]";
+  }
+
+  static String _formatStringComparisonValue(
+      String? comparisonValue, bool isSensitive) {
+    return "'${isSensitive ? _hashedValue : comparisonValue}'";
+  }
+
+  static String _formatDoubleComparisonValue(
+      double? comparisonValue, bool isDate) {
+    if (comparisonValue == null) {
+      return _invalidValue;
+    }
+    var decimalFormat = NumberFormat("0.####", "UK");
+    if (isDate) {
+      var dateTimeInMilliseconds = comparisonValue * 1000;
+      var dateTime = DateTime.fromMillisecondsSinceEpoch(
+          isUtc: true, dateTimeInMilliseconds as int);
+
+      return "'${decimalFormat.format(comparisonValue)}' (${dateTime.toIso8601String()} UTC)";
+    }
+    return "'${decimalFormat.format(comparisonValue)}'";
   }
 }

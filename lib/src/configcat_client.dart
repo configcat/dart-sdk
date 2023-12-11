@@ -1,6 +1,7 @@
 import 'package:configcat_client/src/constants.dart';
 import 'package:configcat_client/src/fetch/refresh_result.dart';
 import 'package:configcat_client/src/json/settings_value.dart';
+import 'package:configcat_client/src/log/logger.dart';
 import 'package:dio/dio.dart';
 
 import 'configcat_cache.dart';
@@ -25,6 +26,7 @@ class ConfigCatClient {
   ];
 
   late final ConfigCatLogger _logger;
+  late final LogLevel _logLevel;
   late final ConfigService? _configService;
   late final RolloutEvaluator _rolloutEvaluator;
   late final Fetcher _fetcher;
@@ -64,6 +66,7 @@ class ConfigCatClient {
 
   ConfigCatClient._(String sdkKey, ConfigCatOptions options) {
     _logger = options.logger ?? ConfigCatLogger();
+    _logLevel = _logger.getLogLevel();
     _override = options.override;
     _defaultUser = options.defaultUser;
     _hooks = options.hooks ?? Hooks();
@@ -404,7 +407,8 @@ class ConfigCatClient {
 
   EvaluationDetails<T> _evaluate<T>(String key, Setting setting,
       ConfigCatUser? user, DateTime fetchTime, Map<String, Setting> settings) {
-    final eval = _rolloutEvaluator.evaluate(setting, key, user, settings);
+    final eval = _rolloutEvaluator.evaluate(
+        setting, key, user, settings, EvaluateLogger(_logLevel));
     final details = EvaluationDetails<T>(
         key: key,
         variationId: eval.variationId,

@@ -45,4 +45,8 @@ class ConfigCatLogger {
     _isClosed = true;
     _internal.close();
   }
+
+  LogLevel getLogLevel() {
+    return _globalLevel;
+  }
 }
