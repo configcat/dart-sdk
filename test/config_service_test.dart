@@ -566,7 +566,43 @@ void main() {
       service.close();
       service2.close();
     });
-  });
+
+    test('ensure cached TTL respects external cache', () async {
+      //TODO with etag
+      final cache = CustomCache(createTestEntry({'key': false}).serialize());
+      final service = createService(
+          PollingMode.lazyLoad(
+              cacheRefreshInterval: const Duration(milliseconds: 200)),
+          customCache: cache);
+      dioAdapter.onGet(
+          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
+              (server) {
+            server.reply(200, createTestConfig({'key': true}).toJson());
+          });
+
+      // Act
+      final settings = await service.getSettings();
+
+
+      // Assert
+      expect(false, settings.settings["key"]!.settingsValue.booleanValue);
+      expect(interceptor.allRequestCount(), 0);
+
+      // Act
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      final settings2 = await service.getSettings();
+
+      // Assert
+      expect(true, settings.settings["key"]!.settingsValue.booleanValue);
+      expect(interceptor.allRequestCount(), 0);
+
+      // Cleanup
+      service.close();
+
+    });
+
+    });
 
   group('Manual Polling Tests', () {
     test('refresh', () async {
