@@ -2,6 +2,7 @@ import 'package:configcat_client/configcat_client.dart';
 import 'package:configcat_client/src/fetch/config_fetcher.dart';
 import 'package:configcat_client/src/json/config.dart';
 import 'package:configcat_client/src/json/preferences.dart';
+import 'package:configcat_client/src/pair.dart';
 import 'package:dio/dio.dart';
 import 'package:http_mock_adapter/http_mock_adapter.dart';
 import 'package:mockito/mockito.dart';
@@ -335,16 +336,15 @@ void main() {
 
   test('get key and value', () async {
     // Arrange
-    final body = createTestConfigWithVariationId({
-      'value': [42, 'test']
-    }).toJson();
+    final body =
+        createTestConfigWithVariationId({'value': Pair(42, 'test')}).toJson();
     dioAdapter.onGet(getPath(), (server) {
       server.reply(200, body);
     });
 
     // Act
     await client.forceRefresh();
-    final keyValue = await client.getKeyAndValue(variationId: 'test');
+    final MapEntry<String, int>? keyValue = await client.getKeyAndValue(variationId: 'test');
 
     // Assert
     expect(keyValue!.key, equals('value'));
@@ -353,9 +353,8 @@ void main() {
 
   test('variation id test', () async {
     // Arrange
-    final body = createTestConfigWithVariationId({
-      'value': [42, 'test']
-    }).toJson();
+    final body =
+        createTestConfigWithVariationId({'value': Pair(42, 'test')}).toJson();
     dioAdapter.onGet(getPath(), (server) {
       server.reply(200, body);
     });
@@ -385,10 +384,9 @@ void main() {
 
   test('get all variation ids', () async {
     // Arrange
-    final body = createTestConfigWithVariationId({
-      'value1': [42, 'testId1'],
-      'value2': [69, 'testId2']
-    }).toJson();
+    final body = createTestConfigWithVariationId(
+            {'value1': Pair(42, 'testId1'), 'value2': Pair(69, 'testId2')})
+        .toJson();
     dioAdapter.onGet(getPath(), (server) {
       server.reply(200, body);
     });
@@ -565,13 +563,14 @@ void main() {
     expect(details.variationId, equals('variationId2'));
     expect(details.isDefaultValue, isFalse);
     expect(details.error, isNull);
-    expect(details.matchedEvaluationPercentageRule, isNull);
-    expect(details.matchedEvaluationRule?.value, equals('fake2'));
-    expect(details.matchedEvaluationRule?.comparator, equals(2));
-    expect(details.matchedEvaluationRule?.comparisonAttribute,
-        equals('Identifier'));
+    expect(details.matchedPercentageOption, isNull);
+    expect(details.matchedTargetingRule?.conditions.length, 1);
+
+    Condition? condition = details.matchedTargetingRule?.conditions[0];
+    expect(condition?.userCondition?.comparisonAttribute, equals('Identifier'));
+    expect(condition?.userCondition?.comparator, equals(2));
     expect(
-        details.matchedEvaluationRule?.comparisonValue, equals('@test2.com'));
+        condition?.userCondition?.stringArrayValue?[0], equals('@test2.com'));
     expect(
         details.fetchTime.isAfter(
             DateTime.now().toUtc().subtract(const Duration(seconds: 1))),
@@ -579,9 +578,12 @@ void main() {
   });
 }
 
-Config createTestConfigWithVariationId(Map<String, List<Object>> map) {
+Config createTestConfigWithVariationId(Map<String, Pair<int, String>> map) {
   return Config(
-      Preferences(ConfigFetcher.globalBaseUrl, 0),
-      map.map((key, value) =>
-          MapEntry(key, Setting(value[0], 0, [], [], value[1].toString()))));
+      Preferences(ConfigFetcher.globalBaseUrl, 0, "test-salt"),
+      map.map((key, value) => MapEntry(
+          key,
+          Setting(SettingsValue(null, null, value.first, null), 2, [], [],
+              value.second, ""))),
+      List.empty());
 }

@@ -82,7 +82,8 @@ class ConfigService with ContinuousFutureSynchronizer {
               fetchTime: entry.first.fetchTime)
           : SettingResult.empty;
     } else {
-      final entry = await _fetchIfOlder(distantPast, preferCached: _initialized);
+      final entry =
+          await _fetchIfOlder(distantPast, preferCached: _initialized);
       return !entry.first.isEmpty
           ? SettingResult(
               settings: entry.first.config.entries,
@@ -125,8 +126,8 @@ class ConfigService with ContinuousFutureSynchronizer {
     // Sync up with the cache and use it when it's not expired.
     final entry = await _readCache();
     if (!entry.isEmpty && entry.eTag != _cachedEntry.eTag) {
-        _cachedEntry = entry;
-        _hooks.invokeConfigChanged(entry.config.entries);
+      _cachedEntry = entry;
+      _hooks.invokeConfigChanged(entry.config.entries);
     }
     // Cache isn't expired
     if (_cachedEntry.fetchTime.isAfter(time)) {

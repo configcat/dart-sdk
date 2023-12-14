@@ -330,7 +330,8 @@ class RolloutEvaluator {
     Object? userAttributeValue =
         evaluationContext.user!.getAttribute(comparisonAttribute);
 
-    if (userAttributeValue == null || (userAttributeValue is String && userAttributeValue.isEmpty)) {
+    if (userAttributeValue == null ||
+        (userAttributeValue is String && userAttributeValue.isEmpty)) {
       _logger.warning(3003,
           "Cannot evaluate condition (${_LogHelper.formatUserCondition(userCondition)}) for setting '${evaluationContext.key}' (the User.$comparisonAttribute attribute is missing). You should set the User.$comparisonAttribute attribute in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/");
       throw RolloutEvaluatorException(cannotEvaluateTheUserPrefix +
@@ -343,32 +344,49 @@ class RolloutEvaluator {
       case UserComparator.notContainsAnyOf:
         bool negateContainsAnyOf =
             UserComparator.notContainsAnyOf == comparator;
-        String userAttributeForContains = _getUserAttributeAsString(evaluationContext.key, userCondition, comparisonAttribute, userAttributeValue);
+        String userAttributeForContains = _getUserAttributeAsString(
+            evaluationContext.key,
+            userCondition,
+            comparisonAttribute,
+            userAttributeValue);
         return _evaluateContainsAnyOf(
             negateContainsAnyOf, userCondition, userAttributeForContains);
       case UserComparator.semverIsOneOf:
       case UserComparator.semverIsNotOneOf:
         bool negateSemverIsOneOf =
             UserComparator.semverIsNotOneOf == comparator;
-        Version userAttributeValueForSemverIsOneOf = _getUserAttributeAsVersion(evaluationContext.key, userCondition, comparisonAttribute, userAttributeValue);
-        return _evaluateSemverIsOneOf(userCondition, userAttributeValueForSemverIsOneOf,
-            negateSemverIsOneOf, comparisonAttribute);
+        Version userAttributeValueForSemverIsOneOf = _getUserAttributeAsVersion(
+            evaluationContext.key,
+            userCondition,
+            comparisonAttribute,
+            userAttributeValue);
+        return _evaluateSemverIsOneOf(
+            userCondition,
+            userAttributeValueForSemverIsOneOf,
+            negateSemverIsOneOf,
+            comparisonAttribute);
       case UserComparator.semverLess:
       case UserComparator.semverLessEquals:
       case UserComparator.semverGreater:
       case UserComparator.semverGreaterEquals:
-      Version userAttributeValueForSemverOperators = _getUserAttributeAsVersion(evaluationContext.key, userCondition, comparisonAttribute, userAttributeValue);
-      return _evaluateSemver(
-          userAttributeValueForSemverOperators, userCondition, comparator, comparisonAttribute);
+        Version userAttributeValueForSemverOperators =
+            _getUserAttributeAsVersion(evaluationContext.key, userCondition,
+                comparisonAttribute, userAttributeValue);
+        return _evaluateSemver(userAttributeValueForSemverOperators,
+            userCondition, comparator, comparisonAttribute);
       case UserComparator.numberEquals:
       case UserComparator.numberNotEquals:
       case UserComparator.numberLess:
       case UserComparator.numberLessEquals:
       case UserComparator.numberGreater:
       case UserComparator.numberGreaterEquals:
-        double userAttributeAsDouble = _getUserAttributeAsDouble(evaluationContext.key, userCondition, comparisonAttribute, userAttributeValue);
-        return _evaluateNumbers(
-            userAttributeAsDouble, userCondition, comparator, comparisonAttribute);
+        double userAttributeAsDouble = _getUserAttributeAsDouble(
+            evaluationContext.key,
+            userCondition,
+            comparisonAttribute,
+            userAttributeValue);
+        return _evaluateNumbers(userAttributeAsDouble, userCondition,
+            comparator, comparisonAttribute);
       case UserComparator.isOneOf:
       case UserComparator.isNotOneOf:
       case UserComparator.sensitiveIsOneOf:
@@ -377,14 +395,19 @@ class RolloutEvaluator {
             UserComparator.isNotOneOf == comparator;
         bool sensitiveIsOneOf = UserComparator.sensitiveIsOneOf == comparator ||
             UserComparator.sensitiveIsNotOneOf == comparator;
-        String userAttributeForIsOneOf = _getUserAttributeAsString(evaluationContext.key, userCondition, comparisonAttribute, userAttributeValue);
+        String userAttributeForIsOneOf = _getUserAttributeAsString(
+            evaluationContext.key,
+            userCondition,
+            comparisonAttribute,
+            userAttributeValue);
         return _evaluateIsOneOf(userCondition, sensitiveIsOneOf,
             userAttributeForIsOneOf, configSalt, contextSalt, negateIsOneOf);
       case UserComparator.dateBefore:
       case UserComparator.dateAfter:
-      double userAttributeForDate = _getUserAttributeForDate(userCondition, evaluationContext, comparisonAttribute, userAttributeValue);
-        return _evaluateDate(
-            userAttributeForDate, userCondition, comparator, comparisonAttribute);
+        double userAttributeForDate = _getUserAttributeForDate(userCondition,
+            evaluationContext, comparisonAttribute, userAttributeValue);
+        return _evaluateDate(userAttributeForDate, userCondition, comparator,
+            comparisonAttribute);
       case UserComparator.textEquals:
       case UserComparator.textNotEquals:
       case UserComparator.hashedEquals:
@@ -393,27 +416,47 @@ class RolloutEvaluator {
             UserComparator.textNotEquals == comparator;
         bool hashedEquals = UserComparator.hashedEquals == comparator ||
             UserComparator.hashedNotEquals == comparator;
-        String userAttributeForEqual = _getUserAttributeAsString(evaluationContext.key, userCondition, comparisonAttribute, userAttributeValue);
+        String userAttributeForEqual = _getUserAttributeAsString(
+            evaluationContext.key,
+            userCondition,
+            comparisonAttribute,
+            userAttributeValue);
         return _evaluateEquals(hashedEquals, userAttributeForEqual, configSalt,
             contextSalt, userCondition, negateEquals);
       case UserComparator.hashedStartsWith:
       case UserComparator.hashedNotStartsWith:
       case UserComparator.hashedEndsWith:
       case UserComparator.hashedNotEndsWith:
-      String userAttributeForHashedStartEndsWith = _getUserAttributeAsString(evaluationContext.key, userCondition, comparisonAttribute, userAttributeValue);
-      return _evaluateHashedStartOrEndWith(userAttributeForHashedStartEndsWith, userCondition,
-            comparator, configSalt, contextSalt);
+        String userAttributeForHashedStartEndsWith = _getUserAttributeAsString(
+            evaluationContext.key,
+            userCondition,
+            comparisonAttribute,
+            userAttributeValue);
+        return _evaluateHashedStartOrEndWith(
+            userAttributeForHashedStartEndsWith,
+            userCondition,
+            comparator,
+            configSalt,
+            contextSalt);
       case UserComparator.textStartsWith:
       case UserComparator.textNotStartsWith:
         bool negateTextStartWith =
             UserComparator.textNotStartsWith == comparator;
-        String userAttributeFoTextStartWith = _getUserAttributeAsString(evaluationContext.key, userCondition, comparisonAttribute, userAttributeValue);
+        String userAttributeFoTextStartWith = _getUserAttributeAsString(
+            evaluationContext.key,
+            userCondition,
+            comparisonAttribute,
+            userAttributeValue);
         return _evaluateTextStartWith(
             userCondition, userAttributeFoTextStartWith, negateTextStartWith);
       case UserComparator.textEndsWith:
       case UserComparator.textNotEndsWith:
         bool negateTextEndsWith = UserComparator.textNotEndsWith == comparator;
-        String userAttributeForTextEndsWith = _getUserAttributeAsString(evaluationContext.key, userCondition, comparisonAttribute, userAttributeValue);
+        String userAttributeForTextEndsWith = _getUserAttributeAsString(
+            evaluationContext.key,
+            userCondition,
+            comparisonAttribute,
+            userAttributeValue);
         return _evaluateTextEndsWith(
             userCondition, userAttributeForTextEndsWith, negateTextEndsWith);
       case UserComparator.textArrayContains:
@@ -426,7 +469,9 @@ class RolloutEvaluator {
         bool hashedArrayContains =
             UserComparator.hashedArrayContains == comparator ||
                 UserComparator.hashedArrayNotContains == comparator;
-        List<String> userAttributeForArrayContains = _getUserAttributeAsStringList(userCondition, evaluationContext, comparisonAttribute, userAttributeValue);
+        List<String> userAttributeForArrayContains =
+            _getUserAttributeAsStringList(userCondition, evaluationContext,
+                comparisonAttribute, userAttributeValue);
         return _evaluateArrayContains(
             userCondition,
             userAttributeForArrayContains,
@@ -440,7 +485,8 @@ class RolloutEvaluator {
     }
   }
 
-  String _getUserAttributeAsString(String key, UserCondition userCondition, String userAttributeName, Object userAttributeValue) {
+  String _getUserAttributeAsString(String key, UserCondition userCondition,
+      String userAttributeName, Object userAttributeValue) {
     if (userAttributeValue is String) {
       return userAttributeValue;
     }
@@ -450,7 +496,8 @@ class RolloutEvaluator {
     return convertedUserAttribute;
   }
 
-  Version _getUserAttributeAsVersion(String key, UserCondition userCondition, String comparisonAttribute, Object userValue) {
+  Version _getUserAttributeAsVersion(String key, UserCondition userCondition,
+      String comparisonAttribute, Object userValue) {
     if (userValue is String) {
       try {
         return _parseVersion(userValue.trim());
@@ -465,7 +512,8 @@ class RolloutEvaluator {
         "$cannotEvaluateTheUserPrefix$comparisonAttribute$cannotEvaluateTheUserAttributeInvalid$reason)");
   }
 
-   double _getUserAttributeAsDouble(String key, UserCondition userCondition, String comparisonAttribute, Object userAttributeValue) {
+  double _getUserAttributeAsDouble(String key, UserCondition userCondition,
+      String comparisonAttribute, Object userAttributeValue) {
     double converted;
     try {
       if (userAttributeValue is double) {
@@ -478,7 +526,7 @@ class RolloutEvaluator {
       }
       return converted;
     } catch (e) {
-    //If cannot convert to double, continue with the error
+      //If cannot convert to double, continue with the error
       String reason = "'$userAttributeValue ' is not a valid decimal number";
       _logger.warning(3004,
           "Cannot evaluate condition (${_LogHelper.formatUserCondition(userCondition)}) for setting '$key' ($reason). Please check the User.$comparisonAttribute attribute and make sure that its value corresponds to the comparison operator.");
@@ -487,7 +535,11 @@ class RolloutEvaluator {
     }
   }
 
-  double _getUserAttributeForDate(UserCondition userCondition, EvaluationContext context, String comparisonAttribute, Object userAttributeValue) {
+  double _getUserAttributeForDate(
+      UserCondition userCondition,
+      EvaluationContext context,
+      String comparisonAttribute,
+      Object userAttributeValue) {
     try {
       if (userAttributeValue is DateTime) {
         return userAttributeValue.millisecondsSinceEpoch / 1000;
@@ -499,15 +551,20 @@ class RolloutEvaluator {
       }
       return attributeToDouble;
     } catch (e) {
-    String reason = "'$userAttributeValue' is not a valid Unix timestamp (number of seconds elapsed since Unix epoch)";
-    _logger.warning(3004,
-        "Cannot evaluate condition (${_LogHelper.formatUserCondition(userCondition)}) for setting '${context.key}' ($reason). Please check the User.$comparisonAttribute attribute and make sure that its value corresponds to the comparison operator.");
-    throw RolloutEvaluatorException(
-        "$cannotEvaluateTheUserPrefix$comparisonAttribute$cannotEvaluateTheUserAttributeInvalid$reason)");
+      String reason =
+          "'$userAttributeValue' is not a valid Unix timestamp (number of seconds elapsed since Unix epoch)";
+      _logger.warning(3004,
+          "Cannot evaluate condition (${_LogHelper.formatUserCondition(userCondition)}) for setting '${context.key}' ($reason). Please check the User.$comparisonAttribute attribute and make sure that its value corresponds to the comparison operator.");
+      throw RolloutEvaluatorException(
+          "$cannotEvaluateTheUserPrefix$comparisonAttribute$cannotEvaluateTheUserAttributeInvalid$reason)");
     }
   }
 
-  List<String> _getUserAttributeAsStringList(UserCondition userCondition, EvaluationContext context, String comparisonAttribute, Object userAttributeValue) {
+  List<String> _getUserAttributeAsStringList(
+      UserCondition userCondition,
+      EvaluationContext context,
+      String comparisonAttribute,
+      Object userAttributeValue) {
     try {
       if (userAttributeValue is List<String>) {
         return userAttributeValue;
@@ -515,15 +572,14 @@ class RolloutEvaluator {
       if (userAttributeValue is String) {
         return jsonDecode(userAttributeValue);
       }
-
     } catch (e) {
-    // String array parse failed continue with the RolloutEvaluatorException
+      // String array parse failed continue with the RolloutEvaluatorException
     }
     String reason = "'$userAttributeValue' is not a valid JSON string array";
     _logger.warning(3004,
-    "Cannot evaluate condition (${_LogHelper.formatUserCondition(userCondition)}) for setting '${context.key}' ($reason). Please check the User.$comparisonAttribute attribute and make sure that its value corresponds to the comparison operator.");
+        "Cannot evaluate condition (${_LogHelper.formatUserCondition(userCondition)}) for setting '${context.key}' ($reason). Please check the User.$comparisonAttribute attribute and make sure that its value corresponds to the comparison operator.");
     throw RolloutEvaluatorException(
-    "$cannotEvaluateTheUserPrefix$comparisonAttribute$cannotEvaluateTheUserAttributeInvalid$reason)");
+        "$cannotEvaluateTheUserPrefix$comparisonAttribute$cannotEvaluateTheUserAttributeInvalid$reason)");
   }
 
   String _userAttributeToString(Object userAttribute) {
@@ -531,7 +587,7 @@ class RolloutEvaluator {
       return userAttribute;
     }
     if (userAttribute is DateTime) {
-      return  (userAttribute.millisecondsSinceEpoch / 1000).toString();
+      return (userAttribute.millisecondsSinceEpoch / 1000).toString();
     }
     return userAttribute.toString();
   }
@@ -703,15 +759,14 @@ class RolloutEvaluator {
 
   bool _evaluateDate(double userDoubleValue, UserCondition userCondition,
       UserComparator comparator, String comparisonAttribute) {
-      double? comparisonDoubleValue = userCondition.doubleValue;
-      if (comparisonDoubleValue == null) {
-
-        return false;
-      }
-      return (UserComparator.dateBefore == comparator &&
-              userDoubleValue < comparisonDoubleValue) ||
-          UserComparator.dateAfter == comparator &&
-              userDoubleValue > comparisonDoubleValue;
+    double? comparisonDoubleValue = userCondition.doubleValue;
+    if (comparisonDoubleValue == null) {
+      return false;
+    }
+    return (UserComparator.dateBefore == comparator &&
+            userDoubleValue < comparisonDoubleValue) ||
+        UserComparator.dateAfter == comparator &&
+            userDoubleValue > comparisonDoubleValue;
   }
 
   bool _evaluateIsOneOf(
@@ -749,20 +804,20 @@ class RolloutEvaluator {
 
   bool _evaluateNumbers(double uvDouble, UserCondition userCondition,
       UserComparator comparator, String comparisonAttribute) {
-      final cvDouble = userCondition.doubleValue;
-      if (cvDouble == null) {
-        return false;
-      }
-      return ((comparator == UserComparator.numberEquals &&
-              uvDouble == cvDouble) ||
-          (comparator == UserComparator.numberNotEquals &&
-              uvDouble != cvDouble) ||
-          (comparator == UserComparator.numberLess && uvDouble < cvDouble) ||
-          (comparator == UserComparator.numberLessEquals &&
-              uvDouble <= cvDouble) ||
-          (comparator == UserComparator.numberGreater && uvDouble > cvDouble) ||
-          (comparator == UserComparator.numberGreaterEquals &&
-              uvDouble >= cvDouble));
+    final cvDouble = userCondition.doubleValue;
+    if (cvDouble == null) {
+      return false;
+    }
+    return ((comparator == UserComparator.numberEquals &&
+            uvDouble == cvDouble) ||
+        (comparator == UserComparator.numberNotEquals &&
+            uvDouble != cvDouble) ||
+        (comparator == UserComparator.numberLess && uvDouble < cvDouble) ||
+        (comparator == UserComparator.numberLessEquals &&
+            uvDouble <= cvDouble) ||
+        (comparator == UserComparator.numberGreater && uvDouble > cvDouble) ||
+        (comparator == UserComparator.numberGreaterEquals &&
+            uvDouble >= cvDouble));
   }
 
   bool _evaluateSemver(Version userValueVersion, UserCondition userCondition,
@@ -784,11 +839,8 @@ class RolloutEvaluator {
     }
   }
 
-  bool _evaluateSemverIsOneOf(
-      UserCondition userCondition,
-      Version userVersion,
-      bool negateSemverIsOneOf,
-      String comparisonAttribute) {
+  bool _evaluateSemverIsOneOf(UserCondition userCondition, Version userVersion,
+      bool negateSemverIsOneOf, String comparisonAttribute) {
     List<String> containsValues =
         userCondition.stringArrayValue ?? List.empty();
     final filteredContainsValues = containsValues
@@ -965,7 +1017,7 @@ class RolloutEvaluator {
 
   EvaluationResult? _evaluatePercentageOptions(
       List<PercentageOption> percentageOptions,
-      String percentageOptionAttribute,
+      String? percentageOptionAttribute,
       EvaluationContext evaluationContext,
       TargetingRule? parentTargetingRule,
       EvaluateLogger evaluateLogger) {
@@ -980,12 +1032,13 @@ class RolloutEvaluator {
       return null;
     }
     String percentageOptionAttributeValue;
-    String percentageOptionAttributeName = percentageOptionAttribute;
-    if (percentageOptionAttributeName.isEmpty) {
+    String? percentageOptionAttributeName = percentageOptionAttribute;
+    if (percentageOptionAttributeName == null || percentageOptionAttributeName.isEmpty) {
       percentageOptionAttributeName = "Identifier";
       percentageOptionAttributeValue = evaluationContext.user!.identifier;
     } else {
-      Object? userAttribute = contextUser.getAttribute(percentageOptionAttributeName);
+      Object? userAttribute =
+          contextUser.getAttribute(percentageOptionAttributeName);
       if (userAttribute == null) {
         evaluateLogger.logPercentageOptionUserAttributeMissing(
             percentageOptionAttributeName);

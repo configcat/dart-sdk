@@ -125,7 +125,7 @@ class ConfigCatClient {
         return defaultValue;
       }
 
-      return _evaluate(
+      return _evaluate<T>(
               key, setting, evalUser, result.fetchTime, result.settings)
           .value;
     } catch (e, s) {
@@ -170,7 +170,7 @@ class ConfigCatClient {
         return details;
       }
 
-      return _evaluate(
+      return _evaluate<T>(
           key, setting, evalUser, result.fetchTime, result.settings);
     } catch (e, s) {
       final err =
@@ -279,7 +279,7 @@ class ConfigCatClient {
       for (final entry in result.settings.entries) {
         if (entry.value.variationId == variationId) {
           return MapEntry(entry.key,
-              _parseSettingValue(entry.value.settingsValue, entry.value.type));
+              _parseSettingValue<T>(entry.value.settingsValue, entry.value.type));
         }
 
         for (final targetingRule in entry.value.targetingRules) {
@@ -287,7 +287,7 @@ class ConfigCatClient {
               targetingRule.servedValue?.variationId == variationId) {
             return MapEntry(
                 entry.key,
-                _parseSettingValue(targetingRule.servedValue!.settingsValue,
+                _parseSettingValue<T>(targetingRule.servedValue!.settingsValue,
                     entry.value.type));
           }
         }
@@ -296,7 +296,7 @@ class ConfigCatClient {
           if (percentageOption.variationId == variationId) {
             return MapEntry(
                 entry.key,
-                _parseSettingValue(
+                _parseSettingValue<T>(
                     percentageOption.settingsValue, entry.value.type));
           }
         }
@@ -415,7 +415,7 @@ class ConfigCatClient {
         user: user,
         isDefaultValue: false,
         error: null,
-        value: _parseSettingValue(eval.value, setting.type),
+        value: _parseSettingValue<T>(eval.value, setting.type),
         fetchTime: fetchTime,
         matchedTargetingRule: eval.matchedTargetingRule,
         matchedPercentageOption: eval.matchedPercentageOption);
@@ -425,24 +425,30 @@ class ConfigCatClient {
   }
 
   T _parseSettingValue<T>(SettingsValue settingsValue, int settingType) {
-    if (!(T is bool || T is String || T is int || T is double)) {
-      throw ArgumentError(
-          "Only String, Integer, Double or Boolean types are supported.");
+    bool isDynamic = false;
+    if( T == dynamic){
+      isDynamic = true;
+    } else {
+      if (!(T == bool || T == String || T == int || T == double)) {
+        throw ArgumentError(
+            "Only String, Integer, Double or Boolean types are supported.");
+      }
     }
 
-    if (T is bool && settingType == 0 && settingsValue.booleanValue != null) {
+    if ((T == bool || isDynamic) && settingType == 0 && settingsValue.booleanValue != null) {
       return settingsValue.booleanValue as T;
     }
-    if (T is String && settingType == 1 && settingsValue.stringValue != null) {
+    if ((T == String || isDynamic) && settingType == 1 && settingsValue.stringValue != null) {
       return settingsValue.stringValue as T;
     }
-    if (T is int && settingType == 2 && settingsValue.intValue != null) {
+    if ((T == int || isDynamic) && settingType == 2 && settingsValue.intValue != null) {
       return settingsValue.intValue as T;
     }
-    if (T is double && settingType == 3 && settingsValue.doubleValue != null) {
+    if ((T == double || isDynamic) && settingType == 3 && settingsValue.doubleValue != null) {
       return settingsValue.doubleValue as T;
     }
     throw ArgumentError(
         "The type of a setting must match the type of the setting's default value. Setting's type was {${_settingTypes[settingType]}} but the default value's type was {${T.runtimeType}}. Please use a default value which corresponds to the setting type {${_settingTypes[settingType]}}. Learn more: https://configcat.com/docs/sdk-reference/dotnet/#setting-type-mapping");
   }
+
 }

@@ -15,22 +15,46 @@ const testSdkKey =
 const etag = 'test-etag';
 
 Config createTestConfig(Map<String, Object> map) {
-  return Config(Preferences(ConfigFetcher.globalBaseUrl, 0),
-      map.map((key, value) => MapEntry(key, Setting(value, 0, [], [], ''))));
+  return Config(Preferences(ConfigFetcher.globalBaseUrl, 0, "test-salt"),
+      map.map((key, value) => MapEntry(key, value.toSetting())), List.empty());
 }
 
 Config createTestConfigWithRules() {
-  return Config(Preferences(ConfigFetcher.globalBaseUrl, 0), {
-    'key1': Setting(
-        "def",
-        0,
-        [],
-        [
-          RolloutRule("fake1", "Identifier", 2, "@test1.com", "variationId1"),
-          RolloutRule("fake2", "Identifier", 2, "@test2.com", "variationId2")
-        ],
-        ''),
-  });
+  return Config(
+      Preferences(ConfigFetcher.globalBaseUrl, 0, "test-salt"),
+      {
+        'key1': Setting(
+            SettingsValue(null, "def", null, null), //default flag value
+            1,
+            [],
+            [
+              TargetingRule(
+                  [
+                    Condition(
+                        UserCondition(
+                            "Identifier", 2, null, null, ["@test1.com"]),
+                        null,
+                        null)
+                  ],
+                  [],
+                  ServedValue(SettingsValue(null, "fake1", null, null),
+                      "variationId1")),
+              TargetingRule(
+                  [
+                    Condition(
+                        UserCondition(
+                            "Identifier", 2, null, null, ["@test2.com"]),
+                        null,
+                        null)
+                  ],
+                  [],
+                  ServedValue(SettingsValue(null, "fake2", null, null),
+                      "variationId2")),
+            ],
+            'defaultId', // flag def variationID
+            "") //percentage attribute
+      },
+      List.empty());
 }
 
 Entry createTestEntry(Map<String, Object> map) {
@@ -42,6 +66,12 @@ Entry createTestEntry(Map<String, Object> map) {
 Entry createTestEntryWithTime(Map<String, Object> map, DateTime time) {
   Config config = createTestConfig(map);
   return Entry(jsonEncode(config.toJson()), config, map[0].toString(), time);
+}
+
+Entry createTestEntryWithETag(Map<String, Object> map, String etag) {
+  Config config = createTestConfig(map);
+  return Entry(
+      jsonEncode(config.toJson()), config, etag, DateTime.now().toUtc());
 }
 
 String getPath({String sdkKey = testSdkKey}) {

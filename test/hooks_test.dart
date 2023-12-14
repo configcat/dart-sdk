@@ -91,12 +91,15 @@ void main() {
         expect(details.variationId, equals('variationId1'));
         expect(details.isDefaultValue, isFalse);
         expect(details.error, isNull);
-        expect(details.matchedEvaluationPercentageRule, isNull);
-        expect(details.matchedEvaluationRule?.value, equals('fake1'));
-        expect(details.matchedEvaluationRule?.comparator, equals(2));
-        expect(details.matchedEvaluationRule?.comparisonAttribute,
+
+        expect(details.matchedPercentageOption, isNull);
+        expect(details.matchedTargetingRule?.conditions.length, 1);
+
+        Condition? condition = details.matchedTargetingRule?.conditions[0];
+        expect(condition?.userCondition?.comparisonAttribute,
             equals('Identifier'));
-        expect(details.matchedEvaluationRule?.comparisonValue,
+        expect(condition?.userCondition?.comparator, equals(2));
+        expect(condition?.userCondition?.stringArrayValue?[0],
             equals('@test1.com'));
         expect(
             details.fetchTime.isAfter(

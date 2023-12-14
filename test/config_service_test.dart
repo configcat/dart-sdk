@@ -101,14 +101,14 @@ void main() {
       final settings1 = await service.getSettings();
 
       // Assert
-      expect(settings1.settings['key']?.value, 'test1');
+      expect(settings1.settings['key']?.settingsValue.stringValue, 'test1');
 
       // Act
       await service.refresh();
       final settings2 = await service.getSettings();
 
       // Assert
-      expect(settings2.settings['key']?.value, 'test2');
+      expect(settings2.settings['key']?.settingsValue.stringValue, 'test2');
       verify(cache.write(any, any)).called(equals(2));
       expect(interceptor.allRequestCount(), 2);
 
@@ -144,17 +144,18 @@ void main() {
       final settings1 = await service.getSettings();
 
       // Assert
-      expect(settings1.settings['key']?.value, 'test1');
+      expect(settings1.settings['key']?.settingsValue.stringValue, 'test1');
 
       // Act
       final settings2 = await service.getSettings();
 
       // Assert
-      expect(settings2.settings['key']?.value, 'test1');
+      expect(settings2.settings['key']?.settingsValue.stringValue, 'test1');
 
       await until(() async {
         final settings3 = await service.getSettings();
-        final value = settings3.settings['key']?.value ?? '';
+        final value =
+            settings3.settings['key']?.settingsValue.stringValue ?? '';
         return value == 'test2';
       }, const Duration(milliseconds: 2500));
 
@@ -302,14 +303,14 @@ void main() {
       final settings1 = await service.getSettings();
 
       // Assert
-      expect(settings1.settings['key']?.value, 'test1');
+      expect(settings1.settings['key']?.settingsValue.stringValue, 'test1');
 
       // Act
       await Future.delayed(const Duration(milliseconds: 500));
       final settings2 = await service.getSettings();
 
       // Assert
-      expect(settings2.settings['key']?.value, 'test1');
+      expect(settings2.settings['key']?.settingsValue.stringValue, 'test1');
       verify(cache.write(any, any)).called(greaterThanOrEqualTo(1));
 
       // Cleanup
@@ -410,7 +411,7 @@ void main() {
       // Assert
       expect(DateTime.now().difference(current),
           lessThan(const Duration(milliseconds: 200)));
-      expect(result.settings['key']?.value, isTrue);
+      expect(result.settings['key']?.settingsValue.booleanValue, isTrue);
 
       // Cleanup
       service.close();
@@ -442,14 +443,14 @@ void main() {
       final settings1 = await service.getSettings();
 
       // Assert
-      expect(settings1.settings['key']?.value, 'test1');
+      expect(settings1.settings['key']?.settingsValue.stringValue, 'test1');
 
       // Act
       await service.refresh();
       final settings2 = await service.getSettings();
 
       // Assert
-      expect(settings2.settings['key']?.value, 'test2');
+      expect(settings2.settings['key']?.settingsValue.stringValue, 'test2');
       verify(cache.write(any, any)).called(2);
       expect(interceptor.allRequestCount(), 2);
 
@@ -478,13 +479,14 @@ void main() {
         }, headers: {'If-None-Match': 'tag1'});
 
       final settings1 = await service.getSettings();
-      expect(settings1.settings['key']?.value, 'test1');
+      expect(settings1.settings['key']?.settingsValue.stringValue, 'test1');
       final settings2 = await service.getSettings();
-      expect(settings2.settings['key']?.value, 'test1');
+      expect(settings2.settings['key']?.settingsValue.stringValue, 'test1');
 
       await until(() async {
         final settings3 = await service.getSettings();
-        final value = settings3.settings['key']?.value ?? '';
+        final value =
+            settings3.settings['key']?.settingsValue.stringValue ?? '';
         return value == 'test2';
       }, const Duration(milliseconds: 150));
 
@@ -568,41 +570,42 @@ void main() {
     });
 
     test('ensure cached TTL respects external cache', () async {
-      //TODO with etag
-      final cache = CustomCache(createTestEntry({'key': false}).serialize());
+      final cache = CustomCache(
+          createTestEntryWithETag({'key': 'test-local'}, "etag").serialize());
       final service = createService(
           PollingMode.lazyLoad(
               cacheRefreshInterval: const Duration(milliseconds: 200)),
           customCache: cache);
       dioAdapter.onGet(
           sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
-              (server) {
-            server.reply(200, createTestConfig({'key': true}).toJson());
-          });
+          (server) {
+        server.reply(200, createTestConfig({'key': 'test-remote'}).toJson());
+      });
 
       // Act
       final settings = await service.getSettings();
 
-
       // Assert
-      expect(false, settings.settings["key"]!.settingsValue.booleanValue);
+      expect(
+          'test-local', settings.settings["key"]!.settingsValue.stringValue);
       expect(interceptor.allRequestCount(), 0);
 
       // Act
       await Future.delayed(const Duration(milliseconds: 300));
+      cache.write("",
+          createTestEntryWithETag({'key': 'test-local2'}, "etag2").serialize());
 
       final settings2 = await service.getSettings();
 
       // Assert
-      expect(true, settings.settings["key"]!.settingsValue.booleanValue);
+      expect(
+          'test-local2', settings2.settings["key"]!.settingsValue.stringValue);
       expect(interceptor.allRequestCount(), 0);
 
       // Cleanup
       service.close();
-
     });
-
-    });
+  });
 
   group('Manual Polling Tests', () {
     test('refresh', () async {
@@ -630,14 +633,14 @@ void main() {
       // Assert
       expect(result.isSuccess, isTrue);
       expect(result.error, isNull);
-      expect(settings1.settings['key']?.value, 'test1');
+      expect(settings1.settings['key']?.settingsValue.stringValue, 'test1');
 
       // Act
       await service.refresh();
       final settings2 = await service.getSettings();
 
       // Assert
-      expect(settings2.settings['key']?.value, 'test2');
+      expect(settings2.settings['key']?.settingsValue.stringValue, 'test2');
       verify(cache.write(any, any)).called(2);
       expect(interceptor.allRequestCount(), 2);
 

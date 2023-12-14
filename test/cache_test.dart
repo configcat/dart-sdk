@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:configcat_client/configcat_client.dart';
 import 'package:configcat_client/src/entry.dart';
 import 'package:http_mock_adapter/http_mock_adapter.dart';
@@ -29,7 +31,7 @@ void main() {
     });
 
     // Act
-    final value = await client.getValue(key: 'value', defaultValue: '');
+    final String value = await client.getValue(key: 'value', defaultValue: '');
 
     // Assert
     expect(value, equals('test'));
@@ -58,9 +60,9 @@ void main() {
   group('cache key generation', () {
     final inputs = {
       'configcat-sdk-1/TEST_KEY-0123456789012/1234567890123456789012':
-          'dbd2c54f946f95ed3d76e788950f8a3a6c01e0a6',
+          'f83ba5d45bceb4bb704410f51b704fb6dfa19942',
       'configcat-sdk-1/TEST_KEY2-123456789012/1234567890123456789012':
-          '71a778682cbfa4bb87862ab4733c37de35ebcbee',
+          'da7bfd8662209c8ed3f9db96daed4f8d91ba5876',
     };
 
     inputs.forEach((sdkKey, cacheKey) {
@@ -90,18 +92,20 @@ void main() {
   test('cache serialization', () async {
     // Arrange
     final testJson =
-        "{\"p\":{\"u\":\"https://cdn-global.configcat.com\",\"r\":0},\"f\":{\"testKey\":{\"v\":\"testValue\",\"t\":1,\"p\":[],\"r\":[]}}}";
+        "{\"p\":{\"u\":\"https://cdn-global.configcat.com\",\"r\":0,\"s\":\"test-slat\"},\"f\":{\"testKey\":{\"v\":{\"s\":\"testValue\"},\"t\":1,\"p\":[],\"r\":[], \"a\":\"\"}}, \"s\":[] }";
 
     final time = DateTime.parse('2023-06-14T15:27:15.8440000Z');
     final eTag = 'test-etag';
 
-    final expectedPayload = '1686756435844\ntest-etag\n$testJson';
+    final decodedJson = jsonDecode(testJson);
+    final config = Config.fromJson(decodedJson);
 
-    final entry = Entry.fromConfigJson(testJson, eTag, time);
+    final entry = Entry(testJson, config, eTag, time);
 
     // Act
     final cached = entry.serialize();
 
+    final expectedPayload = '1686756435844\ntest-etag\n$testJson';
     // Assert
     expect(cached, equals(expectedPayload));
 

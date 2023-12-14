@@ -28,8 +28,8 @@ extension SettingConvert on Object {
       throw ArgumentError(
           "Only String, Integer, Double or Boolean types are supported.");
     }
-    return Setting(settingsValue, settingType, List.empty(), List.empty(), "",
-        "", "", List.empty());
+    return Setting(
+        settingsValue, settingType, List.empty(), List.empty(), "", "");
   }
 }
 
@@ -63,20 +63,16 @@ class Setting {
 
   /// The User Object attribute which serves as the basis of percentage options evaluation.
   @JsonKey(name: 'a')
-  final String percentageAttribute;
+  final String? percentageAttribute;
 
+  @JsonKey(includeFromJson: false, includeToJson: false)
   String salt = "";
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
   List<Segment> segments = List.empty();
 
-  Setting(
-      this.settingsValue,
-      this.type,
-      this.percentageOptions,
-      this.targetingRules,
-      this.variationId,
-      this.percentageAttribute,
-      this.salt,
-      this.segments);
+  Setting(this.settingsValue, this.type, this.percentageOptions,
+      this.targetingRules, this.variationId, this.percentageAttribute);
 
   factory Setting.fromJson(Map<String, dynamic> json) =>
       _$SettingFromJson(json);

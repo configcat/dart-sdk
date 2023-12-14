@@ -9,43 +9,80 @@ import 'package:sprintf/sprintf.dart';
 import 'package:test/test.dart';
 
 void main() {
-  final testData = {
+  final testDataV1 = {
     "testmatrix.csv": [
       "PKDVCLf-Hq-h-kCzMp-L7Q/psuH7BGHoUmdONrzzUOY7A",
       _Kind.value
     ],
+    // "testmatrix_semantic.csv": [
+    //   "PKDVCLf-Hq-h-kCzMp-L7Q/BAr3KgLTP0ObzKnBTo5nhA",
+    //   _Kind.value
+    // ],
+    // "testmatrix_number.csv": [
+    //   "PKDVCLf-Hq-h-kCzMp-L7Q/uGyK3q9_ckmdxRyI7vjwCw",
+    //   _Kind.value
+    // ],
+    // "testmatrix_semantic_2.csv": [
+    //   "PKDVCLf-Hq-h-kCzMp-L7Q/q6jMCFIp-EmuAfnmZhPY7w",
+    //   _Kind.value
+    // ],
+    // "testmatrix_sensitive.csv": [
+    //   "PKDVCLf-Hq-h-kCzMp-L7Q/qX3TP2dTj06ZpCCT1h_SPA",
+    //   _Kind.value
+    // ],
+    // "testmatrix_variationId.csv": [
+    //   "PKDVCLf-Hq-h-kCzMp-L7Q/nQ5qkhRAUEa6beEyyrVLBA",
+    //   _Kind.variation
+    // ],
+    //TODO add segment old csv to V1
+  };
+
+  final testDataV2 = {
+    "testmatrix.csv": [
+      "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/AG6C1ngVb0CvM07un6JisQ",
+      _Kind.value
+    ],
     "testmatrix_semantic.csv": [
-      "PKDVCLf-Hq-h-kCzMp-L7Q/BAr3KgLTP0ObzKnBTo5nhA",
+      "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/iV8vH2MBakKxkFZylxHmTg",
       _Kind.value
     ],
     "testmatrix_number.csv": [
-      "PKDVCLf-Hq-h-kCzMp-L7Q/uGyK3q9_ckmdxRyI7vjwCw",
+      "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/FCWN-k1dV0iBf8QZrDgjdw",
       _Kind.value
     ],
     "testmatrix_semantic_2.csv": [
-      "PKDVCLf-Hq-h-kCzMp-L7Q/q6jMCFIp-EmuAfnmZhPY7w",
+      "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/U8nt3zEhDEO5S2ulubCopA",
       _Kind.value
     ],
     "testmatrix_sensitive.csv": [
-      "PKDVCLf-Hq-h-kCzMp-L7Q/qX3TP2dTj06ZpCCT1h_SPA",
+      "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/-0YmVOUNgEGKkgRF-rU65g",
       _Kind.value
     ],
     "testmatrix_variationId.csv": [
-      "PKDVCLf-Hq-h-kCzMp-L7Q/nQ5qkhRAUEa6beEyyrVLBA",
+      "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/spQnkRTIPEWVivZkWM84lQ",
       _Kind.variation
     ],
+    //TODO add new CSV tests
   };
-
   tearDown(() {
     ConfigCatClient.closeAll();
   });
 
-  for (var element in testData.entries) {
+  //V1
+  for (var element in testDataV1.entries) {
     test(element.key, () async {
       await _runTest('test/fixtures/${element.key}', element.value[0] as String,
           element.value[1] as _Kind);
     });
   }
+
+  //V2
+  // for (var element in testDataV2.entries) {
+  //   test(element.key, () async {
+  //     await _runTest('test/fixtures/${element.key}', element.value[0] as String,
+  //         element.value[1] as _Kind);
+  //   });
+  // }
 }
 
 enum _Kind { value, variation }

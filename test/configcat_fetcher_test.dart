@@ -495,5 +495,5 @@ ConfigFetcher _createFetcher(
 }
 
 Config _createTestConfig(String url, int redirectMode) {
-  return Config(Preferences(url, redirectMode), {});
+  return Config(Preferences(url, redirectMode, "test_salt"), {}, List.empty());
 }
