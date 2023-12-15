@@ -10,11 +10,11 @@ class ConfigCatUser {
       String? country,
       Map<String, Object>? custom}) {
     _attributes['Identifier'] = identifier;
-    if (email != null) {
+    if (email != null && email.isNotEmpty) {
       _attributes['Email'] = email;
     }
 
-    if (country != null) {
+    if (country != null && country.isNotEmpty) {
       _attributes['Country'] = country;
     }
 

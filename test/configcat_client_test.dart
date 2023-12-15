@@ -344,7 +344,8 @@ void main() {
 
     // Act
     await client.forceRefresh();
-    final MapEntry<String, int>? keyValue = await client.getKeyAndValue(variationId: 'test');
+    final MapEntry<String, int>? keyValue =
+        await client.getKeyAndValue(variationId: 'test');
 
     // Assert
     expect(keyValue!.key, equals('value'));

@@ -586,8 +586,7 @@ void main() {
       final settings = await service.getSettings();
 
       // Assert
-      expect(
-          'test-local', settings.settings["key"]!.settingsValue.stringValue);
+      expect('test-local', settings.settings["key"]!.settingsValue.stringValue);
       expect(interceptor.allRequestCount(), 0);
 
       // Act

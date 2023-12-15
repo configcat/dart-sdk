@@ -278,8 +278,10 @@ class ConfigCatClient {
 
       for (final entry in result.settings.entries) {
         if (entry.value.variationId == variationId) {
-          return MapEntry(entry.key,
-              _parseSettingValue<T>(entry.value.settingsValue, entry.value.type));
+          return MapEntry(
+              entry.key,
+              _parseSettingValue<T>(
+                  entry.value.settingsValue, entry.value.type));
         }
 
         for (final targetingRule in entry.value.targetingRules) {
@@ -426,7 +428,7 @@ class ConfigCatClient {
 
   T _parseSettingValue<T>(SettingsValue settingsValue, int settingType) {
     bool isDynamic = false;
-    if( T == dynamic){
+    if (T == dynamic) {
       isDynamic = true;
     } else {
       if (!(T == bool || T == String || T == int || T == double)) {
@@ -435,20 +437,27 @@ class ConfigCatClient {
       }
     }
 
-    if ((T == bool || isDynamic) && settingType == 0 && settingsValue.booleanValue != null) {
+    if ((T == bool || isDynamic) &&
+        settingType == 0 &&
+        settingsValue.booleanValue != null) {
       return settingsValue.booleanValue as T;
     }
-    if ((T == String || isDynamic) && settingType == 1 && settingsValue.stringValue != null) {
+    if ((T == String || isDynamic) &&
+        settingType == 1 &&
+        settingsValue.stringValue != null) {
       return settingsValue.stringValue as T;
     }
-    if ((T == int || isDynamic) && settingType == 2 && settingsValue.intValue != null) {
+    if ((T == int || isDynamic) &&
+        settingType == 2 &&
+        settingsValue.intValue != null) {
       return settingsValue.intValue as T;
     }
-    if ((T == double || isDynamic) && settingType == 3 && settingsValue.doubleValue != null) {
+    if ((T == double || isDynamic) &&
+        settingType == 3 &&
+        settingsValue.doubleValue != null) {
       return settingsValue.doubleValue as T;
     }
     throw ArgumentError(
         "The type of a setting must match the type of the setting's default value. Setting's type was {${_settingTypes[settingType]}} but the default value's type was {${T.runtimeType}}. Please use a default value which corresponds to the setting type {${_settingTypes[settingType]}}. Learn more: https://configcat.com/docs/sdk-reference/dotnet/#setting-type-mapping");
   }
-
 }

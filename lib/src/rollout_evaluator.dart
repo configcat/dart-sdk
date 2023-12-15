@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:ffi';
 import 'dart:math';
 
 import 'package:configcat_client/src/log/logger.dart';
@@ -314,7 +313,8 @@ class RolloutEvaluator {
       EvaluateLogger evaluateLogger) {
     evaluateLogger.append(_LogHelper.formatUserCondition(userCondition));
 
-    if (evaluationContext.user == null) {
+    var configCatUser = evaluationContext.user;
+    if (configCatUser == null) {
       if (!evaluationContext.isUserMissing) {
         evaluationContext.isUserMissing = true;
         _logger.warning(3001,
@@ -328,7 +328,7 @@ class RolloutEvaluator {
         (element) => element.id == userCondition.comparator,
         orElse: () => throw ArgumentError(comparisonOperatorIsInvalid));
     Object? userAttributeValue =
-        evaluationContext.user!.getAttribute(comparisonAttribute);
+        configCatUser.getAttribute(comparisonAttribute);
 
     if (userAttributeValue == null ||
         (userAttributeValue is String && userAttributeValue.isEmpty)) {
@@ -570,7 +570,8 @@ class RolloutEvaluator {
         return userAttributeValue;
       }
       if (userAttributeValue is String) {
-        return jsonDecode(userAttributeValue);
+        var decoded = jsonDecode(userAttributeValue);
+        return List<String>.from(decoded);
       }
     } catch (e) {
       // String array parse failed continue with the RolloutEvaluatorException
@@ -711,13 +712,16 @@ class RolloutEvaluator {
         String userValueSubString;
         if (UserComparator.hashedStartsWith == comparator ||
             UserComparator.hashedNotStartsWith == comparator) {
-          userValueSubString = utf8
-              .decode(userAttributeValueUTF8.sublist(0, comparedTextLengthInt));
+          userValueSubString = utf8.decode(
+              userAttributeValueUTF8.sublist(0, comparedTextLengthInt),
+              allowMalformed: true);
         } else {
           //HASHED_ENDS_WITH & HASHED_NOT_ENDS_WITH
-          userValueSubString = utf8.decode(userAttributeValueUTF8.sublist(
-              userAttributeValueUTF8.length - comparedTextLengthInt,
-              userAttributeValueUTF8.length));
+          userValueSubString = utf8.decode(
+              userAttributeValueUTF8.sublist(
+                  userAttributeValueUTF8.length - comparedTextLengthInt,
+                  userAttributeValueUTF8.length),
+              allowMalformed: true);
         }
         String hashUserValueSub =
             _getSaltedUserValue(userValueSubString, configSalt, contextSalt);
@@ -1033,7 +1037,8 @@ class RolloutEvaluator {
     }
     String percentageOptionAttributeValue;
     String? percentageOptionAttributeName = percentageOptionAttribute;
-    if (percentageOptionAttributeName == null || percentageOptionAttributeName.isEmpty) {
+    if (percentageOptionAttributeName == null ||
+        percentageOptionAttributeName.isEmpty) {
       percentageOptionAttributeName = "Identifier";
       percentageOptionAttributeValue = evaluationContext.user!.identifier;
     } else {
@@ -1519,11 +1524,11 @@ class _LogHelper {
     if (comparisonValue == null) {
       return _invalidValue;
     }
-    var decimalFormat = NumberFormat("0.####", "UK");
+    var decimalFormat = NumberFormat("0.######", "en");
     if (isDate) {
       var dateTimeInMilliseconds = comparisonValue * 1000;
       var dateTime = DateTime.fromMillisecondsSinceEpoch(
-          isUtc: true, dateTimeInMilliseconds as int);
+          isUtc: true, dateTimeInMilliseconds.toInt());
 
       return "'${decimalFormat.format(comparisonValue)}' (${dateTime.toIso8601String()} UTC)";
     }
