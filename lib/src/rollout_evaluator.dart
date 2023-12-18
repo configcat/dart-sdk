@@ -527,7 +527,7 @@ class RolloutEvaluator {
       return converted;
     } catch (e) {
       //If cannot convert to double, continue with the error
-      String reason = "'$userAttributeValue ' is not a valid decimal number";
+      String reason = "'$userAttributeValue' is not a valid decimal number";
       _logger.warning(3004,
           "Cannot evaluate condition (${_LogHelper.formatUserCondition(userCondition)}) for setting '$key' ($reason). Please check the User.$comparisonAttribute attribute and make sure that its value corresponds to the comparison operator.");
       throw RolloutEvaluatorException(
@@ -1076,7 +1076,7 @@ class RolloutEvaluator {
           evaluateLogger.logPercentageEvaluationReturnValue(
               scaled,
               indexedRule.$1,
-              indexedRule.$2.percentage,
+              indexedRule.$2.percentage.toInt(),
               indexedRule.$2.settingsValue);
           return EvaluationResult(
               variationId: indexedRule.$2.variationId,
@@ -1264,7 +1264,7 @@ class EvaluateLogger {
   }
 
   logPercentageEvaluationReturnValue(
-      int hashValue, int i, double percentage, SettingsValue settingsValue) {
+      int hashValue, int i, int percentage, SettingsValue settingsValue) {
     if (!_isLoggable) {
       return;
     }
@@ -1493,7 +1493,7 @@ class _LogHelper {
       if (comparisonValue.length > _maxListElement) {
         int count = comparisonValue.length - _maxListElement;
         String countPostFix = count == 1 ? "value" : "values";
-        listPostFix = ", ... <$count  more $countPostFix>";
+        listPostFix = ", ... <$count more $countPostFix>";
       }
       List<String> subList = comparisonValue.sublist(
           0, min(_maxListElement, comparisonValue.length));

@@ -40,4 +40,17 @@ class SettingsValue {
       stringValue.hashCode ^
       intValue.hashCode ^
       doubleValue.hashCode;
+
+  @override
+  String toString() {
+    if (booleanValue != null) {
+      return booleanValue.toString();
+    } else if (intValue != null) {
+      return intValue.toString();
+    } else if (doubleValue != null) {
+      return doubleValue.toString();
+    } else {
+      return stringValue ?? '';
+    }
+  }
 }

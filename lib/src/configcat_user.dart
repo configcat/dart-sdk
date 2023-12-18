@@ -29,6 +29,26 @@ class ConfigCatUser {
 
   @override
   String toString() {
-    return _attributes.toString();
+    Map<String, Object> tmp = Map<String, Object>.from(_attributes);
+    StringBuffer stringBuffer = StringBuffer("{");
+
+    stringBuffer.write("\"Identifier\":\"${tmp["Identifier"]}\"");
+    tmp.remove("Identifier");
+
+    if (tmp.containsKey("Email")) {
+      stringBuffer.write(",\"Email\":\"${tmp["Email"]}\"");
+      tmp.remove("Email");
+    }
+    if (tmp.containsKey("Country")) {
+      stringBuffer.write(",\"Country\":\"${tmp["Country"]}\"");
+      tmp.remove("Country");
+    }
+    var iterator = tmp.entries.iterator;
+    while (iterator.moveNext()) {
+      stringBuffer
+          .write(",\"${iterator.current.key}\":\"${iterator.current.value}\"");
+    }
+    stringBuffer.write("}");
+    return stringBuffer.toString();
   }
 }
