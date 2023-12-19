@@ -34,7 +34,7 @@ void main() {
     var logList = testLogger.getLogList();
     expect(2, equals(logList.length));
     expect(LogLevel.warning, equals(logList[0].logLevel));
-    expect(LogLevel.info, equals(logList[0].logLevel));
+    expect(LogLevel.info, equals(logList[1].logLevel));
   });
 
   test('evaluation log level warning', () async {

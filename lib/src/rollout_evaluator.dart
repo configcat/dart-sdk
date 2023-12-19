@@ -569,6 +569,9 @@ class RolloutEvaluator {
       if (userAttributeValue is List<String>) {
         return userAttributeValue;
       }
+      if (userAttributeValue is Set<dynamic>) {
+        return userAttributeValue.map((e) => e as String).toList();
+      }
       if (userAttributeValue is String) {
         var decoded = jsonDecode(userAttributeValue);
         return List<String>.from(decoded);

@@ -176,8 +176,8 @@ class ConfigCatClient {
       final err =
           'Error occurred in the `getValueDetails` method while evaluating setting \'$key\'. Returning the `defaultValue` parameter that you specified in your application: \'$defaultValue\'.';
       _errorReporter.error(1002, err, e, s);
-      final details =
-          EvaluationDetails.makeError(key, defaultValue, err, evalUser);
+      final details = EvaluationDetails.makeError(
+          key, defaultValue, e.toString(), evalUser);
       hooks.invokeFlagEvaluated(details);
       return details;
     }
