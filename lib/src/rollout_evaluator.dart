@@ -621,6 +621,9 @@ class RolloutEvaluator {
     if (userContainsValues.isEmpty) {
       return false;
     }
+    if(conditionContainsValues == null || conditionContainsValues.isEmpty){
+      return false;
+    }
     bool containsFlag = false;
     for (String userContainsValue in userContainsValues) {
       String userContainsValueConverted;
@@ -630,8 +633,7 @@ class RolloutEvaluator {
       } else {
         userContainsValueConverted = userContainsValue;
       }
-      //TODO ! fix
-      if (conditionContainsValues!.contains(userContainsValueConverted)) {
+      if (conditionContainsValues.contains(userContainsValueConverted)) {
         containsFlag = true;
         break;
       }
