@@ -1,5 +1,4 @@
 import 'package:configcat_client/configcat_client.dart';
-import 'package:parameterized_test/parameterized_test.dart';
 import 'package:test/expect.dart';
 import 'package:test/scaffolding.dart';
 
@@ -7,8 +6,7 @@ void main() {
   tearDown(() {
     ConfigCatClient.closeAll();
   });
-
-  parameterizedTest('User Attribute Convert Test', [
+  final userAttributeConvertTestData = {
     //SemVer data
     [
       "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/iV8vH2MBakKxkFZylxHmTg",
@@ -215,24 +213,10 @@ void main() {
       "numberWithPercentage",
       "NotANumber",
       "80%"
-    ],
-  ], p4((String key, String flagKey, Object customAttributeValue,
-      Object expectedValue) async {
-    final client = ConfigCatClient.get(sdkKey: key);
+    ]
+  };
 
-    Map<String, Object> customAttributes = <String, Object>{};
-    customAttributes["Custom1"] = customAttributeValue;
-
-    ConfigCatUser user =
-        ConfigCatUser(identifier: "12345", custom: customAttributes);
-
-    final result = await client.getValueDetails(
-        key: flagKey, defaultValue: "", user: user);
-
-    expect(result.value, expectedValue);
-  }));
-
-  parameterizedTest('User Attribute Convert Test - Date', [
+  final userAttributeDateConvertTestData = {
     //Date data
     [
       "configcat-sdk-1/JcPbCGl_1E-K9M-fJOyKyQ/OfQqcTjfFUGBwMKqtyEOrQ",
@@ -281,21 +265,53 @@ void main() {
       "boolTrueIn202304",
       "1680307200.001",
       true
-    ],
-  ], p4((String key, String flagKey, Object customAttributeValue,
-      Object expectedValue) async {
-    final client = ConfigCatClient.get(sdkKey: key);
+    ]
+  };
 
-    Map<String, Object> customAttributes = <String, Object>{};
-    customAttributes["Custom1"] = customAttributeValue;
+  for (List<dynamic> element in userAttributeConvertTestData) {
+    test("UserAttributeConvertTest", () async {
+      await _userAttributeConvertTest(
+          element[0], element[1], element[2], element[3]);
+    });
+  }
 
-    ConfigCatUser user =
-        ConfigCatUser(identifier: "12345", custom: customAttributes);
+  for (List<dynamic> element in userAttributeDateConvertTestData) {
+    test("UserAttributeDateConvertTest", () async {
+      await _userAttributeDateConvertTest(
+          element[0], element[1], element[2], element[3]);
+    });
+  }
+}
 
-    final result = await client.getValueDetails(
-        key: flagKey, defaultValue: false, user: user);
+Future<void> _userAttributeDateConvertTest(String key, String flagKey,
+    Object customAttributeValue, Object expectedValue) async {
+  final client = ConfigCatClient.get(sdkKey: key);
 
-    expect(result.value, expectedValue);
-    expect(result.isDefaultValue, false);
-  }));
+  Map<String, Object> customAttributes = <String, Object>{};
+  customAttributes["Custom1"] = customAttributeValue;
+
+  ConfigCatUser user =
+      ConfigCatUser(identifier: "12345", custom: customAttributes);
+
+  final result = await client.getValueDetails(
+      key: flagKey, defaultValue: false, user: user);
+
+  expect(result.value, expectedValue);
+  expect(result.isDefaultValue, false);
+}
+
+Future<void> _userAttributeConvertTest(String key, String flagKey,
+    Object customAttributeValue, Object expectedValue) async {
+  final client = ConfigCatClient.get(sdkKey: key);
+
+  Map<String, Object> customAttributes = <String, Object>{};
+  customAttributes["Custom1"] = customAttributeValue;
+
+  ConfigCatUser user =
+      ConfigCatUser(identifier: "12345", custom: customAttributes);
+
+  final result =
+      await client.getValueDetails(key: flagKey, defaultValue: "", user: user);
+
+  expect(result.value, expectedValue);
 }

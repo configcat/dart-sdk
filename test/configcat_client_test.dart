@@ -1,7 +1,5 @@
 import 'package:configcat_client/configcat_client.dart';
 import 'package:configcat_client/src/fetch/config_fetcher.dart';
-import 'package:configcat_client/src/json/config.dart';
-import 'package:configcat_client/src/json/preferences.dart';
 import 'package:configcat_client/src/pair.dart';
 import 'package:dio/dio.dart';
 import 'package:http_mock_adapter/http_mock_adapter.dart';
@@ -71,13 +69,13 @@ void main() {
       "configcat-proxy/sdk-key-90123456789012"
     };
 
-    wrongSDKKeys.forEach((sdkKey) {
+    for (String sdkKey in wrongSDKKeys) {
       expect(
           () => ConfigCatClient.get(sdkKey: sdkKey),
           throwsA(predicate((e) =>
               e is ArgumentError &&
               e.message == "SDK Key '$sdkKey' is invalid.")));
-    });
+    }
 
     expect(
         () => ConfigCatClient.get(

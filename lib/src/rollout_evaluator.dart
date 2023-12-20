@@ -1073,19 +1073,20 @@ class RolloutEvaluator {
     double bucket = 0;
 
     if (percentageOptions.isNotEmpty) {
-      for (final indexedRule in percentageOptions.indexed) {
-        bucket += indexedRule.$2.percentage;
+      for (int i = 0; i < percentageOptions.length; i++) {
+        var percentageOption = percentageOptions[i];
+        bucket += percentageOption.percentage;
         if (scaled < bucket) {
           evaluateLogger.logPercentageEvaluationReturnValue(
               scaled,
-              indexedRule.$1,
-              indexedRule.$2.percentage.toInt(),
-              indexedRule.$2.settingsValue);
+              i,
+              percentageOption.percentage.toInt(),
+              percentageOption.settingsValue);
           return EvaluationResult(
-              variationId: indexedRule.$2.variationId,
-              value: indexedRule.$2.settingsValue,
+              variationId: percentageOption.variationId,
+              value: percentageOption.settingsValue,
               matchedTargetingRule: parentTargetingRule,
-              matchedPercentageOption: indexedRule.$2);
+              matchedPercentageOption: percentageOption);
         }
       }
     }
@@ -1271,9 +1272,7 @@ class EvaluateLogger {
     if (!_isLoggable) {
       return;
     }
-    String percentageOptionValue = settingsValue != null
-        ? settingsValue.toString()
-        : _LogHelper._invalidName;
+    String percentageOptionValue = settingsValue.toString();
     newLine();
     append(
         "- Hash value $hashValue selects % option ${i + 1} ($percentage%), '$percentageOptionValue'.");
@@ -1343,9 +1342,7 @@ class EvaluateLogger {
       return;
     }
     newLine();
-    String prerequisiteFlagValueFormat = prerequisiteFlagValue != null
-        ? prerequisiteFlagValue.toString()
-        : _LogHelper._invalidName;
+    String prerequisiteFlagValueFormat = prerequisiteFlagValue.toString();
     append(
         "Prerequisite flag evaluation result: '$prerequisiteFlagValueFormat'.");
     newLine();

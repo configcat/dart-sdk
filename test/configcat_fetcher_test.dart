@@ -2,8 +2,6 @@ import 'package:configcat_client/configcat_client.dart';
 import 'package:configcat_client/src/error_reporter.dart';
 import 'package:configcat_client/src/fetch/config_fetcher.dart';
 import 'package:configcat_client/src/entry.dart';
-import 'package:configcat_client/src/json/config.dart';
-import 'package:configcat_client/src/json/preferences.dart';
 import 'package:dio/dio.dart';
 import 'package:http_mock_adapter/http_mock_adapter.dart';
 import 'package:sprintf/sprintf.dart';
@@ -37,9 +35,9 @@ void main() {
       final response = await fetcher.fetchConfiguration('');
 
       // Assert
-      expect(response.entry.config.preferences!.baseUrl,
+      expect(response.entry.config.preferences.baseUrl,
           equals(ConfigFetcher.globalBaseUrl));
-      expect(response.entry.config.preferences!.redirect, equals(0));
+      expect(response.entry.config.preferences.redirect, equals(0));
       expect(interceptor.requestCountForPath(path), 1);
 
       // Cleanup
@@ -64,9 +62,9 @@ void main() {
       final response = await fetcher.fetchConfiguration('');
 
       // Assert
-      expect(response.entry.config.preferences!.baseUrl,
+      expect(response.entry.config.preferences.baseUrl,
           equals(ConfigFetcher.globalBaseUrl));
-      expect(response.entry.config.preferences!.redirect, equals(1));
+      expect(response.entry.config.preferences.redirect, equals(1));
       expect(interceptor.requestCountForPath(path), 1);
 
       // Cleanup
@@ -91,9 +89,9 @@ void main() {
       final response = await fetcher.fetchConfiguration('');
 
       // Assert
-      expect(response.entry.config.preferences!.baseUrl,
+      expect(response.entry.config.preferences.baseUrl,
           equals(ConfigFetcher.globalBaseUrl));
-      expect(response.entry.config.preferences!.redirect, equals(2));
+      expect(response.entry.config.preferences.redirect, equals(2));
       expect(interceptor.requestCountForPath(path), 1);
 
       // Cleanup
@@ -125,9 +123,9 @@ void main() {
       final response = await fetcher.fetchConfiguration('');
 
       // Assert
-      expect(response.entry.config.preferences!.baseUrl,
+      expect(response.entry.config.preferences.baseUrl,
           equals(ConfigFetcher.euOnlyBaseUrl));
-      expect(response.entry.config.preferences!.redirect, equals(0));
+      expect(response.entry.config.preferences.redirect, equals(0));
       expect(interceptor.requestCountForPath(firstPath), 1);
       expect(interceptor.requestCountForPath(secondPath), 1);
 
@@ -160,9 +158,9 @@ void main() {
       final response = await fetcher.fetchConfiguration('');
 
       // Assert
-      expect(response.entry.config.preferences!.baseUrl,
+      expect(response.entry.config.preferences.baseUrl,
           equals(ConfigFetcher.euOnlyBaseUrl));
-      expect(response.entry.config.preferences!.redirect, equals(0));
+      expect(response.entry.config.preferences.redirect, equals(0));
       expect(interceptor.requestCountForPath(firstPath), 1);
       expect(interceptor.requestCountForPath(secondPath), 1);
 
@@ -195,9 +193,9 @@ void main() {
       final response = await fetcher.fetchConfiguration('');
 
       // Assert
-      expect(response.entry.config.preferences!.baseUrl,
+      expect(response.entry.config.preferences.baseUrl,
           equals(ConfigFetcher.euOnlyBaseUrl));
-      expect(response.entry.config.preferences!.redirect, equals(1));
+      expect(response.entry.config.preferences.redirect, equals(1));
       expect(interceptor.requestCountForPath(firstPath), 2);
       expect(interceptor.requestCountForPath(secondPath), 1);
 
@@ -231,8 +229,8 @@ void main() {
       final response = await fetcher.fetchConfiguration('');
 
       // Assert
-      expect(response.entry.config.preferences!.baseUrl, equals(customUrl));
-      expect(response.entry.config.preferences!.redirect, equals(0));
+      expect(response.entry.config.preferences.baseUrl, equals(customUrl));
+      expect(response.entry.config.preferences.redirect, equals(0));
       expect(interceptor.requestCountForPath(firstPath), null);
       expect(interceptor.requestCountForPath(secondPath), 1);
 
@@ -266,9 +264,9 @@ void main() {
       final response = await fetcher.fetchConfiguration('');
 
       // Assert
-      expect(response.entry.config.preferences!.baseUrl,
+      expect(response.entry.config.preferences.baseUrl,
           equals(ConfigFetcher.globalBaseUrl));
-      expect(response.entry.config.preferences!.redirect, equals(0));
+      expect(response.entry.config.preferences.redirect, equals(0));
       expect(interceptor.requestCountForPath(firstPath), 1);
       expect(interceptor.requestCountForPath(secondPath), 1);
 

@@ -3,6 +3,7 @@
 ## Preparation
 
 1. Run tests
+2. Increase the version in the `pubspec.yaml` file.
 3. Increase the version in the `lib/src/constant.dart` file.
 4. Add the description of the new version in `CHANGELOG.md`.
 5. Commit & Push

@@ -1,6 +1,4 @@
 import 'package:configcat_client/configcat_client.dart';
-
-import 'package:test/scaffolding.dart';
 import 'package:test/test.dart';
 
 import 'evaluation_test_logger.dart';
