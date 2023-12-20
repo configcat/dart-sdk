@@ -144,12 +144,8 @@ void main() {
       var message = logList[0].message;
       expect(message, startsWith("ERROR [1002]"));
 
-      if (prerequisiteFlagValue == null) {
-        expect(message, matches(RegExp("^.*Setting value is null.*")));
-      } else {
-        expect(message,
-            matches(RegExp("^.*Type mismatch between comparison value.*")));
-      }
+      expect(message,
+          matches(RegExp("^.*Type mismatch between comparison value.*")));
     }
   }));
 
