@@ -621,7 +621,7 @@ class RolloutEvaluator {
     if (userContainsValues.isEmpty) {
       return false;
     }
-    if(conditionContainsValues == null || conditionContainsValues.isEmpty){
+    if (conditionContainsValues == null || conditionContainsValues.isEmpty) {
       return false;
     }
     bool containsFlag = false;
