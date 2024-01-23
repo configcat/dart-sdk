@@ -997,6 +997,8 @@ class RolloutEvaluator {
     EvaluationResult evaluateResult = _evaluateSetting(
         prerequisiteFlagSetting, prerequisiteFlagContext, evaluateLogger);
 
+    visitedKeys.remove(evaluationContext.key);
+
     PrerequisiteComparator prerequisiteComparator =
         PrerequisiteComparator.values.firstWhere(
             (element) =>
