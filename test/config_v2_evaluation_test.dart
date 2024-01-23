@@ -32,24 +32,24 @@ void main() {
   final prerequisiteFlagTypeMismatchTestData = {
     ["stringDependsOnBool", "mainBoolFlag", true, "Dog"],
     ["stringDependsOnBool", "mainBoolFlag", false, "Cat"],
-    ["stringDependsOnBool", "mainBoolFlag", "1", ""],
-    ["stringDependsOnBool", "mainBoolFlag", 1, ""],
-    ["stringDependsOnBool", "mainBoolFlag", 1.0, ""],
+    ["stringDependsOnBool", "mainBoolFlag", "1", null],
+    ["stringDependsOnBool", "mainBoolFlag", 1, null],
+    ["stringDependsOnBool", "mainBoolFlag", 1.0, null],
     ["stringDependsOnString", "mainStringFlag", "private", "Dog"],
     ["stringDependsOnString", "mainStringFlag", "Private", "Cat"],
-    ["stringDependsOnString", "mainStringFlag", true, ""],
-    ["stringDependsOnString", "mainStringFlag", 1, ""],
-    ["stringDependsOnString", "mainStringFlag", 1.0, ""],
+    ["stringDependsOnString", "mainStringFlag", true, null],
+    ["stringDependsOnString", "mainStringFlag", 1, null],
+    ["stringDependsOnString", "mainStringFlag", 1.0, null],
     ["stringDependsOnInt", "mainIntFlag", 2, "Dog"],
     ["stringDependsOnInt", "mainIntFlag", 1, "Cat"],
-    ["stringDependsOnInt", "mainIntFlag", "2", ""],
-    ["stringDependsOnInt", "mainIntFlag", true, ""],
-    ["stringDependsOnInt", "mainIntFlag", 2.0, ""],
+    ["stringDependsOnInt", "mainIntFlag", "2", null],
+    ["stringDependsOnInt", "mainIntFlag", true, null],
+    ["stringDependsOnInt", "mainIntFlag", 2.0, null],
     ["stringDependsOnDouble", "mainDoubleFlag", 0.1, "Dog"],
     ["stringDependsOnDouble", "mainDoubleFlag", 0.11, "Cat"],
-    ["stringDependsOnDouble", "mainDoubleFlag", "0.1", ""],
-    ["stringDependsOnDouble", "mainDoubleFlag", true, ""],
-    ["stringDependsOnDouble", "mainDoubleFlag", 1, ""]
+    ["stringDependsOnDouble", "mainDoubleFlag", "0.1", null],
+    ["stringDependsOnDouble", "mainDoubleFlag", true, null],
+    ["stringDependsOnDouble", "mainDoubleFlag", 1, null]
   };
 
   final prerequisiteFlagOverrideTestData = {
@@ -197,7 +197,7 @@ Future<void> _prerequisiteFlagTypeMismatchTest(
     String key,
     String prerequisiteFlagKey,
     Object prerequisiteFlagValue,
-    String expectedValue) async {
+    String? expectedValue) async {
   final testLogger = EvaluationTestLogger();
 
   Map<String, Object> map = <String, Object>{
@@ -216,11 +216,11 @@ Future<void> _prerequisiteFlagTypeMismatchTest(
 
   await client.forceRefresh();
 
-  final result = await client.getValue(key: key, defaultValue: "");
+  final result = await client.getValue<dynamic>(key: key, defaultValue: null);
 
   expect(result, expectedValue);
 
-  if (expectedValue.isEmpty) {
+  if (expectedValue == null) {
     var logList = testLogger
         .getLogList()
         .where((element) => element.logLevel == LogLevel.error)

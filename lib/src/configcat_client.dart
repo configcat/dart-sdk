@@ -427,14 +427,10 @@ class ConfigCatClient {
   }
 
   T _parseSettingValue<T>(SettingsValue settingsValue, int settingType) {
-    bool isDynamic = false;
-    if (T == dynamic) {
-      isDynamic = true;
-    } else {
-      if (!(T == bool || T == String || T == int || T == double)) {
+    bool isDynamic = T == dynamic;
+    if (!isDynamic && !(T == bool || T == String || T == int || T == double)) {
         throw ArgumentError(
             "Only String, Integer, Double or Boolean types are supported.");
-      }
     }
 
     if ((T == bool || isDynamic) &&
