@@ -53,7 +53,11 @@ class ConfigCatUser {
     }
 
     if (custom != null) {
-      _attributes.addAll(custom);
+      for(MapEntry<String, Object> entry in custom.entries){
+        if(entry.key != "Identifier" && entry.key != "Email" && entry.key != "Country") {
+          _attributes[entry.key] = entry.value;
+        }
+      }
     }
   }
 
@@ -63,24 +67,23 @@ class ConfigCatUser {
 
   @override
   String toString() {
-    Map<String, Object> tmp = Map<String, Object>.from(_attributes);
     StringBuffer stringBuffer = StringBuffer("{");
 
-    stringBuffer.write("\"Identifier\":\"${tmp["Identifier"]}\"");
-    tmp.remove("Identifier");
+    stringBuffer.write("\"Identifier\":\"${_attributes["Identifier"]}\"");
 
-    if (tmp.containsKey("Email")) {
-      stringBuffer.write(",\"Email\":\"${tmp["Email"]}\"");
-      tmp.remove("Email");
+    if (_attributes.containsKey("Email")) {
+      stringBuffer.write(",\"Email\":\"${_attributes["Email"]}\"");
     }
-    if (tmp.containsKey("Country")) {
-      stringBuffer.write(",\"Country\":\"${tmp["Country"]}\"");
-      tmp.remove("Country");
+    if (_attributes.containsKey("Country")) {
+      stringBuffer.write(",\"Country\":\"${_attributes["Country"]}\"");
     }
-    var iterator = tmp.entries.iterator;
+    var iterator = _attributes.entries.iterator;
     while (iterator.moveNext()) {
-      stringBuffer
-          .write(",\"${iterator.current.key}\":\"${iterator.current.value}\"");
+      if(iterator.current.key != "Identifier" && iterator.current.key != "Email" && iterator.current.key != "Country") {
+        stringBuffer
+            .write(
+            ",\"${iterator.current.key}\":\"${iterator.current.value}\"");
+      }
     }
     stringBuffer.write("}");
     return stringBuffer.toString();
