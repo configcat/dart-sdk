@@ -236,7 +236,7 @@ class RolloutEvaluator {
       List<Segment> segments,
       EvaluateLogger evaluateLogger) {
     bool firstConditionFlag = true;
-    bool conditionsEvaluationResult = false;
+    bool conditionsEvaluationResult = true;
     String? error;
     bool newLine = false;
     for (ConditionAccessor condition in conditions) {

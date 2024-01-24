@@ -292,6 +292,17 @@ class ConfigCatClient {
                 _parseSettingValue<T>(targetingRule.servedValue!.settingsValue,
                     entry.value.type));
           }
+          var targetRulePercentageOptions = targetingRule.percentageOptions;
+          if(targetRulePercentageOptions != null) {
+            for (final percentageOption in targetRulePercentageOptions) {
+              if (percentageOption.variationId == variationId) {
+                return MapEntry(
+                    entry.key,
+                    _parseSettingValue<T>(
+                        percentageOption.settingsValue, entry.value.type));
+              }
+            }
+          }
         }
 
         for (final percentageOption in entry.value.percentageOptions) {
