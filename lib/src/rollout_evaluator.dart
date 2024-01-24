@@ -514,17 +514,12 @@ class RolloutEvaluator {
 
   double _getUserAttributeAsDouble(String key, UserCondition userCondition,
       String comparisonAttribute, Object userAttributeValue) {
-    double converted;
     try {
       if (userAttributeValue is double) {
-        converted = userAttributeValue;
+        return userAttributeValue;
       } else {
-        converted = _userAttributeToDouble(userAttributeValue);
+        return _userAttributeToDouble(userAttributeValue);
       }
-      if (converted.isNaN) {
-        throw FormatException();
-      }
-      return converted;
     } catch (e) {
       //If cannot convert to double, continue with the error
       String reason = "'$userAttributeValue' is not a valid decimal number";
@@ -544,12 +539,7 @@ class RolloutEvaluator {
       if (userAttributeValue is DateTime) {
         return userAttributeValue.millisecondsSinceEpoch / 1000;
       }
-
-      double attributeToDouble = _userAttributeToDouble(userAttributeValue);
-      if (attributeToDouble.isNaN) {
-        throw FormatException();
-      }
-      return attributeToDouble;
+      return _userAttributeToDouble(userAttributeValue);
     } catch (e) {
       String reason =
           "'$userAttributeValue' is not a valid Unix timestamp (number of seconds elapsed since Unix epoch)";
@@ -603,9 +593,13 @@ class RolloutEvaluator {
     if (userAttribute is String) {
       return double.parse(userAttribute.trim().replaceAll(",", "."));
     }
+    if (userAttribute is num) {
+      return userAttribute.toDouble();
+    }
     if (userAttribute is int) {
       return userAttribute.toDouble();
     }
+
     throw FormatException();
   }
 

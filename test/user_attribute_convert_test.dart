@@ -194,7 +194,7 @@ void main() {
       "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/FCWN-k1dV0iBf8QZrDgjdw",
       "numberWithPercentage",
       double.nan,
-      "80%"
+      "<>4.2"
     ],
     [
       "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/FCWN-k1dV0iBf8QZrDgjdw",
@@ -211,9 +211,39 @@ void main() {
     [
       "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/FCWN-k1dV0iBf8QZrDgjdw",
       "numberWithPercentage",
+      double.maxFinite.toInt(),
+      ">5"
+    ],
+    [
+      "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/FCWN-k1dV0iBf8QZrDgjdw",
+      "numberWithPercentage",
+      -double.maxFinite.toInt(),
+      "<2.1"
+    ],
+    [
+      "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/FCWN-k1dV0iBf8QZrDgjdw",
+      "numberWithPercentage",
       "NotANumber",
       "80%"
-    ]
+    ],
+    [
+      "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/FCWN-k1dV0iBf8QZrDgjdw",
+      "numberWithPercentage",
+      "Infinity",
+      ">5"
+    ],
+    [
+      "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/FCWN-k1dV0iBf8QZrDgjdw",
+      "numberWithPercentage",
+      "NaN",
+      "<>4.2"
+    ],
+    [
+      "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/FCWN-k1dV0iBf8QZrDgjdw",
+      "numberWithPercentage",
+      "NaNa",
+      "80%"
+    ],
   };
 
   final userAttributeDateConvertTestData = {
