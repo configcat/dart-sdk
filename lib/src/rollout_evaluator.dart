@@ -711,22 +711,18 @@ class RolloutEvaluator {
         if (comparisonHashValue.isEmpty) {
           throw ArgumentError(comparisonValueIsMissingOrInvalid);
         }
-        String userValueSubString;
+        List<int> userValueSubStringByteArray;
         if (UserComparator.hashedStartsWith == comparator ||
             UserComparator.hashedNotStartsWith == comparator) {
-          userValueSubString = utf8.decode(
-              userAttributeValueUTF8.sublist(0, comparedTextLengthInt),
-              allowMalformed: true);
+          userValueSubStringByteArray = userAttributeValueUTF8.sublist(0, comparedTextLengthInt);
         } else {
           //HASHED_ENDS_WITH & HASHED_NOT_ENDS_WITH
-          userValueSubString = utf8.decode(
-              userAttributeValueUTF8.sublist(
+          userValueSubStringByteArray = userAttributeValueUTF8.sublist(
                   userAttributeValueUTF8.length - comparedTextLengthInt,
-                  userAttributeValueUTF8.length),
-              allowMalformed: true);
+                  userAttributeValueUTF8.length);
         }
         String hashUserValueSub =
-            _getSaltedUserValue(userValueSubString, configSalt, contextSalt);
+            _getSaltedUserValueSlice(userValueSubStringByteArray, configSalt, contextSalt);
         if (hashUserValueSub == comparisonHashValue) {
           foundEqual = true;
           break;
@@ -805,6 +801,18 @@ class RolloutEvaluator {
       String userValue, String configSalt, String contextSalt) {
     return sha256
         .convert(utf8.encode(userValue + configSalt + contextSalt))
+        .toString();
+  }
+
+  String _getSaltedUserValueSlice(
+      List<int> userValueSliceUTF8, String configSalt, String contextSalt) {
+    List<int> configSaltByteArray = utf8.encode(configSalt);
+    List<int> contextSaltByteArray = utf8.encode(contextSalt);
+
+    List<int> concatByteArrays = userValueSliceUTF8 + configSaltByteArray + contextSaltByteArray;
+
+    return sha256
+        .convert(concatByteArrays)
         .toString();
   }
 
