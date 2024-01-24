@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 /// An object containing attributes to properly identify a given user for variation evaluation.
 /// Its only mandatory attribute is the [identifier].
 ///
@@ -67,25 +69,6 @@ class ConfigCatUser {
 
   @override
   String toString() {
-    StringBuffer stringBuffer = StringBuffer("{");
-
-    stringBuffer.write("\"Identifier\":\"${_attributes["Identifier"]}\"");
-
-    if (_attributes.containsKey("Email")) {
-      stringBuffer.write(",\"Email\":\"${_attributes["Email"]}\"");
-    }
-    if (_attributes.containsKey("Country")) {
-      stringBuffer.write(",\"Country\":\"${_attributes["Country"]}\"");
-    }
-    var iterator = _attributes.entries.iterator;
-    while (iterator.moveNext()) {
-      if(iterator.current.key != "Identifier" && iterator.current.key != "Email" && iterator.current.key != "Country") {
-        stringBuffer
-            .write(
-            ",\"${iterator.current.key}\":\"${iterator.current.value}\"");
-      }
-    }
-    stringBuffer.write("}");
-    return stringBuffer.toString();
+    return jsonEncode(_attributes);
   }
 }

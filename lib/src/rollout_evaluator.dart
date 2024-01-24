@@ -580,6 +580,9 @@ class RolloutEvaluator {
     if (userAttribute is String) {
       return userAttribute;
     }
+    if (userAttribute is List) {
+      return jsonEncode(userAttribute);
+    }
     if (userAttribute is DateTime) {
       return (userAttribute.millisecondsSinceEpoch / 1000).toString();
     }
