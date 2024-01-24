@@ -1088,7 +1088,7 @@ class RolloutEvaluator {
         }
       }
     }
-    return null;
+    throw ArgumentError("Sum of percentage option percentages are less than 100.");
   }
 
   Version _parseVersion(String text) {
