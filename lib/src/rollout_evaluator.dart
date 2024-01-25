@@ -556,15 +556,19 @@ class RolloutEvaluator {
       String comparisonAttribute,
       Object userAttributeValue) {
     try {
+      List<String>? result;
       if (userAttributeValue is List<String>) {
-        return userAttributeValue;
+        result = userAttributeValue;
       }
       if (userAttributeValue is Set<dynamic>) {
-        return userAttributeValue.map((e) => e as String).toList();
+        result = userAttributeValue.map((e) => e as String).toList();
       }
       if (userAttributeValue is String) {
         var decoded = jsonDecode(userAttributeValue);
-        return List<String>.from(decoded);
+        result = List<String>.from(decoded);
+      }
+      if(result != null && !result.contains(null)){
+        return result;
       }
     } catch (e) {
       // String array parse failed continue with the RolloutEvaluatorException
@@ -614,71 +618,45 @@ class RolloutEvaluator {
       String configSalt,
       String contextSalt,
       bool negateArrayContains) {
-    List<String>? conditionContainsValues = userCondition.stringArrayValue;
+    List<String> comparisonValues = _ensureComparisonValue(userCondition.stringArrayValue);
     if (userContainsValues.isEmpty) {
       return false;
     }
-    if (conditionContainsValues == null || conditionContainsValues.isEmpty) {
-      return false;
-    }
-    bool containsFlag = false;
+
     for (String userContainsValue in userContainsValues) {
-      String userContainsValueConverted;
-      if (hashedArrayContains) {
-        userContainsValueConverted = _getSaltedUserValue(
-            userContainsValue.trim(), configSalt, contextSalt);
-      } else {
-        userContainsValueConverted = userContainsValue;
-      }
-      if (conditionContainsValues.contains(userContainsValueConverted)) {
-        containsFlag = true;
-        break;
+      String userContainsValueConverted = hashedArrayContains ? _getSaltedUserValue(userContainsValue, configSalt, contextSalt) : userContainsValue;
+
+      for (String inValuesElement in comparisonValues) {
+        if (_ensureComparisonValue(inValuesElement) == userContainsValueConverted) {
+          return !negateArrayContains;
+        }
       }
     }
-    if (negateArrayContains) {
-      containsFlag = !containsFlag;
-    }
-    return containsFlag;
+    return negateArrayContains;
   }
 
   bool _evaluateTextEndsWith(UserCondition userCondition,
       String userAttributeValue, bool negateTextEndsWith) {
-    List<String> withTextValues =
-        userCondition.stringArrayValue ?? List.empty();
-    final filteredContainsValues = withTextValues
-        .map((value) => value.trim())
-        .where((value) => value.isNotEmpty);
-    bool textEndsWith = false;
-    for (String textValue in filteredContainsValues) {
-      if (userAttributeValue.endsWith(textValue)) {
-        textEndsWith = true;
-        break;
+    List<String> comparisonValues = _ensureComparisonValue(userCondition.stringArrayValue);
+
+    for (String textValue in comparisonValues) {
+      if (userAttributeValue.endsWith(_ensureComparisonValue(textValue))) {
+        return !negateTextEndsWith;
       }
     }
-    if (negateTextEndsWith) {
-      return !textEndsWith;
-    }
-    return textEndsWith;
+    return negateTextEndsWith;
   }
 
   bool _evaluateTextStartWith(UserCondition userCondition,
       String userAttributeValue, bool negateTextStartWith) {
-    List<String> withTextValues =
-        userCondition.stringArrayValue ?? List.empty();
-    final filteredContainsValues = withTextValues
-        .map((value) => value.trim())
-        .where((value) => value.isNotEmpty);
-    bool textStartWith = false;
-    for (String textValue in filteredContainsValues) {
-      if (userAttributeValue.startsWith(textValue)) {
-        textStartWith = true;
-        break;
+    List<String> comparisonValues = _ensureComparisonValue(userCondition.stringArrayValue);
+
+    for (String textValue in comparisonValues) {
+      if (userAttributeValue.startsWith(_ensureComparisonValue(textValue))) {
+        return !negateTextStartWith;
       }
     }
-    if (negateTextStartWith) {
-      return !textStartWith;
-    }
-    return textStartWith;
+    return negateTextStartWith;
   }
 
   bool _evaluateHashedStartOrEndWith(
@@ -687,48 +665,46 @@ class RolloutEvaluator {
       UserComparator comparator,
       String configSalt,
       String contextSalt) {
+    List<String> comparisonValues =_ensureComparisonValue(userCondition.stringArrayValue);
     List<int> userAttributeValueUTF8 = utf8.encode(userAttributeValue);
-    List<String> withValues = userCondition.stringArrayValue ?? List.empty();
-    final filteredContainsValues = withValues
-        .map((value) => value.trim())
-        .where((value) => value.isNotEmpty);
+
 
     bool foundEqual = false;
-    for (String comparisonValueHashedStartsEnds in filteredContainsValues) {
-      int indexOf = comparisonValueHashedStartsEnds.indexOf("_");
+    for (String comparisonValueHashedStartsEnds in comparisonValues) {
+      int indexOf = _ensureComparisonValue(comparisonValueHashedStartsEnds).indexOf("_");
       if (indexOf <= 0) {
         throw ArgumentError(comparisonValueIsMissingOrInvalid);
       }
       String comparedTextLength =
           comparisonValueHashedStartsEnds.substring(0, indexOf);
+      int comparedTextLengthInt;
       try {
-        int comparedTextLengthInt = int.parse(comparedTextLength);
-        if (userAttributeValueUTF8.length < comparedTextLengthInt) {
-          continue;
-        }
-        String comparisonHashValue =
-            comparisonValueHashedStartsEnds.substring(indexOf + 1);
-        if (comparisonHashValue.isEmpty) {
-          throw ArgumentError(comparisonValueIsMissingOrInvalid);
-        }
-        List<int> userValueSubStringByteArray;
-        if (UserComparator.hashedStartsWith == comparator ||
-            UserComparator.hashedNotStartsWith == comparator) {
-          userValueSubStringByteArray = userAttributeValueUTF8.sublist(0, comparedTextLengthInt);
-        } else {
-          //HASHED_ENDS_WITH & HASHED_NOT_ENDS_WITH
-          userValueSubStringByteArray = userAttributeValueUTF8.sublist(
-                  userAttributeValueUTF8.length - comparedTextLengthInt,
-                  userAttributeValueUTF8.length);
-        }
-        String hashUserValueSub =
-            _getSaltedUserValueSlice(userValueSubStringByteArray, configSalt, contextSalt);
-        if (hashUserValueSub == comparisonHashValue) {
-          foundEqual = true;
-          break;
-        }
+        comparedTextLengthInt = int.parse(comparedTextLength);
       } catch (e) {
         throw ArgumentError(comparisonValueIsMissingOrInvalid);
+      }
+      if (userAttributeValueUTF8.length < comparedTextLengthInt) {
+        continue;
+      }
+      String comparisonHashValue =
+        comparisonValueHashedStartsEnds.substring(indexOf + 1);
+      if (comparisonHashValue.isEmpty) {
+        throw ArgumentError(comparisonValueIsMissingOrInvalid);
+      }
+      List<int> userValueSubStringByteArray;
+      if (UserComparator.hashedStartsWith == comparator ||
+          UserComparator.hashedNotStartsWith == comparator) {
+        userValueSubStringByteArray = userAttributeValueUTF8.sublist(0, comparedTextLengthInt);
+      } else {
+        //HASHED_ENDS_WITH & HASHED_NOT_ENDS_WITH
+        userValueSubStringByteArray = userAttributeValueUTF8.sublist(
+            userAttributeValueUTF8.length - comparedTextLengthInt,
+            userAttributeValueUTF8.length);
+      }
+      String hashUserValueSub = _getSaltedUserValueSlice(userValueSubStringByteArray, configSalt, contextSalt);
+      if (hashUserValueSub == comparisonHashValue) {
+          foundEqual = true;
+          break;
       }
     }
     if (UserComparator.hashedNotStartsWith == comparator ||
@@ -745,26 +721,15 @@ class RolloutEvaluator {
       String contextSalt,
       UserCondition userCondition,
       bool negateEquals) {
-    String valueEquals;
-    if (hashedEquals) {
-      valueEquals =
-          _getSaltedUserValue(userAttributeValue, configSalt, contextSalt);
-    } else {
-      valueEquals = userAttributeValue;
-    }
-    bool equalsResult = valueEquals == userCondition.stringValue;
-    if (negateEquals) {
-      equalsResult = !equalsResult;
-    }
-    return equalsResult;
+    String comparisonValue = _ensureComparisonValue(userCondition.stringValue);
+
+    String valueEquals = hashedEquals ? _getSaltedUserValue(userAttributeValue, configSalt, contextSalt) : userAttributeValue;
+    return negateEquals != (valueEquals == comparisonValue);
   }
 
   bool _evaluateDate(double userDoubleValue, UserCondition userCondition,
       UserComparator comparator, String comparisonAttribute) {
-    double? comparisonDoubleValue = userCondition.doubleValue;
-    if (comparisonDoubleValue == null) {
-      return false;
-    }
+    double comparisonDoubleValue = _ensureComparisonValue(userCondition.doubleValue);
     return (UserComparator.dateBefore == comparator &&
             userDoubleValue < comparisonDoubleValue) ||
         UserComparator.dateAfter == comparator &&
@@ -778,23 +743,16 @@ class RolloutEvaluator {
       String configSalt,
       String contextSalt,
       bool negateIsOneOf) {
-    List<String> containsValues =
-        userCondition.stringArrayValue ?? List.empty();
-    final filteredContainsValues = containsValues
-        .map((value) => value.trim())
-        .where((value) => value.isNotEmpty);
-    String userIsOneOfValue;
-    if (sensitiveIsOneOf) {
-      userIsOneOfValue =
-          _getSaltedUserValue(userAttributeValue, configSalt, contextSalt);
-    } else {
-      userIsOneOfValue = userAttributeValue;
+    List<String> comparisonValues = _ensureComparisonValue(userCondition.stringArrayValue);
+
+    String userIsOneOfValue = sensitiveIsOneOf ? _getSaltedUserValue(userAttributeValue, configSalt, contextSalt) : userAttributeValue;
+
+    for (String inValuesElement in comparisonValues) {
+      if (_ensureComparisonValue(inValuesElement) == userIsOneOfValue) {
+        return !negateIsOneOf;
+      }
     }
-    bool isOneOf = filteredContainsValues.contains(userIsOneOfValue);
-    if (negateIsOneOf) {
-      isOneOf = !isOneOf;
-    }
-    return isOneOf;
+    return negateIsOneOf;
   }
 
   String _getSaltedUserValue(
@@ -818,10 +776,7 @@ class RolloutEvaluator {
 
   bool _evaluateNumbers(double uvDouble, UserCondition userCondition,
       UserComparator comparator, String comparisonAttribute) {
-    final cvDouble = userCondition.doubleValue;
-    if (cvDouble == null) {
-      return false;
-    }
+    final cvDouble = _ensureComparisonValue(userCondition.doubleValue);
     return ((comparator == UserComparator.numberEquals &&
             uvDouble == cvDouble) ||
         (comparator == UserComparator.numberNotEquals &&
@@ -836,8 +791,8 @@ class RolloutEvaluator {
 
   bool _evaluateSemver(Version userValueVersion, UserCondition userCondition,
       UserComparator comparator, String comparisonAttribute) {
+    final comparisonValue = _ensureComparisonValue(userCondition.stringValue);
     try {
-      final comparisonValue = userCondition.stringValue ?? "";
       final comparisonVersion = _parseVersion(comparisonValue.trim());
 
       return ((comparator == UserComparator.semverLess &&
@@ -855,21 +810,17 @@ class RolloutEvaluator {
 
   bool _evaluateSemverIsOneOf(UserCondition userCondition, Version userVersion,
       bool negateSemverIsOneOf, String comparisonAttribute) {
-    List<String> containsValues =
-        userCondition.stringArrayValue ?? List.empty();
-    final filteredContainsValues = containsValues
-        .map((value) => value.trim())
-        .where((value) => value.isNotEmpty);
+    List<String> comparisonValues = _ensureComparisonValue(userCondition.stringArrayValue);
+
     try {
       var matched = false;
-      for (final value in filteredContainsValues) {
-        matched = _parseVersion(value) == userVersion || matched;
+      for (final value in comparisonValues) {
+        if(_ensureComparisonValue(value).isEmpty){
+          continue;
+        }
+        matched = _parseVersion(value.trim()) == userVersion || matched;
       }
-
-      if (negateSemverIsOneOf) {
-        matched = !matched;
-      }
-      return matched;
+      return negateSemverIsOneOf != matched;
     } catch (e) {
       return false;
     }
@@ -877,18 +828,15 @@ class RolloutEvaluator {
 
   bool _evaluateContainsAnyOf(bool negateContainsAnyOf,
       UserCondition userCondition, String userAttributeValue) {
-    bool containsResult = !negateContainsAnyOf;
-    List<String> containsValues =
-        userCondition.stringArrayValue ?? List.empty();
-    final filteredContainsValues = containsValues
-        .map((value) => value.trim())
-        .where((value) => value.isNotEmpty);
-    for (String containsValue in filteredContainsValues) {
-      if (userAttributeValue.contains(containsValue)) {
-        return containsResult;
+
+    List<String> comparisonValues = _ensureComparisonValue<List<String>>(userCondition.stringArrayValue);
+
+    for (String containsValue in comparisonValues) {
+      if (userAttributeValue.contains(_ensureComparisonValue(containsValue))) {
+        return !negateContainsAnyOf;
       }
     }
-    return !containsResult;
+    return negateContainsAnyOf;
   }
 
   bool _evaluateSegmentCondition(
@@ -1107,6 +1055,13 @@ class RolloutEvaluator {
     final buildCharPos = text.indexOf('+');
     return Version.parse(
         buildCharPos != -1 ? text.substring(0, buildCharPos) : text);
+  }
+
+   T _ensureComparisonValue<T>(T? value) {
+    if (value == null) {
+      throw ArgumentError("Comparison value is missing or invalid.");
+    }
+    return value;
   }
 }
 
