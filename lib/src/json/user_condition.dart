@@ -8,7 +8,6 @@ part 'user_condition.g.dart';
 /// Describes a condition that is based on a User Object attribute.
 @JsonSerializable()
 class UserCondition implements ConditionAccessor {
-
   /// The User Object attribute that the condition is based on. Can be "Identifier", "Email", "Country" or any custom attribute.
   @JsonKey(name: 'a')
   final String comparisonAttribute;

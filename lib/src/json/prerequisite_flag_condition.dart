@@ -7,7 +7,6 @@ part 'prerequisite_flag_condition.g.dart';
 /// Describes a condition that is based on a prerequisite flag.
 @JsonSerializable()
 class PrerequisiteFlagCondition {
-
   /// The key of the prerequisite flag that the condition is based on.
   @JsonKey(name: 'f')
   final String prerequisiteFlagKey;

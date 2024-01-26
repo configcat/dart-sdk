@@ -11,7 +11,6 @@ import 'helpers.dart';
 DioAdapter? dioAdapter;
 
 Future<void> main() async {
-
   tearDown(() {
     ConfigCatClient.closeAll();
     dioAdapter?.close();
@@ -91,18 +90,21 @@ Future<void> main() async {
     ["notcontainsanyof", "no trim"]
   };
 
-
-  ConfigCatUser trimComparatorValueUser = _createTestUser("12345", "[\"USA\"]", "1.0.0", "3", "1705253400");
-  Config trimComparatorValueConfig = await _loadConfigFromJson("trim_comparator_values.json");
+  ConfigCatUser trimComparatorValueUser =
+      _createTestUser("12345", "[\"USA\"]", "1.0.0", "3", "1705253400");
+  Config trimComparatorValueConfig =
+      await _loadConfigFromJson("trim_comparator_values.json");
   for (List<dynamic> element in testComparatorValueTrimsData) {
     test("TestComparatorValueTrims", () async {
-      await _trimValueTest(
-          element[0], element[1], trimComparatorValueUser, trimComparatorValueConfig);
+      await _trimValueTest(element[0], element[1], trimComparatorValueUser,
+          trimComparatorValueConfig);
     });
   }
 
-  ConfigCatUser trimUserValueUser = _createTestUser(" 12345 ", "[\" USA \"]", " 1.0.0 ", " 3 ", " 1705253400 ");
-  Config trimUserValueConfig = await _loadConfigFromJson("trim_user_values.json");
+  ConfigCatUser trimUserValueUser = _createTestUser(
+      " 12345 ", "[\" USA \"]", " 1.0.0 ", " 3 ", " 1705253400 ");
+  Config trimUserValueConfig =
+      await _loadConfigFromJson("trim_user_values.json");
 
   for (List<dynamic> element in testUserValueTrimsData) {
     test("TestUserValueTrims", () async {
@@ -113,29 +115,27 @@ Future<void> main() async {
 }
 
 Future<Config> _loadConfigFromJson(String fileName) async {
-  var jsonOverrideFile =
-  await File("test/fixtures/$fileName").readAsString();
+  var jsonOverrideFile = await File("test/fixtures/$fileName").readAsString();
   final decoded = jsonDecode(jsonOverrideFile);
   return Config.fromJson(decoded);
 }
 
-ConfigCatUser _createTestUser(String identifier, String country, String version, String number, String date){
+ConfigCatUser _createTestUser(String identifier, String country, String version,
+    String number, String date) {
   Map<String, Object> customAttributes = <String, Object>{};
   customAttributes["Version"] = version;
   customAttributes["Number"] = number;
   customAttributes["Date"] = date;
-  return ConfigCatUser(identifier: identifier, country: country, custom: customAttributes);
+  return ConfigCatUser(
+      identifier: identifier, country: country, custom: customAttributes);
 }
 
-Future<void> _trimValueTest(String key, String expectedValue,
-    ConfigCatUser user, Config config) async {
+Future<void> _trimValueTest(
+    String key, String expectedValue, ConfigCatUser user, Config config) async {
   String sdkKey = "configcat-sdk-test-key/0000000000000000000000";
   final client = ConfigCatClient.get(
       sdkKey: sdkKey,
-      options: ConfigCatOptions(
-        pollingMode: PollingMode.manualPoll()
-      )
-  );
+      options: ConfigCatOptions(pollingMode: PollingMode.manualPoll()));
 
   var interceptor = RequestCounterInterceptor();
   client.httpClient.interceptors.add(interceptor);
@@ -146,8 +146,8 @@ Future<void> _trimValueTest(String key, String expectedValue,
 
   await client.forceRefresh();
 
-  var value = await client.getValue(
-      key: key, defaultValue: "default", user: user);
+  var value =
+      await client.getValue(key: key, defaultValue: "default", user: user);
 
   // Assert
   expect(value, equals(expectedValue));

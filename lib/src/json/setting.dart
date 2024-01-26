@@ -36,7 +36,6 @@ extension SettingConvert on Object {
 /// Feature flag or setting.
 @JsonSerializable()
 class Setting {
-
   /// Setting value.
   /// Can be a value of the following types: {@link Boolean}, {@link String}, {@link Integer} or {@link Double}.
   @JsonKey(name: 'v')

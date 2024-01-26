@@ -9,7 +9,6 @@ part 'targeting_rule.g.dart';
 /// Describes a targeting rule.
 @JsonSerializable()
 class TargetingRule {
-
   /// The list of conditions that are combined with the AND logical operator.
   /// Items can be one of the following types: {@link UserCondition}, {@link SegmentCondition} or {@link PrerequisiteFlagCondition}.
   @JsonKey(name: 'c')

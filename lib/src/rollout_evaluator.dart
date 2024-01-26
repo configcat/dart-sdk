@@ -567,7 +567,7 @@ class RolloutEvaluator {
         var decoded = jsonDecode(userAttributeValue);
         result = List<String>.from(decoded);
       }
-      if(result != null && !result.contains(null)){
+      if (result != null && !result.contains(null)) {
         return result;
       }
     } catch (e) {
@@ -618,16 +618,20 @@ class RolloutEvaluator {
       String configSalt,
       String contextSalt,
       bool negateArrayContains) {
-    List<String> comparisonValues = _ensureComparisonValue(userCondition.stringArrayValue);
+    List<String> comparisonValues =
+        _ensureComparisonValue(userCondition.stringArrayValue);
     if (userContainsValues.isEmpty) {
       return false;
     }
 
     for (String userContainsValue in userContainsValues) {
-      String userContainsValueConverted = hashedArrayContains ? _getSaltedUserValue(userContainsValue, configSalt, contextSalt) : userContainsValue;
+      String userContainsValueConverted = hashedArrayContains
+          ? _getSaltedUserValue(userContainsValue, configSalt, contextSalt)
+          : userContainsValue;
 
       for (String inValuesElement in comparisonValues) {
-        if (_ensureComparisonValue(inValuesElement) == userContainsValueConverted) {
+        if (_ensureComparisonValue(inValuesElement) ==
+            userContainsValueConverted) {
           return !negateArrayContains;
         }
       }
@@ -637,7 +641,8 @@ class RolloutEvaluator {
 
   bool _evaluateTextEndsWith(UserCondition userCondition,
       String userAttributeValue, bool negateTextEndsWith) {
-    List<String> comparisonValues = _ensureComparisonValue(userCondition.stringArrayValue);
+    List<String> comparisonValues =
+        _ensureComparisonValue(userCondition.stringArrayValue);
 
     for (String textValue in comparisonValues) {
       if (userAttributeValue.endsWith(_ensureComparisonValue(textValue))) {
@@ -649,7 +654,8 @@ class RolloutEvaluator {
 
   bool _evaluateTextStartWith(UserCondition userCondition,
       String userAttributeValue, bool negateTextStartWith) {
-    List<String> comparisonValues = _ensureComparisonValue(userCondition.stringArrayValue);
+    List<String> comparisonValues =
+        _ensureComparisonValue(userCondition.stringArrayValue);
 
     for (String textValue in comparisonValues) {
       if (userAttributeValue.startsWith(_ensureComparisonValue(textValue))) {
@@ -665,12 +671,14 @@ class RolloutEvaluator {
       UserComparator comparator,
       String configSalt,
       String contextSalt) {
-    List<String> comparisonValues =_ensureComparisonValue(userCondition.stringArrayValue);
+    List<String> comparisonValues =
+        _ensureComparisonValue(userCondition.stringArrayValue);
     List<int> userAttributeValueUTF8 = utf8.encode(userAttributeValue);
 
     bool foundEqual = false;
     for (String comparisonValueHashedStartsEnds in comparisonValues) {
-      int indexOf = _ensureComparisonValue(comparisonValueHashedStartsEnds).indexOf("_");
+      int indexOf =
+          _ensureComparisonValue(comparisonValueHashedStartsEnds).indexOf("_");
       if (indexOf <= 0) {
         throw ArgumentError(comparisonValueIsMissingOrInvalid);
       }
@@ -686,24 +694,26 @@ class RolloutEvaluator {
         continue;
       }
       String comparisonHashValue =
-        comparisonValueHashedStartsEnds.substring(indexOf + 1);
+          comparisonValueHashedStartsEnds.substring(indexOf + 1);
       if (comparisonHashValue.isEmpty) {
         throw ArgumentError(comparisonValueIsMissingOrInvalid);
       }
       List<int> userValueSubStringByteArray;
       if (UserComparator.hashedStartsWith == comparator ||
           UserComparator.hashedNotStartsWith == comparator) {
-        userValueSubStringByteArray = userAttributeValueUTF8.sublist(0, comparedTextLengthInt);
+        userValueSubStringByteArray =
+            userAttributeValueUTF8.sublist(0, comparedTextLengthInt);
       } else {
         //HASHED_ENDS_WITH & HASHED_NOT_ENDS_WITH
         userValueSubStringByteArray = userAttributeValueUTF8.sublist(
             userAttributeValueUTF8.length - comparedTextLengthInt,
             userAttributeValueUTF8.length);
       }
-      String hashUserValueSub = _getSaltedUserValueSlice(userValueSubStringByteArray, configSalt, contextSalt);
+      String hashUserValueSub = _getSaltedUserValueSlice(
+          userValueSubStringByteArray, configSalt, contextSalt);
       if (hashUserValueSub == comparisonHashValue) {
-          foundEqual = true;
-          break;
+        foundEqual = true;
+        break;
       }
     }
     if (UserComparator.hashedNotStartsWith == comparator ||
@@ -722,13 +732,16 @@ class RolloutEvaluator {
       bool negateEquals) {
     String comparisonValue = _ensureComparisonValue(userCondition.stringValue);
 
-    String valueEquals = hashedEquals ? _getSaltedUserValue(userAttributeValue, configSalt, contextSalt) : userAttributeValue;
+    String valueEquals = hashedEquals
+        ? _getSaltedUserValue(userAttributeValue, configSalt, contextSalt)
+        : userAttributeValue;
     return negateEquals != (valueEquals == comparisonValue);
   }
 
   bool _evaluateDate(double userDoubleValue, UserCondition userCondition,
       UserComparator comparator, String comparisonAttribute) {
-    double comparisonDoubleValue = _ensureComparisonValue(userCondition.doubleValue);
+    double comparisonDoubleValue =
+        _ensureComparisonValue(userCondition.doubleValue);
     return (UserComparator.dateBefore == comparator &&
             userDoubleValue < comparisonDoubleValue) ||
         UserComparator.dateAfter == comparator &&
@@ -742,9 +755,12 @@ class RolloutEvaluator {
       String configSalt,
       String contextSalt,
       bool negateIsOneOf) {
-    List<String> comparisonValues = _ensureComparisonValue(userCondition.stringArrayValue);
+    List<String> comparisonValues =
+        _ensureComparisonValue(userCondition.stringArrayValue);
 
-    String userIsOneOfValue = sensitiveIsOneOf ? _getSaltedUserValue(userAttributeValue, configSalt, contextSalt) : userAttributeValue;
+    String userIsOneOfValue = sensitiveIsOneOf
+        ? _getSaltedUserValue(userAttributeValue, configSalt, contextSalt)
+        : userAttributeValue;
 
     for (String inValuesElement in comparisonValues) {
       if (_ensureComparisonValue(inValuesElement) == userIsOneOfValue) {
@@ -766,11 +782,10 @@ class RolloutEvaluator {
     List<int> configSaltByteArray = utf8.encode(configSalt);
     List<int> contextSaltByteArray = utf8.encode(contextSalt);
 
-    List<int> concatByteArrays = userValueSliceUTF8 + configSaltByteArray + contextSaltByteArray;
+    List<int> concatByteArrays =
+        userValueSliceUTF8 + configSaltByteArray + contextSaltByteArray;
 
-    return sha256
-        .convert(concatByteArrays)
-        .toString();
+    return sha256.convert(concatByteArrays).toString();
   }
 
   bool _evaluateNumbers(double uvDouble, UserCondition userCondition,
@@ -809,12 +824,13 @@ class RolloutEvaluator {
 
   bool _evaluateSemverIsOneOf(UserCondition userCondition, Version userVersion,
       bool negateSemverIsOneOf, String comparisonAttribute) {
-    List<String> comparisonValues = _ensureComparisonValue(userCondition.stringArrayValue);
+    List<String> comparisonValues =
+        _ensureComparisonValue(userCondition.stringArrayValue);
 
     try {
       var matched = false;
       for (final value in comparisonValues) {
-        if(_ensureComparisonValue(value).isEmpty){
+        if (_ensureComparisonValue(value).isEmpty) {
           continue;
         }
         matched = _parseVersion(value.trim()) == userVersion || matched;
@@ -827,8 +843,8 @@ class RolloutEvaluator {
 
   bool _evaluateContainsAnyOf(bool negateContainsAnyOf,
       UserCondition userCondition, String userAttributeValue) {
-
-    List<String> comparisonValues = _ensureComparisonValue<List<String>>(userCondition.stringArrayValue);
+    List<String> comparisonValues =
+        _ensureComparisonValue<List<String>>(userCondition.stringArrayValue);
 
     for (String containsValue in comparisonValues) {
       if (userAttributeValue.contains(_ensureComparisonValue(containsValue))) {
@@ -1046,7 +1062,8 @@ class RolloutEvaluator {
         }
       }
     }
-    throw ArgumentError("Sum of percentage option percentages are less than 100.");
+    throw ArgumentError(
+        "Sum of percentage option percentages are less than 100.");
   }
 
   Version _parseVersion(String text) {
@@ -1056,7 +1073,7 @@ class RolloutEvaluator {
         buildCharPos != -1 ? text.substring(0, buildCharPos) : text);
   }
 
-   T _ensureComparisonValue<T>(T? value) {
+  T _ensureComparisonValue<T>(T? value) {
     if (value == null) {
       throw ArgumentError("Comparison value is missing or invalid.");
     }

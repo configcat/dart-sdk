@@ -214,12 +214,18 @@ class ConfigFetcher implements Fetcher {
         _errorReporter.error(1102, error, e, s);
         return FetchResponse.failure(error, true);
       }
-      _errorReporter.error(1103,
-          'Unexpected error occurred while trying to fetch config JSON. It is most likely due to a local network issue. Please make sure your application can reach the ConfigCat CDN servers (or your proxy server) over HTTP.', e, s);
+      _errorReporter.error(
+          1103,
+          'Unexpected error occurred while trying to fetch config JSON. It is most likely due to a local network issue. Please make sure your application can reach the ConfigCat CDN servers (or your proxy server) over HTTP.',
+          e,
+          s);
       return FetchResponse.failure(e.toString(), true);
     } catch (e, s) {
-      _errorReporter.error(1103,
-          'Unexpected error occurred while trying to fetch config JSON. It is most likely due to a local network issue. Please make sure your application can reach the ConfigCat CDN servers (or your proxy server) over HTTP.', e, s);
+      _errorReporter.error(
+          1103,
+          'Unexpected error occurred while trying to fetch config JSON. It is most likely due to a local network issue. Please make sure your application can reach the ConfigCat CDN servers (or your proxy server) over HTTP.',
+          e,
+          s);
       return FetchResponse.failure(e.toString(), true);
     }
   }

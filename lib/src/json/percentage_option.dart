@@ -7,7 +7,6 @@ part 'percentage_option.g.dart';
 /// Represents a percentage option.
 @JsonSerializable()
 class PercentageOption {
-
   /// The value associated with the percentage option.
   /// Can be a value of the following types: {@link Boolean}, {@link String}, {@link Integer} or {@link Double}.
   @JsonKey(name: 'v')

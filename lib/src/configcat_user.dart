@@ -55,8 +55,10 @@ class ConfigCatUser {
     }
 
     if (custom != null) {
-      for(MapEntry<String, Object> entry in custom.entries){
-        if(entry.key != "Identifier" && entry.key != "Email" && entry.key != "Country") {
+      for (MapEntry<String, Object> entry in custom.entries) {
+        if (entry.key != "Identifier" &&
+            entry.key != "Email" &&
+            entry.key != "Country") {
           _attributes[entry.key] = entry.value;
         }
       }

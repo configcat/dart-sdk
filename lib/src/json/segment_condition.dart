@@ -5,7 +5,6 @@ part 'segment_condition.g.dart';
 /// Describes a condition that is based on a segment.
 @JsonSerializable()
 class SegmentCondition {
-
   /// The index of the segment that the condition is based on.
   @JsonKey(name: 's')
   final int segmentIndex;

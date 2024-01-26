@@ -7,7 +7,6 @@ part 'segment.g.dart';
 /// ConfigCat segment.
 @JsonSerializable()
 class Segment {
-
   /// The name of the segment.
   @JsonKey(name: 'n')
   final String? name;
