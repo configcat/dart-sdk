@@ -14,6 +14,7 @@ void main() {
   late DioAdapter dioAdapter;
   late MockConfigCatCache cache;
   late RequestCounterInterceptor interceptor;
+
   setUp(() {
     cache = MockConfigCatCache();
     interceptor = RequestCounterInterceptor();
@@ -375,7 +376,7 @@ void main() {
     // Act
     await client.forceRefresh();
     final details =
-        await client.getValueDetails(key: 'value', defaultValue: null);
+        await client.getValueDetails<dynamic>(key: 'value', defaultValue: null);
 
     // Assert
     expect(details.variationId, equals(''));
@@ -575,6 +576,77 @@ void main() {
             DateTime.now().toUtc().subtract(const Duration(seconds: 1))),
         isTrue);
   });
+
+  test('test Special Characters Works', () async {
+
+    //Setup client
+    client = ConfigCatClient.get(
+        sdkKey: "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/u28_1qNyZ0Wz-ldYHIU7-g");
+    // Act
+    await client.forceRefresh();
+
+    ConfigCatUser user = ConfigCatUser(identifier: "äöüÄÖÜçéèñışğâ¢™✓😀");
+
+    var resultSpecialCharacters = await client.getValue(key: "specialCharacters", defaultValue: "NOT_CAT", user: user);
+    // Assert
+    expect("äöüÄÖÜçéèñışğâ¢™✓😀", equals(resultSpecialCharacters));
+
+    var resultSpecialCharactersHashed = await client.getValue(key: "specialCharactersHashed", defaultValue: "NOT_CAT", user: user);
+    // Assert
+    expect("äöüÄÖÜçéèñışğâ¢™✓😀", equals(resultSpecialCharactersHashed));
+
+  });
+
+    test("getValueValidTypes", () async {
+      final body = createTestConfig({'fakeKeyString': "fakeValueString", 'fakeKeyInt': 1, 'fakeKeyDouble': 2.1, 'fakeKeyBoolean': true});
+      dioAdapter.onGet(getPath(), (server) {
+        server.reply(200, body);
+      });
+
+      // Act
+      await client.forceRefresh();
+
+      //String
+      final valueString =  await client.getValue(key: "fakeKeyString", defaultValue: "default" );
+      expect(valueString, equals("fakeValueString"));
+
+      //int
+      final valueInt =  await client.getValue(key: "fakeKeyInt", defaultValue: 0 );
+      expect(valueInt, equals(1));
+
+      //double
+      final valueDouble =  await client.getValue(key: "fakeKeyDouble", defaultValue: 1.1 );
+      expect(valueDouble, equals(2.1));
+
+      //bool
+      final valueBool =  await client.getValue(key: "fakeKeyBoolean", defaultValue: false );
+      expect(valueBool, equals(true));
+
+      //dynamic
+      final valueDynamic = await client.getValue<dynamic>(key: "fakeKeyString", defaultValue: "default" );
+      expect(valueDynamic.toString(), equals("fakeValueString"));
+    });
+
+    test("getValueInvalidTypes", () async {
+      final body = createTestConfig({'fakeKeyString': "fakeValueString", 'fakeKeyInt': 1, 'fakeKeyDouble': 2.1, 'fakeKeyBoolean': true});
+      dioAdapter.onGet(getPath(), (server) {
+        server.reply(200, body);
+      });
+
+      // Act
+      await client.forceRefresh();
+
+      //List
+      expect(() => client.getValue(key: "fakeKeyString", defaultValue: {"list1", "list2"}),
+          throwsA(predicate((e) => e is ArgumentError && e.message == 'Only String, Integer, Double, Boolean or dynamic types are supported.')));
+      //ConfigCatUser
+      expect(() => client.getValue(key: "fakeKeyString", defaultValue: ConfigCatUser(identifier: "test")),
+          throwsA(predicate((e) => e is ArgumentError && e.message == 'Only String, Integer, Double, Boolean or dynamic types are supported.')));
+      // //Bad list - with dynamic
+      // expect(() => client.getValue<dynamic>(key: "fakeKeyString", defaultValue: {"list1", "list2"}),
+      //     throwsA(predicate((e) => e is ArgumentError && e.message == 'Only String, Integer, Double, Boolean or dynamic types are supported.')));
+    });
+
 }
 
 Config createTestConfigWithVariationId(Map<String, Pair<int, String>> map) {

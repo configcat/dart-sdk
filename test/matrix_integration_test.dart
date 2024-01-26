@@ -98,7 +98,7 @@ void main() {
   //V1
   for (var element in testDataV1.entries) {
     test(element.key, () async {
-      await _runTest('test/fixtures/${element.key}', element.value[0] as String,
+      await _runTest('test/matrix/${element.key}', element.value[0] as String,
           element.value[1] as _Kind);
     });
   }
@@ -106,7 +106,7 @@ void main() {
   //V2
   for (var element in testDataV2.entries) {
     test(element.key, () async {
-      await _runTest('test/fixtures/${element.key}', element.value[0] as String,
+      await _runTest('test/matrix/${element.key}', element.value[0] as String,
           element.value[1] as _Kind);
     });
   }

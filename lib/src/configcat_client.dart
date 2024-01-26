@@ -104,6 +104,11 @@ class ConfigCatClient {
     required T defaultValue,
     ConfigCatUser? user,
   }) async {
+    if(key.isEmpty){
+      throw ArgumentError("'key' cannot be empty.");
+    }
+    _validateReturnType(T);
+
     final evalUser = user ?? _defaultUser;
     try {
       final result = await _getSettings();
@@ -147,6 +152,11 @@ class ConfigCatClient {
     required T defaultValue,
     ConfigCatUser? user,
   }) async {
+    if(key.isEmpty){
+      throw ArgumentError("'key' cannot be empty.");
+    }
+    _validateReturnType(T);
+
     final evalUser = user ?? _defaultUser;
     try {
       final result = await _getSettings();
@@ -438,11 +448,9 @@ class ConfigCatClient {
   }
 
   T _parseSettingValue<T>(SettingsValue settingsValue, int settingType) {
+    _validateReturnType(T);
+
     bool isDynamic = T == dynamic;
-    if (!isDynamic && !(T == bool || T == String || T == int || T == double)) {
-        throw ArgumentError(
-            "Only String, Integer, Double or Boolean types are supported.");
-    }
 
     if ((T == bool || isDynamic) &&
         settingType == 0 &&
@@ -467,4 +475,12 @@ class ConfigCatClient {
     throw ArgumentError(
         "The type of a setting must match the type of the setting's default value. Setting's type was {${_settingTypes[settingType]}} but the default value's type was {${T.runtimeType}}. Please use a default value which corresponds to the setting type {${_settingTypes[settingType]}}. Learn more: https://configcat.com/docs/sdk-reference/dotnet/#setting-type-mapping");
   }
+
+  void _validateReturnType<T>(T type){
+    if (type != bool && type != String && type != int && type != double && type != dynamic) {
+      throw ArgumentError(
+          "Only String, Integer, Double, Boolean or dynamic types are supported.");
+    }
+  }
+
 }

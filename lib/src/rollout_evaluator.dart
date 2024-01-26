@@ -668,7 +668,6 @@ class RolloutEvaluator {
     List<String> comparisonValues =_ensureComparisonValue(userCondition.stringArrayValue);
     List<int> userAttributeValueUTF8 = utf8.encode(userAttributeValue);
 
-
     bool foundEqual = false;
     for (String comparisonValueHashedStartsEnds in comparisonValues) {
       int indexOf = _ensureComparisonValue(comparisonValueHashedStartsEnds).indexOf("_");

@@ -32,7 +32,7 @@ void main() {
     final found = await client.getValue(key: 'enabled', defaultValue: false);
     final localOnly =
         await client.getValue(key: 'local-only', defaultValue: false);
-    final notFound = await client.getValue(key: 'remote', defaultValue: null);
+    final notFound = await client.getValue<dynamic>(key: 'remote', defaultValue: null);
 
     // Assert
     expect(found, isTrue);
