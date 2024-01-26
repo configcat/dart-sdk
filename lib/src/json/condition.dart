@@ -7,6 +7,7 @@ import 'prerequisite_flag_condition.dart';
 
 part 'condition.g.dart';
 
+/// Represents a condition.
 @JsonSerializable()
 class Condition implements ConditionAccessor {
   @override

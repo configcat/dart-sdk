@@ -625,6 +625,10 @@ void main() {
       //dynamic
       final valueDynamic = await client.getValue<dynamic>(key: "fakeKeyString", defaultValue: "default" );
       expect(valueDynamic.toString(), equals("fakeValueString"));
+
+      // dynamic with different default value
+      final valueDynamicWithList = await client.getValue<dynamic>(key: "fakeKeyString", defaultValue: {"list1", "list2"} );
+      expect(valueDynamicWithList.toString(), equals("fakeValueString"));
     });
 
     test("getValueInvalidTypes", () async {
@@ -639,12 +643,10 @@ void main() {
       //List
       expect(() => client.getValue(key: "fakeKeyString", defaultValue: {"list1", "list2"}),
           throwsA(predicate((e) => e is ArgumentError && e.message == 'Only String, Integer, Double, Boolean or dynamic types are supported.')));
+
       //ConfigCatUser
       expect(() => client.getValue(key: "fakeKeyString", defaultValue: ConfigCatUser(identifier: "test")),
           throwsA(predicate((e) => e is ArgumentError && e.message == 'Only String, Integer, Double, Boolean or dynamic types are supported.')));
-      // //Bad list - with dynamic
-      // expect(() => client.getValue<dynamic>(key: "fakeKeyString", defaultValue: {"list1", "list2"}),
-      //     throwsA(predicate((e) => e is ArgumentError && e.message == 'Only String, Integer, Double, Boolean or dynamic types are supported.')));
     });
 
 }

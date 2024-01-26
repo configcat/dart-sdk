@@ -96,9 +96,9 @@ class ConfigCatClient {
 
   /// Gets the value of a feature flag or setting as [T] identified by the given [key].
   ///
-  /// [key] is the identifier of the feature flag or setting.
-  /// In case of any failure, [defaultValue] will be returned.
-  /// [user] is the user object to identify the caller.
+  /// [key] the identifier of the feature flag or setting.
+  /// [defaultValue] in case of any failure, this value will be returned.
+  /// [user] the user object.
   Future<T> getValue<T>({
     required String key,
     required T defaultValue,
@@ -145,8 +145,9 @@ class ConfigCatClient {
 
   /// Gets the value and evaluation details of a feature flag or setting identified by the given [key].
   ///
-  /// [key] is the identifier of the feature flag or setting.
-  /// [user] is the user object to identify the caller.
+  /// [key] the identifier of the feature flag or setting.
+  /// [defaultValue] in case of any failure, this value will be returned.
+  /// [user] the user object.
   Future<EvaluationDetails<T>> getValueDetails<T>({
     required String key,
     required T defaultValue,
@@ -193,9 +194,10 @@ class ConfigCatClient {
     }
   }
 
-  /// Gets the values along with evaluation details of all feature flags and settings.
+  /// Gets the detailed values of all feature flags or settings.
   ///
-  /// [user] is the user object to identify the caller.
+  /// [user] the user object.
+  /// Return a collection of all the evaluation results with details.
   Future<List<EvaluationDetails>> getAllValueDetails({
     ConfigCatUser? user,
   }) async {
@@ -247,7 +249,7 @@ class ConfigCatClient {
 
   /// Gets the values of all feature flags or settings.
   ///
-  /// [user] is the user object to identify the caller.
+  /// [user] the user object.
   Future<Map<String, dynamic>> getAllValues({ConfigCatUser? user}) async {
     try {
       final settingsResult = await _getSettings();
@@ -276,6 +278,7 @@ class ConfigCatClient {
   }
 
   /// Gets the key of a setting and its value identified by the given [variationId] (analytics).
+  /// [variationId] the Variation ID.
   Future<MapEntry<String, T>?> getKeyAndValue<T>(
       {required String variationId}) async {
     try {
@@ -355,19 +358,25 @@ class ConfigCatClient {
             'The SDK uses the LOCAL_ONLY flag override behavior which prevents making HTTP requests.'));
   }
 
-  /// Sets the default user.
+  /// Sets defaultUser value.
+  /// If no user specified in the following calls {getValue}, {getAllValues}, {getValueDetails}, {getAllValueDetails}
+  /// the default user value will be used.
+  ///
+  /// [user] The new default user.
   void setDefaultUser(ConfigCatUser? user) => _defaultUser = user;
 
   /// Sets the default user to null.
   void clearDefaultUser() => _defaultUser = null;
 
-  /// Configures the SDK to not initiate HTTP requests.
+  /// Set the client to offline mode. HTTP calls are not allowed.
   void setOffline() => _configService?.offline();
 
-  /// Configures the SDK to allow HTTP requests.
+  /// Set the client to online mode. HTTP calls are allowed.
   void setOnline() => _configService?.online();
 
-  /// True when the SDK is configured not to initiate HTTP requests, otherwise false.
+  /// Get the client offline mode status.
+  ///
+  /// Return true if the client is in offline mode, otherwise false.
   bool isOffline() => _configService?.isOffline() ?? true;
 
   /// Closes the underlying resources.

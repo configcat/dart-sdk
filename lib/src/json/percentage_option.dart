@@ -4,17 +4,20 @@ import 'settings_value.dart';
 
 part 'percentage_option.g.dart';
 
+/// Represents a percentage option.
 @JsonSerializable()
 class PercentageOption {
-  /// Value served when the rule is selected during evaluation.
+
+  /// The value associated with the percentage option.
+  /// Can be a value of the following types: {@link Boolean}, {@link String}, {@link Integer} or {@link Double}.
   @JsonKey(name: 'v')
   final SettingsValue settingsValue;
 
-  /// The rule's percentage value.
+  /// A number between 0 and 100 that represents a randomly allocated fraction of the users.
   @JsonKey(name: 'p', defaultValue: 0)
   final double percentage;
 
-  /// The rule's variation ID (for analytical purposes).
+  /// Variation ID.
   @JsonKey(name: 'i', defaultValue: '')
   final String variationId;
 

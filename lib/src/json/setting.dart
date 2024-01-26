@@ -33,31 +33,28 @@ extension SettingConvert on Object {
   }
 }
 
-/// Describes a ConfigCat Feature Flag / Setting
+/// Feature flag or setting.
 @JsonSerializable()
 class Setting {
-  /// Value of the feature flag / setting.
+
+  /// Setting value.
+  /// Can be a value of the following types: {@link Boolean}, {@link String}, {@link Integer} or {@link Double}.
   @JsonKey(name: 'v')
   final SettingsValue settingsValue;
 
-  /// Type of the feature flag / setting.
-  ///
-  /// 0 -> [bool],
-  /// 1 -> [String],
-  /// 2 -> [int],
-  /// 3 -> [double],
+  /// Setting type.
   @JsonKey(name: 't', defaultValue: 0)
   final int type;
 
-  /// Collection of percentage options that belongs to the feature flag / setting.
+  /// The list of percentage options.
   @JsonKey(name: 'p', defaultValue: [])
   final List<PercentageOption> percentageOptions;
 
-  /// Collection of targeting rules that belongs to the feature flag / setting.
+  /// The list of targeting rules (where there is a logical OR relation between the items).
   @JsonKey(name: 'r', defaultValue: [])
   final List<TargetingRule> targetingRules;
 
-  /// Variation ID (for analytical purposes).
+  /// Variation ID.
   @JsonKey(name: 'i', defaultValue: '')
   final String variationId;
 

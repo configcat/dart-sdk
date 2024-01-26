@@ -2,6 +2,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'settings_value.g.dart';
 
+/// Describes the setting type-specific value of a setting or feature flag.
 @JsonSerializable()
 class SettingsValue {
   @JsonKey(name: 'b')
