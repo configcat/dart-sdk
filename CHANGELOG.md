@@ -8,7 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### New features and improvements
 - Add support for the new Config JSON v6 format: update the config model and implement new features in setting evaluation logic.
 - Overhaul setting evaluation-related logging and make it consistent across SDKs.
-- SDK key format validation (when client is not set up to use local-only flag overrides)
+- SDK key format validation (when client is not set up to use local-only flag overrides).
+- Go to the cache in all polling modes instead of using the in memory variable.
 
 ### Breaking changes
 - Change the `ConfigCatUser` constructor `custom` parameter type to Map<String, Object> to allow other values than string.
