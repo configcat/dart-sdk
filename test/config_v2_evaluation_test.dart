@@ -2,13 +2,11 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:configcat_client/configcat_client.dart';
-import 'package:http_mock_adapter/http_mock_adapter.dart';
 import 'package:test/test.dart';
 
 import 'evaluation/evaluation_test_logger.dart';
 import 'helpers.dart';
-
-DioAdapter? dioAdapter;
+import 'http_adapter.dart';
 
 void main() {
   final matchedEvaluationRuleAndPercentageOptionTestData = {
@@ -101,9 +99,6 @@ void main() {
 
   tearDown(() {
     ConfigCatClient.closeAll();
-    if (dioAdapter != null) {
-      dioAdapter?.close();
-    }
   });
 
   for (List<dynamic> element
@@ -180,10 +175,8 @@ Future<void> _prerequisiteFlagCircularDependencyTest(
   Config config = Config.fromJson(decoded);
   var interceptor = RequestCounterInterceptor();
   client.httpClient.interceptors.add(interceptor);
-  dioAdapter = DioAdapter(dio: client.httpClient);
-  dioAdapter?.onGet(getPath(sdkKey: testSdkKey), (server) {
-    server.reply(200, config);
-  });
+  final testAdapter = HttpTestAdapter(client.httpClient);
+  testAdapter.enqueueResponse(getPath(sdkKey: testSdkKey), 200, config);
 
   await client.forceRefresh();
 
@@ -191,6 +184,8 @@ Future<void> _prerequisiteFlagCircularDependencyTest(
 
   expect(result.error,
       "Invalid argument(s): Circular dependency detected between the following depending flags: $dependencyCycle.");
+
+  testAdapter.close();
 }
 
 Future<void> _prerequisiteFlagTypeMismatchTest(

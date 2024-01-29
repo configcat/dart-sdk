@@ -1,8 +1,8 @@
 import 'package:configcat_client/configcat_client.dart';
-import 'package:http_mock_adapter/http_mock_adapter.dart';
 import 'package:test/test.dart';
 
 import 'helpers.dart';
+import 'http_adapter.dart';
 
 void main() {
   group('Hooks Tests', () {
@@ -19,12 +19,10 @@ void main() {
                   onConfigChanged: (map) => configChanged = true,
                   onClientReady: () => ready = true,
                   onFlagEvaluated: (ctx) => eval = true)));
-      final dioAdapter = DioAdapter(dio: client.httpClient);
+      final testAdapter = HttpTestAdapter(client.httpClient);
 
       final body = createTestConfig({'stringValue': 'testValue'}).toJson();
-      dioAdapter.onGet(getPath(), (server) {
-        server.reply(200, body);
-      });
+      testAdapter.enqueueResponse(getPath(), 200, body);
 
       // Act
       await client.forceRefresh();
@@ -38,7 +36,7 @@ void main() {
 
       // Cleanup
       client.close();
-      dioAdapter.close();
+      testAdapter.close();
     });
 
     test('subscribe', () async {
@@ -48,12 +46,10 @@ void main() {
       final client = ConfigCatClient.get(
           sdkKey: testSdkKey,
           options: ConfigCatOptions(pollingMode: PollingMode.manualPoll()));
-      final dioAdapter = DioAdapter(dio: client.httpClient);
+      final testAdapter = HttpTestAdapter(client.httpClient);
 
       final body = createTestConfig({'stringValue': 'testValue'}).toJson();
-      dioAdapter.onGet(getPath(), (server) {
-        server.reply(200, body);
-      });
+      testAdapter.enqueueResponse(getPath(), 200, body);
 
       // Act
       client.hooks.addOnConfigChanged((p0) => configChanged = true);
@@ -69,7 +65,7 @@ void main() {
 
       // Cleanup
       client.close();
-      dioAdapter.close();
+      testAdapter.close();
     });
 
     test('evaluation', () async {
@@ -78,11 +74,9 @@ void main() {
       final client = ConfigCatClient.get(
           sdkKey: testSdkKey,
           options: ConfigCatOptions(pollingMode: PollingMode.manualPoll()));
-      final dioAdapter = DioAdapter(dio: client.httpClient);
+      final testAdapter = HttpTestAdapter(client.httpClient);
 
-      dioAdapter.onGet(getPath(), (server) {
-        server.reply(200, createTestConfigWithRules());
-      });
+      testAdapter.enqueueResponse(getPath(), 200, createTestConfigWithRules());
 
       // Act
       client.hooks.addOnFlagEvaluated((details) {
@@ -117,7 +111,7 @@ void main() {
 
       // Cleanup
       client.close();
-      dioAdapter.close();
+      testAdapter.close();
     });
   });
 }

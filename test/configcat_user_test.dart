@@ -1,21 +1,21 @@
 import 'package:configcat_client/configcat_client.dart';
-import 'package:http_mock_adapter/http_mock_adapter.dart';
 import 'package:test/test.dart';
 
 import 'helpers.dart';
+import 'http_adapter.dart';
 
 void main() {
   late ConfigCatClient client;
-  late DioAdapter dioAdapter;
+  late HttpTestAdapter testAdapter;
   setUp(() {
     client = ConfigCatClient.get(
         sdkKey: testSdkKey,
         options: ConfigCatOptions(pollingMode: PollingMode.manualPoll()));
-    dioAdapter = DioAdapter(dio: client.httpClient);
+    testAdapter = HttpTestAdapter(client.httpClient);
   });
   tearDown(() {
     ConfigCatClient.closeAll();
-    dioAdapter.close();
+    testAdapter.close();
   });
 
   test('user attributes case insensitivity', () async {
@@ -40,9 +40,8 @@ void main() {
 
   test('default user', () async {
     // Arrange
-    dioAdapter.onGet(getPath(), (server) {
-      server.reply(200, createTestConfigWithRules().toJson());
-    });
+    testAdapter.enqueueResponse(
+        getPath(), 200, createTestConfigWithRules().toJson());
     await client.forceRefresh();
     final user1 = ConfigCatUser(identifier: 'test@test1.com');
     final user2 = ConfigCatUser(identifier: 'test@test2.com');

@@ -1,34 +1,30 @@
 import 'package:configcat_client/configcat_client.dart';
 import 'package:configcat_client/src/fetch/config_fetcher.dart';
 import 'package:configcat_client/src/pair.dart';
-import 'package:dio/dio.dart';
-import 'package:http_mock_adapter/http_mock_adapter.dart';
 import 'package:mockito/mockito.dart';
 import 'package:test/test.dart';
 
 import 'cache_test.mocks.dart';
 import 'helpers.dart';
+import 'http_adapter.dart';
 
 void main() {
   late ConfigCatClient client;
-  late DioAdapter dioAdapter;
+  late HttpTestAdapter httpAdapter;
   late MockConfigCatCache cache;
-  late RequestCounterInterceptor interceptor;
 
   setUp(() {
     cache = MockConfigCatCache();
-    interceptor = RequestCounterInterceptor();
     when(cache.read(any)).thenAnswer((_) => Future.value(''));
     client = ConfigCatClient.get(
         sdkKey: testSdkKey,
         options: ConfigCatOptions(
             pollingMode: PollingMode.manualPoll(), cache: cache));
-    client.httpClient.interceptors.add(interceptor);
-    dioAdapter = DioAdapter(dio: client.httpClient);
+    httpAdapter = HttpTestAdapter(client.httpClient);
   });
   tearDown(() {
     ConfigCatClient.closeAll();
-    dioAdapter.close();
+    httpAdapter.close();
   });
 
   test('sdk key is not empty', () async {
@@ -90,9 +86,7 @@ void main() {
   test('get string', () async {
     // Arrange
     final body = createTestConfig({'stringValue': 'testValue'}).toJson();
-    dioAdapter.onGet(getPath(), (server) {
-      server.reply(200, body);
-    });
+    httpAdapter.enqueueResponse(getPath(), 200, body);
 
     // Act
     await client.forceRefresh();
@@ -105,9 +99,7 @@ void main() {
   test('get int', () async {
     // Arrange
     final body = createTestConfig({'intValue': 42}).toJson();
-    dioAdapter.onGet(getPath(), (server) {
-      server.reply(200, body);
-    });
+    httpAdapter.enqueueResponse(getPath(), 200, body);
 
     // Act
     await client.forceRefresh();
@@ -120,9 +112,7 @@ void main() {
   test('get double', () async {
     // Arrange
     final body = createTestConfig({'doubleValue': 3.14}).toJson();
-    dioAdapter.onGet(getPath(), (server) {
-      server.reply(200, body);
-    });
+    httpAdapter.enqueueResponse(getPath(), 200, body);
 
     // Act
     await client.forceRefresh();
@@ -135,9 +125,7 @@ void main() {
   test('get bool', () async {
     // Arrange
     final body = createTestConfig({'boolValue': true}).toJson();
-    dioAdapter.onGet(getPath(), (server) {
-      server.reply(200, body);
-    });
+    httpAdapter.enqueueResponse(getPath(), 200, body);
 
     // Act
     await client.forceRefresh();
@@ -149,9 +137,7 @@ void main() {
 
   test('get default on failure', () async {
     // Arrange
-    dioAdapter.onGet(getPath(), (server) {
-      server.reply(500, null);
-    });
+    httpAdapter.enqueueResponse(getPath(), 500, null);
 
     // Act
     await client.forceRefresh();
@@ -163,9 +149,7 @@ void main() {
 
   test('get default on bad response', () async {
     // Arrange
-    dioAdapter.onGet(getPath(), (server) {
-      server.reply(200, null);
-    });
+    httpAdapter.enqueueResponse(getPath(), 200, null);
 
     // Act
     await client.forceRefresh();
@@ -179,16 +163,9 @@ void main() {
     // Arrange
     final body1 = createTestConfig({'value': 42}).toJson();
     final body2 = createTestConfig({'value': 69}).toJson();
-    dioAdapter
-      ..onGet(getPath(), (server) {
-        server.reply(200, body1, headers: {
-          Headers.contentTypeHeader: [Headers.jsonContentType],
-          'Etag': [etag]
-        });
-      })
-      ..onGet(getPath(), (server) {
-        server.reply(200, body2);
-      }, headers: {'If-None-Match': etag});
+
+    httpAdapter.enqueueResponse(getPath(), 200, body1, headers: {'Etag': etag});
+    httpAdapter.enqueueResponse(getPath(), 200, body2);
 
     // Act
     await client.forceRefresh();
@@ -203,21 +180,15 @@ void main() {
 
     // Assert
     expect(value2, equals(69));
+    expect(httpAdapter.capturedRequests.last.headers['If-None-Match'], etag);
   });
 
   test('returns cached value on failed latest fetch', () async {
     // Arrange
     final body1 = createTestConfig({'value': 42}).toJson();
-    dioAdapter
-      ..onGet(getPath(), (server) {
-        server.reply(200, body1, headers: {
-          Headers.contentTypeHeader: [Headers.jsonContentType],
-          'Etag': [etag]
-        });
-      })
-      ..onGet(getPath(), (server) {
-        server.reply(500, null);
-      }, headers: {'If-None-Match': etag});
+
+    httpAdapter.enqueueResponse(getPath(), 200, body1, headers: {'Etag': etag});
+    httpAdapter.enqueueResponse(getPath(), 500, null);
 
     // Act
     await client.forceRefresh();
@@ -232,21 +203,14 @@ void main() {
 
     // Assert
     expect(value2, equals(42));
+    expect(httpAdapter.capturedRequests.last.headers['If-None-Match'], etag);
   });
 
   test('returns cached value on failed latest fetch', () async {
     // Arrange
     final body1 = createTestConfig({'value': 42}).toJson();
-    dioAdapter
-      ..onGet(getPath(), (server) {
-        server.reply(200, body1, headers: {
-          Headers.contentTypeHeader: [Headers.jsonContentType],
-          'Etag': [etag]
-        });
-      })
-      ..onGet(getPath(), (server) {
-        server.reply(500, null);
-      }, headers: {'If-None-Match': etag});
+    httpAdapter.enqueueResponse(getPath(), 200, body1, headers: {'Etag': etag});
+    httpAdapter.enqueueResponse(getPath(), 500, null);
 
     // Act
     await client.forceRefresh();
@@ -261,15 +225,15 @@ void main() {
 
     // Assert
     expect(value2, equals(42));
+    expect(httpAdapter.capturedRequests.last.headers['If-None-Match'], etag);
   });
 
   test('returns cached value on failure', () async {
     // Arrange
     final body = createTestEntry({'value': 42}).serialize();
     when(cache.read(any)).thenAnswer((_) => Future.value(body));
-    dioAdapter.onGet(getPath(), (server) {
-      server.reply(500, null);
-    });
+
+    httpAdapter.enqueueResponse(getPath(), 500, null);
 
     // Act
     await client.forceRefresh();
@@ -289,9 +253,7 @@ void main() {
   test('get all keys', () async {
     // Arrange
     final body = createTestConfig({'value1': true, 'value2': false});
-    dioAdapter.onGet(getPath(), (server) {
-      server.reply(200, body);
-    });
+    httpAdapter.enqueueResponse(getPath(), 200, body);
 
     // Act
     await client.forceRefresh();
@@ -304,9 +266,7 @@ void main() {
   test('get all values', () async {
     // Arrange
     final body = createTestConfig({'value1': true, 'value2': false}).toJson();
-    dioAdapter.onGet(getPath(), (server) {
-      server.reply(200, body);
-    });
+    httpAdapter.enqueueResponse(getPath(), 200, body);
 
     // Act
     await client.forceRefresh();
@@ -319,9 +279,7 @@ void main() {
   test('get all value details', () async {
     // Arrange
     final body = createTestConfig({'value1': true, 'value2': false}).toJson();
-    dioAdapter.onGet(getPath(), (server) {
-      server.reply(200, body);
-    });
+    httpAdapter.enqueueResponse(getPath(), 200, body);
 
     // Act
     await client.forceRefresh();
@@ -337,9 +295,7 @@ void main() {
     // Arrange
     final body =
         createTestConfigWithVariationId({'value': Pair(42, 'test')}).toJson();
-    dioAdapter.onGet(getPath(), (server) {
-      server.reply(200, body);
-    });
+    httpAdapter.enqueueResponse(getPath(), 200, body);
 
     // Act
     await client.forceRefresh();
@@ -355,9 +311,7 @@ void main() {
     // Arrange
     final body =
         createTestConfigWithVariationId({'value': Pair(42, 'test')}).toJson();
-    dioAdapter.onGet(getPath(), (server) {
-      server.reply(200, body);
-    });
+    httpAdapter.enqueueResponse(getPath(), 200, body);
 
     // Act
     await client.forceRefresh();
@@ -369,9 +323,7 @@ void main() {
 
   test('variation id test default', () async {
     // Arrange
-    dioAdapter.onGet(getPath(), (server) {
-      server.reply(500, null);
-    });
+    httpAdapter.enqueueResponse(getPath(), 500, null);
 
     // Act
     await client.forceRefresh();
@@ -387,9 +339,7 @@ void main() {
     final body = createTestConfigWithVariationId(
             {'value1': Pair(42, 'testId1'), 'value2': Pair(69, 'testId2')})
         .toJson();
-    dioAdapter.onGet(getPath(), (server) {
-      server.reply(200, body);
-    });
+    httpAdapter.enqueueResponse(getPath(), 200, body);
 
     // Act
     await client.forceRefresh();
@@ -461,22 +411,20 @@ void main() {
   test('online/offline', () async {
     // Arrange
     final body = createTestConfig({'stringValue': 'testValue'}).toJson();
-    dioAdapter.onGet(getPath(), (server) {
-      server.reply(200, body);
-    });
+    httpAdapter.enqueueResponse(getPath(), 200, body);
 
     // Act
     await client.forceRefresh();
 
     // Assert
-    expect(interceptor.allRequestCount(), equals(1));
+    expect(httpAdapter.capturedRequests.length, equals(1));
 
     // Act
     client.setOffline();
     await client.forceRefresh();
 
     // Assert
-    expect(interceptor.allRequestCount(), equals(1));
+    expect(httpAdapter.capturedRequests.length, equals(1));
     expect(client.isOffline(), isTrue);
 
     // Act
@@ -484,7 +432,7 @@ void main() {
     await client.forceRefresh();
 
     // Assert
-    expect(interceptor.allRequestCount(), equals(2));
+    expect(httpAdapter.capturedRequests.length, equals(2));
   });
 
   test('init offline', () async {
@@ -497,18 +445,15 @@ void main() {
             pollingMode: PollingMode.manualPoll(),
             cache: cache,
             offline: true));
-    localClient.httpClient.interceptors.add(interceptor);
-    final localDioAdapter = DioAdapter(dio: client.httpClient);
+    final localAdapter = HttpTestAdapter(localClient.httpClient);
 
-    localDioAdapter.onGet(getPath(), (server) {
-      server.reply(200, body);
-    });
+    localAdapter.enqueueResponse(getPath(), 200, body);
 
     // Act
     await localClient.forceRefresh();
 
     // Assert
-    expect(interceptor.allRequestCount(), equals(0));
+    expect(localAdapter.capturedRequests.length, equals(0));
     expect(localClient.isOffline(), isTrue);
 
     // Act
@@ -516,7 +461,7 @@ void main() {
     await localClient.forceRefresh();
 
     // Assert
-    expect(interceptor.allRequestCount(), equals(1));
+    expect(localAdapter.capturedRequests.length, equals(1));
     expect(localClient.isOffline(), isFalse);
   });
 
@@ -532,23 +477,18 @@ void main() {
             cache: cache,
             hooks: Hooks(onClientReady: () => ready = true),
             offline: true));
-    localClient.httpClient.interceptors.add(interceptor);
-    final localDioAdapter = DioAdapter(dio: client.httpClient);
+    final localAdapter = HttpTestAdapter(localClient.httpClient);
 
-    localDioAdapter.onGet(getPath(), (server) {
-      server.reply(200, body);
-    });
+    localAdapter.enqueueResponse(getPath(), 200, body);
 
     // Assert
-    expect(interceptor.allRequestCount(), equals(0));
+    expect(localAdapter.capturedRequests.length, equals(0));
     expect(ready, isTrue);
   });
 
   test('eval details', () async {
     // Arrange
-    dioAdapter.onGet(getPath(), (server) {
-      server.reply(200, createTestConfigWithRules());
-    });
+    httpAdapter.enqueueResponse(getPath(), 200, createTestConfigWithRules());
 
     // Act
     await client.forceRefresh();
@@ -605,9 +545,7 @@ void main() {
       'fakeKeyDouble': 2.1,
       'fakeKeyBoolean': true
     });
-    dioAdapter.onGet(getPath(), (server) {
-      server.reply(200, body);
-    });
+    httpAdapter.enqueueResponse(getPath(), 200, body);
 
     // Act
     await client.forceRefresh();
@@ -649,9 +587,7 @@ void main() {
       'fakeKeyDouble': 2.1,
       'fakeKeyBoolean': true
     });
-    dioAdapter.onGet(getPath(), (server) {
-      server.reply(200, body);
-    });
+    httpAdapter.enqueueResponse(getPath(), 200, body);
 
     // Act
     await client.forceRefresh();

@@ -2,18 +2,15 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:configcat_client/configcat_client.dart';
-import 'package:http_mock_adapter/http_mock_adapter.dart';
 import 'package:test/expect.dart';
 import 'package:test/scaffolding.dart';
 
 import 'helpers.dart';
-
-DioAdapter? dioAdapter;
+import 'http_adapter.dart';
 
 Future<void> main() async {
   tearDown(() {
     ConfigCatClient.closeAll();
-    dioAdapter?.close();
   });
 
   final testComparatorValueTrimsData = {
@@ -137,12 +134,8 @@ Future<void> _trimValueTest(
       sdkKey: sdkKey,
       options: ConfigCatOptions(pollingMode: PollingMode.manualPoll()));
 
-  var interceptor = RequestCounterInterceptor();
-  client.httpClient.interceptors.add(interceptor);
-  dioAdapter = DioAdapter(dio: client.httpClient);
-  dioAdapter?.onGet(getPath(sdkKey: sdkKey), (server) {
-    server.reply(200, config);
-  });
+  final testAdapter = HttpTestAdapter(client.httpClient);
+  testAdapter.enqueueResponse(getPath(sdkKey: sdkKey), 200, config);
 
   await client.forceRefresh();
 
@@ -151,4 +144,6 @@ Future<void> _trimValueTest(
 
   // Assert
   expect(value, equals(expectedValue));
+
+  testAdapter.close();
 }

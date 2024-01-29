@@ -2,16 +2,14 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:configcat_client/configcat_client.dart';
-import 'package:http_mock_adapter/http_mock_adapter.dart';
 
 import 'package:test/test.dart';
 
+import '../http_adapter.dart';
 import 'evaluation_data_set.dart';
 import 'evaluation_test_logger.dart';
 import '../helpers.dart';
 import 'evaluation_data.dart';
-
-DioAdapter? dioAdapter;
 
 void main() {
   final testData = {
@@ -34,9 +32,6 @@ void main() {
 
   tearDown(() {
     ConfigCatClient.closeAll();
-    if (dioAdapter != null) {
-      dioAdapter?.close();
-    }
   });
 
   for (var element in testData) {
@@ -75,12 +70,8 @@ Future<void> _runTest(String testCaseName) async {
         await File("$testSetPath$testCaseName/$jsonOverride").readAsString();
     final decoded = jsonDecode(jsonOverrideFile);
     Config config = Config.fromJson(decoded);
-    var interceptor = RequestCounterInterceptor();
-    client.httpClient.interceptors.add(interceptor);
-    dioAdapter = DioAdapter(dio: client.httpClient);
-    dioAdapter?.onGet(getPath(sdkKey: sdkKey), (server) {
-      server.reply(200, config);
-    });
+    final testAdapter = HttpTestAdapter(client.httpClient);
+    testAdapter.enqueueResponse(getPath(sdkKey: sdkKey), 200, config);
   }
 
   await client.forceRefresh();

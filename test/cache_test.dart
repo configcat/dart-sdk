@@ -2,13 +2,13 @@ import 'dart:convert';
 
 import 'package:configcat_client/configcat_client.dart';
 import 'package:configcat_client/src/entry.dart';
-import 'package:http_mock_adapter/http_mock_adapter.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:test/test.dart';
 
 import 'cache_test.mocks.dart';
 import 'helpers.dart';
+import 'http_adapter.dart';
 
 @GenerateMocks([ConfigCatCache])
 void main() {
@@ -25,10 +25,9 @@ void main() {
 
     final client = ConfigCatClient.get(
         sdkKey: testSdkKey, options: ConfigCatOptions(cache: cache));
-    final dioAdapter = DioAdapter(dio: client.httpClient);
-    dioAdapter.onGet(getPath(), (server) {
-      server.reply(200, createTestConfig({'value': 'test'}).toJson());
-    });
+    final testAdapter = HttpTestAdapter(client.httpClient);
+    testAdapter.enqueueResponse(
+        getPath(), 200, createTestConfig({'value': 'test'}).toJson());
 
     // Act
     final String value = await client.getValue(key: 'value', defaultValue: '');
@@ -45,10 +44,8 @@ void main() {
 
     final client = ConfigCatClient.get(
         sdkKey: testSdkKey, options: ConfigCatOptions(cache: cache));
-    final dioAdapter = DioAdapter(dio: client.httpClient);
-    dioAdapter.onGet(getPath(), (server) {
-      server.reply(500, null);
-    });
+    final testAdapter = HttpTestAdapter(client.httpClient);
+    testAdapter.enqueueResponse(getPath(), 500, null);
 
     // Act
     final value = await client.getValue(key: 'value', defaultValue: '');
@@ -74,10 +71,9 @@ void main() {
 
         final client = ConfigCatClient.get(
             sdkKey: sdkKey, options: ConfigCatOptions(cache: cache));
-        final dioAdapter = DioAdapter(dio: client.httpClient);
-        dioAdapter.onGet(getPath(sdkKey: sdkKey), (server) {
-          server.reply(200, createTestConfig({'value': 'test2'}).toJson());
-        });
+        final testAdapter = HttpTestAdapter(client.httpClient);
+        testAdapter.enqueueResponse(getPath(sdkKey: sdkKey), 200,
+            createTestConfig({'value': 'test2'}).toJson());
 
         // Act
         await client.getValue(key: 'value', defaultValue: '');
