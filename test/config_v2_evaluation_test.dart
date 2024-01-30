@@ -173,8 +173,6 @@ Future<void> _prerequisiteFlagCircularDependencyTest(
       await File("test/fixtures/test_circulardependency.json").readAsString();
   final decoded = jsonDecode(jsonOverrideFile);
   Config config = Config.fromJson(decoded);
-  var interceptor = RequestCounterInterceptor();
-  client.httpClient.interceptors.add(interceptor);
   final testAdapter = HttpTestAdapter(client.httpClient);
   testAdapter.enqueueResponse(getPath(sdkKey: testSdkKey), 200, config);
 
