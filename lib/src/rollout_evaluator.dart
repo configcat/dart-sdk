@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:configcat_client/src/log/logger.dart';
 import 'package:crypto/crypto.dart';
 import 'package:intl/intl.dart';
 import 'package:pub_semver/pub_semver.dart';
@@ -126,30 +125,32 @@ class RolloutEvaluator {
   RolloutEvaluator(this._logger);
 
   EvaluationResult evaluate(Setting setting, String key, ConfigCatUser? user,
-      Map<String, Setting> settings, EvaluateLogger evaluateLogger) {
+      Map<String, Setting> settings, EvaluateLogger? evaluateLogger) {
     try {
-      evaluateLogger.logEvaluation(key);
+      evaluateLogger?.logEvaluation(key);
 
       if (user != null) {
-        evaluateLogger.logUserObject(user);
+        evaluateLogger?.logUserObject(user);
       }
-      evaluateLogger.increaseIndentLevel();
+      evaluateLogger?.increaseIndentLevel();
 
       EvaluationContext evaluationContext =
           EvaluationContext(key, user, null, settings);
       EvaluationResult evaluationResult =
           _evaluateSetting(setting, evaluationContext, evaluateLogger);
 
-      evaluateLogger.logReturnValue(evaluationResult.value.toString());
-      evaluateLogger.decreaseIndentLevel();
+      evaluateLogger?.logReturnValue(evaluationResult.value.toString());
+      evaluateLogger?.decreaseIndentLevel();
       return evaluationResult;
     } finally {
-      _logger.info(5000, evaluateLogger.toPrint());
+      if(evaluateLogger != null) {
+        _logger.info(5000, evaluateLogger.toPrint());
+      }
     }
   }
 
   EvaluationResult _evaluateSetting(Setting setting,
-      EvaluationContext evaluationContext, EvaluateLogger evaluateLogger) {
+      EvaluationContext evaluationContext, EvaluateLogger? evaluateLogger) {
     EvaluationResult? evaluationResult;
     if (setting.targetingRules.isNotEmpty) {
       evaluationResult =
@@ -169,8 +170,8 @@ class RolloutEvaluator {
   }
 
   EvaluationResult? _evaluateTargetingRules(Setting setting,
-      EvaluationContext evaluationContext, EvaluateLogger evaluateLogger) {
-    evaluateLogger.logTargetingRules();
+      EvaluationContext evaluationContext, EvaluateLogger? evaluateLogger) {
+    evaluateLogger?.logTargetingRules();
     for (TargetingRule rule in setting.targetingRules) {
       bool evaluateConditionsResult;
       String? error;
@@ -190,7 +191,7 @@ class RolloutEvaluator {
 
       if (!evaluateConditionsResult) {
         if (error != null) {
-          evaluateLogger.logTargetingRuleIgnored();
+          evaluateLogger?.logTargetingRuleIgnored();
         }
         continue;
       }
@@ -206,7 +207,7 @@ class RolloutEvaluator {
         throw ArgumentError("Targeting rule THEN part is missing or invalid.");
       }
 
-      evaluateLogger.increaseIndentLevel();
+      evaluateLogger?.increaseIndentLevel();
       EvaluationResult? evaluatePercentageOptionsResult =
           _evaluatePercentageOptions(
               rule.percentageOptions!,
@@ -214,10 +215,10 @@ class RolloutEvaluator {
               evaluationContext,
               rule,
               evaluateLogger);
-      evaluateLogger.decreaseIndentLevel();
+      evaluateLogger?.decreaseIndentLevel();
 
       if (evaluatePercentageOptionsResult == null) {
-        evaluateLogger.logTargetingRuleIgnored();
+        evaluateLogger?.logTargetingRuleIgnored();
         continue;
       }
 
@@ -234,7 +235,7 @@ class RolloutEvaluator {
       String configSalt,
       String contextSalt,
       List<Segment> segments,
-      EvaluateLogger evaluateLogger) {
+      EvaluateLogger? evaluateLogger) {
     bool firstConditionFlag = true;
     bool conditionsEvaluationResult = true;
     String? error;
@@ -242,13 +243,13 @@ class RolloutEvaluator {
     for (ConditionAccessor condition in conditions) {
       if (firstConditionFlag) {
         firstConditionFlag = false;
-        evaluateLogger.newLine();
-        evaluateLogger.append("- IF ");
-        evaluateLogger.increaseIndentLevel();
+        evaluateLogger?.newLine();
+        evaluateLogger?.append("- IF ");
+        evaluateLogger?.increaseIndentLevel();
       } else {
-        evaluateLogger.increaseIndentLevel();
-        evaluateLogger.newLine();
-        evaluateLogger.append("AND ");
+        evaluateLogger?.increaseIndentLevel();
+        evaluateLogger?.newLine();
+        evaluateLogger?.append("AND ");
       }
 
       final userCondition = condition.userCondition;
@@ -288,15 +289,15 @@ class RolloutEvaluator {
       }
 
       if (targetingRule == null || conditions.length > 1) {
-        evaluateLogger.logConditionConsequence(conditionsEvaluationResult);
+        evaluateLogger?.logConditionConsequence(conditionsEvaluationResult);
       }
-      evaluateLogger.decreaseIndentLevel();
+      evaluateLogger?.decreaseIndentLevel();
       if (!conditionsEvaluationResult) {
         break;
       }
     }
     if (targetingRule != null) {
-      evaluateLogger.logTargetingRuleConsequence(
+      evaluateLogger?.logTargetingRuleConsequence(
           targetingRule, error, conditionsEvaluationResult, newLine);
     }
     if (error != null) {
@@ -310,8 +311,8 @@ class RolloutEvaluator {
       EvaluationContext evaluationContext,
       String configSalt,
       String contextSalt,
-      EvaluateLogger evaluateLogger) {
-    evaluateLogger.append(_LogHelper.formatUserCondition(userCondition));
+      EvaluateLogger? evaluateLogger) {
+    evaluateLogger?.append(_LogHelper.formatUserCondition(userCondition));
 
     var configCatUser = evaluationContext.user;
     if (configCatUser == null) {
@@ -859,13 +860,13 @@ class RolloutEvaluator {
       EvaluationContext evaluationContext,
       String configSalt,
       List<Segment> segments,
-      EvaluateLogger evaluateLogger) {
+      EvaluateLogger? evaluateLogger) {
     int segmentIndex = segmentCondition.segmentIndex;
     Segment? segment;
     if (segmentIndex < segments.length) {
       segment = segments[segmentIndex];
     }
-    evaluateLogger.append(
+    evaluateLogger?.append(
         _LogHelper.formatSegmentFlagCondition(segmentCondition, segment));
 
     if (evaluationContext.user == null) {
@@ -884,7 +885,7 @@ class RolloutEvaluator {
     if (segmentName == null || segmentName.isEmpty) {
       throw ArgumentError("Segment name is missing.");
     }
-    evaluateLogger.logSegmentEvaluationStart(segmentName);
+    evaluateLogger?.logSegmentEvaluationStart(segmentName);
 
     bool result;
     try {
@@ -906,10 +907,10 @@ class RolloutEvaluator {
         default:
           throw ArgumentError("Segment comparison operator is invalid.");
       }
-      evaluateLogger.logSegmentEvaluationResult(
+      evaluateLogger?.logSegmentEvaluationResult(
           segmentCondition, segment, result, segmentRulesResult);
     } on RolloutEvaluatorException catch (evaluatorException) {
-      evaluateLogger.logSegmentEvaluationError(
+      evaluateLogger?.logSegmentEvaluationError(
           segmentCondition, segment, evaluatorException.message);
       rethrow;
     }
@@ -920,8 +921,8 @@ class RolloutEvaluator {
   bool _evaluatePrerequisiteFlagCondition(
       PrerequisiteFlagCondition prerequisiteFlagCondition,
       EvaluationContext evaluationContext,
-      EvaluateLogger evaluateLogger) {
-    evaluateLogger.append(
+      EvaluateLogger? evaluateLogger) {
+    evaluateLogger?.append(
         _LogHelper.formatPrerequisiteFlagCondition(prerequisiteFlagCondition));
 
     String prerequisiteFlagKey = prerequisiteFlagCondition.prerequisiteFlagKey;
@@ -954,7 +955,7 @@ class RolloutEvaluator {
           "Circular dependency detected between the following depending flags: $dependencyCycle.");
     }
 
-    evaluateLogger.logPrerequisiteFlagEvaluationStart(prerequisiteFlagKey);
+    evaluateLogger?.logPrerequisiteFlagEvaluationStart(prerequisiteFlagKey);
 
     EvaluationContext prerequisiteFlagContext = EvaluationContext(
         prerequisiteFlagKey,
@@ -988,7 +989,7 @@ class RolloutEvaluator {
             "Prerequisite Flag comparison operator is invalid.");
     }
 
-    evaluateLogger.logPrerequisiteFlagEvaluationResult(
+    evaluateLogger?.logPrerequisiteFlagEvaluationResult(
         prerequisiteFlagCondition, evaluateResult.value, result);
 
     return result;
@@ -999,10 +1000,10 @@ class RolloutEvaluator {
       String? percentageOptionAttribute,
       EvaluationContext evaluationContext,
       TargetingRule? parentTargetingRule,
-      EvaluateLogger evaluateLogger) {
+      EvaluateLogger? evaluateLogger) {
     ConfigCatUser? contextUser = evaluationContext.user;
     if (contextUser == null) {
-      evaluateLogger.logPercentageOptionUserMissing();
+      evaluateLogger?.logPercentageOptionUserMissing();
       if (!evaluationContext.isUserMissing) {
         evaluationContext.isUserMissing = true;
         _logger.warning(3001,
@@ -1020,7 +1021,7 @@ class RolloutEvaluator {
       Object? userAttribute =
           contextUser.getAttribute(percentageOptionAttributeName);
       if (userAttribute == null) {
-        evaluateLogger.logPercentageOptionUserAttributeMissing(
+        evaluateLogger?.logPercentageOptionUserAttributeMissing(
             percentageOptionAttributeName);
         if (!evaluationContext.isUserAttributeMissing) {
           evaluationContext.isUserAttributeMissing = true;
@@ -1031,7 +1032,7 @@ class RolloutEvaluator {
       }
       percentageOptionAttributeValue = _userAttributeToString(userAttribute);
     }
-    evaluateLogger.logPercentageOptionEvaluation(percentageOptionAttributeName);
+    evaluateLogger?.logPercentageOptionEvaluation(percentageOptionAttributeName);
 
     final hashCandidate =
         evaluationContext.key + percentageOptionAttributeValue;
@@ -1039,7 +1040,7 @@ class RolloutEvaluator {
     final hash = userValueHash.toString().substring(0, 7);
     final num = int.parse(hash, radix: 16);
     final scaled = num % 100;
-    evaluateLogger.logPercentageOptionEvaluationHash(
+    evaluateLogger?.logPercentageOptionEvaluationHash(
         percentageOptionAttributeName, scaled);
 
     double bucket = 0;
@@ -1049,7 +1050,7 @@ class RolloutEvaluator {
         var percentageOption = percentageOptions[i];
         bucket += percentageOption.percentage;
         if (scaled < bucket) {
-          evaluateLogger.logPercentageEvaluationReturnValue(
+          evaluateLogger?.logPercentageEvaluationReturnValue(
               scaled,
               i,
               percentageOption.percentage.toInt(),
@@ -1083,34 +1084,20 @@ class RolloutEvaluator {
 
 class EvaluateLogger {
   int _indentLevel = 0;
-  late bool _isLoggable;
-
-  EvaluateLogger(LogLevel logLeve) {
-    _isLoggable = logLeve.index <= LogLevel.info.index;
-  }
 
   final StringBuffer _stringBuffer = StringBuffer();
 
   increaseIndentLevel() {
-    if (!_isLoggable) {
-      return;
-    }
     _indentLevel++;
   }
 
   decreaseIndentLevel() {
-    if (!_isLoggable) {
-      return;
-    }
     if (_indentLevel > 0) {
       _indentLevel--;
     }
   }
 
   newLine() {
-    if (!_isLoggable) {
-      return;
-    }
     _stringBuffer.write("\n");
     for (int i = 0; i < _indentLevel; i++) {
       _stringBuffer.write("  ");
@@ -1118,55 +1105,34 @@ class EvaluateLogger {
   }
 
   append(final String line) {
-    if (!_isLoggable) {
-      return;
-    }
     _stringBuffer.write(line);
   }
 
   String toPrint() {
-    if (!_isLoggable) {
-      return "";
-    }
     return _stringBuffer.toString();
   }
 
   logUserObject(final ConfigCatUser user) {
-    if (!_isLoggable) {
-      return;
-    }
     append(" for User '$user'");
   }
 
   logEvaluation(String key) {
-    if (!_isLoggable) {
-      return;
-    }
     append("Evaluating '$key'");
   }
 
   logPercentageOptionUserMissing() {
-    if (!_isLoggable) {
-      return;
-    }
     newLine();
     append("Skipping % options because the User Object is missing.");
   }
 
   logPercentageOptionUserAttributeMissing(
       String percentageOptionsAttributeName) {
-    if (!_isLoggable) {
-      return;
-    }
     newLine();
     append(
         "Skipping % options because the User.$percentageOptionsAttributeName attribute is missing.");
   }
 
   logPercentageOptionEvaluation(String percentageOptionsAttributeName) {
-    if (!_isLoggable) {
-      return;
-    }
     newLine();
     append(
         "Evaluating % options based on the User.$percentageOptionsAttributeName attribute:");
@@ -1174,34 +1140,22 @@ class EvaluateLogger {
 
   logPercentageOptionEvaluationHash(
       String percentageOptionsAttributeName, int hashValue) {
-    if (!_isLoggable) {
-      return;
-    }
     newLine();
     append(
         "- Computing hash in the [0..99] range from User.$percentageOptionsAttributeName => $hashValue (this value is sticky and consistent across all SDKs)");
   }
 
   logReturnValue(String returnValue) {
-    if (!_isLoggable) {
-      return;
-    }
     newLine();
     append("Returning '$returnValue'.");
   }
 
   logTargetingRules() {
-    if (!_isLoggable) {
-      return;
-    }
     newLine();
     append("Evaluating targeting rules and applying the first match if any:");
   }
 
   logConditionConsequence(bool result) {
-    if (!_isLoggable) {
-      return;
-    }
     append(" => $result");
     if (!result) {
       append(", skipping the remaining AND conditions");
@@ -1209,9 +1163,6 @@ class EvaluateLogger {
   }
 
   logTargetingRuleIgnored() {
-    if (!_isLoggable) {
-      return;
-    }
     increaseIndentLevel();
     newLine();
     append(
@@ -1221,9 +1172,6 @@ class EvaluateLogger {
 
   logTargetingRuleConsequence(TargetingRule targetingRule, String? error,
       bool isMatch, bool isNewLine) {
-    if (!_isLoggable) {
-      return;
-    }
     increaseIndentLevel();
     String valueFormat = "% options";
     if (targetingRule.servedValue != null) {
@@ -1249,9 +1197,6 @@ class EvaluateLogger {
 
   logPercentageEvaluationReturnValue(
       int hashValue, int i, int percentage, SettingsValue settingsValue) {
-    if (!_isLoggable) {
-      return;
-    }
     String percentageOptionValue = settingsValue.toString();
     newLine();
     append(
@@ -1259,9 +1204,6 @@ class EvaluateLogger {
   }
 
   logSegmentEvaluationStart(String segmentName) {
-    if (!_isLoggable) {
-      return;
-    }
     newLine();
     append("(");
     increaseIndentLevel();
@@ -1271,9 +1213,6 @@ class EvaluateLogger {
 
   logSegmentEvaluationResult(SegmentCondition segmentCondition, Segment segment,
       bool result, bool segmentResult) {
-    if (!_isLoggable) {
-      return;
-    }
     newLine();
     String segmentResultComparator = segmentResult
         ? SegmentComparator.isInSegment.name
@@ -1289,9 +1228,6 @@ class EvaluateLogger {
 
   logSegmentEvaluationError(
       SegmentCondition segmentCondition, Segment segment, String error) {
-    if (!_isLoggable) {
-      return;
-    }
     newLine();
 
     append("Segment evaluation result: $error.");
@@ -1304,9 +1240,6 @@ class EvaluateLogger {
   }
 
   logPrerequisiteFlagEvaluationStart(String prerequisiteFlagKey) {
-    if (!_isLoggable) {
-      return;
-    }
     newLine();
     append("(");
     increaseIndentLevel();
@@ -1318,9 +1251,6 @@ class EvaluateLogger {
       PrerequisiteFlagCondition prerequisiteFlagCondition,
       SettingsValue prerequisiteFlagValue,
       bool result) {
-    if (!_isLoggable) {
-      return;
-    }
     newLine();
     String prerequisiteFlagValueFormat = prerequisiteFlagValue.toString();
     append(

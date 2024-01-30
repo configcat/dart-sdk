@@ -439,8 +439,12 @@ class ConfigCatClient {
 
   EvaluationDetails<T> _evaluate<T>(String key, Setting setting,
       ConfigCatUser? user, DateTime fetchTime, Map<String, Setting> settings) {
+    EvaluateLogger? evaluateLogger;
+    if(_logLevel.index <= LogLevel.info.index){
+      evaluateLogger = EvaluateLogger();
+    }
     final eval = _rolloutEvaluator.evaluate(
-        setting, key, user, settings, EvaluateLogger(_logLevel));
+        setting, key, user, settings, evaluateLogger);
     final details = EvaluationDetails<T>(
         key: key,
         variationId: eval.variationId,
