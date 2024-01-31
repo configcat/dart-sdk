@@ -97,6 +97,28 @@ void main() {
     ]
   };
 
+  final comparisonAttributeConversionToCanonicalStringRepresentationTestData = {
+    ["numberToStringConversion", .12345, "1"],
+    ["numberToStringConversion", "0.12345", "1"],
+    ["numberToStringConversionInt", 125, "4"],
+    ["numberToStringConversionPositiveExp", -1.23456789e96, "2"],
+    ["numberToStringConversionNegativeExp", -12345.6789E-100, "4"],
+    ["numberToStringConversionNaN", double.nan, "3"],
+    ["numberToStringConversionPositiveInf", double.infinity, "4"],
+    ["numberToStringConversionNegativeInf", double.negativeInfinity, "3"],
+    ["dateToStringConversion", DateTime.parse("2023-03-31T23:59:59.9990000Z").toUtc(), "3"],
+    ["dateToStringConversion", DateTime.parse("2023-03-31T23:59:59.9990000Z").toLocal(), "3"],
+    ["dateToStringConversion", 1680307199.999, "3"],
+    ["dateToStringConversion", "1680307199.999", "3"],
+    ["dateToStringConversionNaN", double.nan, "3"],
+    ["dateToStringConversionPositiveInf", double.infinity, "1"],
+    ["dateToStringConversionNegativeInf", double.negativeInfinity, "5"],
+    ["stringArrayToStringConversion", [ "read", "Write", " eXecute " ], "4"],
+    ["stringArrayToStringConversionEmpty", [], "5"],
+    ["stringArrayToStringConversionSpecialChars", ["+<>%\"'\\/\t\r\n"], "3"],
+    ["stringArrayToStringConversionUnicode", [ "äöüÄÖÜçéèñışğâ¢™✓😀" ], "2"]
+  };
+
   tearDown(() {
     ConfigCatClient.closeAll();
   });
@@ -126,6 +148,13 @@ void main() {
     test("PrerequisiteFlagOverrideTest", () async {
       await _prerequisiteFlagOverrideTest(
           element[0], element[1], element[2], element[3], element[4]);
+    });
+  }
+
+  for (List<dynamic> element in comparisonAttributeConversionToCanonicalStringRepresentationTestData) {
+    test("ComparisonAttributeConversionToCanonicalStringRepresentationTest", () async {
+      await _comparisonAttributeConversionToCanonicalStringRepresentationTest(
+          element[0], element[1], element[2]);
     });
   }
 }
@@ -253,4 +282,35 @@ Future<void> _prerequisiteFlagOverrideTest(
   final result = await client.getValue(key: key, defaultValue: "", user: user);
 
   expect(result, expectedValue);
+}
+
+
+Future<void> _comparisonAttributeConversionToCanonicalStringRepresentationTest(
+    String key,
+    Object customAttributeValue,
+    String expectedValue) async {
+
+  final client = ConfigCatClient.get(
+      sdkKey: testSdkKey,
+      options: ConfigCatOptions(
+        pollingMode: PollingMode.manualPoll(),
+      ));
+  var jsonOverrideFile =
+    await File("test/fixtures/comparison_attribute_conversion.json").readAsString();
+  final decoded = jsonDecode(jsonOverrideFile);
+  Config config = Config.fromJson(decoded);
+  final testAdapter = HttpTestAdapter(client.httpClient);
+  testAdapter.enqueueResponse(getPath(sdkKey: testSdkKey), 200, config);
+
+  ConfigCatUser user = ConfigCatUser(identifier: "12345", custom: {
+    "Custom1": customAttributeValue
+  });
+
+  await client.forceRefresh();
+
+  final result = await client.getValue(key: key, defaultValue: "default", user: user);
+
+  expect(result, equals(expectedValue));
+
+  testAdapter.close();
 }

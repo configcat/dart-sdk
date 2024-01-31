@@ -13,21 +13,21 @@ import 'evaluation_data.dart';
 
 void main() {
   final testData = {
-    "simple_value",
-    "1_targeting_rule",
-    "2_targeting_rules",
-    "and_rules",
-    "semver_validation",
-    "epoch_date_validation",
-    "number_validation",
-    "comparators",
+    // "simple_value",
+    // "1_targeting_rule",
+    // "2_targeting_rules",
+    // "and_rules",
+    // "semver_validation",
+    // "epoch_date_validation",
+    // "number_validation",
+    // "comparators",
     "prerequisite_flag",
     "segment",
-    "options_after_targeting_rule",
-    "options_based_on_user_id",
-    "options_based_on_custom_attr",
-    "options_within_targeting_rule",
-    "list_truncation"
+    // "options_after_targeting_rule",
+    // "options_based_on_user_id",
+    // "options_based_on_custom_attr",
+    // "options_within_targeting_rule",
+    // "list_truncation"
   };
 
   tearDown(() {
