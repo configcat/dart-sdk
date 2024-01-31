@@ -143,7 +143,7 @@ class RolloutEvaluator {
       evaluateLogger?.decreaseIndentLevel();
       return evaluationResult;
     } finally {
-      if(evaluateLogger != null) {
+      if (evaluateLogger != null) {
         _logger.info(5000, evaluateLogger.toPrint());
       }
     }
@@ -1032,7 +1032,8 @@ class RolloutEvaluator {
       }
       percentageOptionAttributeValue = _userAttributeToString(userAttribute);
     }
-    evaluateLogger?.logPercentageOptionEvaluation(percentageOptionAttributeName);
+    evaluateLogger
+        ?.logPercentageOptionEvaluation(percentageOptionAttributeName);
 
     final hashCandidate =
         evaluationContext.key + percentageOptionAttributeValue;
