@@ -81,6 +81,17 @@ void main() {
         throwsA(predicate((e) =>
             e is ArgumentError &&
             e.message == "SDK Key 'configcat-proxy/' is invalid.")));
+
+    //TEST OverrideBehaviour.localOnly skip sdkKey validation
+    client = ConfigCatClient.get(
+        sdkKey: "sdk-key-90123456789012",
+        options: ConfigCatOptions(
+            override: FlagOverrides(
+                dataSource: OverrideDataSource.map({}),
+                behaviour: OverrideBehaviour.localOnly)));
+    expect(client, isNotNull);
+
+    ConfigCatClient.closeAll();
   });
 
   test('get string', () async {

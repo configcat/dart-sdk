@@ -43,7 +43,9 @@ class ConfigCatClient {
     if (sdkKey.isEmpty) {
       throw ArgumentError('SDK Key cannot be empty.');
     }
-    if (!_isValidKey(sdkKey, options.isBaseUrlCustom())) {
+
+    if (options.override?.behaviour != OverrideBehaviour.localOnly &&
+        !_isValidKey(sdkKey, options.isBaseUrlCustom())) {
       throw ArgumentError("SDK Key '$sdkKey' is invalid.");
     }
 
@@ -99,6 +101,7 @@ class ConfigCatClient {
   /// [key] the identifier of the feature flag or setting.
   /// [defaultValue] in case of any failure, this value will be returned.
   /// [user] the user object.
+  /// [T] the type of the desired feature flag or setting.
   Future<T> getValue<T>({
     required String key,
     required T defaultValue,
@@ -148,6 +151,7 @@ class ConfigCatClient {
   /// [key] the identifier of the feature flag or setting.
   /// [defaultValue] in case of any failure, this value will be returned.
   /// [user] the user object.
+  /// [T] the type of the desired feature flag or setting.
   Future<EvaluationDetails<T>> getValueDetails<T>({
     required String key,
     required T defaultValue,
@@ -279,6 +283,7 @@ class ConfigCatClient {
 
   /// Gets the key of a setting and its value identified by the given [variationId] (analytics).
   /// [variationId] the Variation ID.
+  /// [T] the type of the desired feature flag or setting.
   Future<MapEntry<String, T>?> getKeyAndValue<T>(
       {required String variationId}) async {
     try {
@@ -298,21 +303,24 @@ class ConfigCatClient {
         }
 
         for (final targetingRule in entry.value.targetingRules) {
-          if (targetingRule.servedValue != null &&
-              targetingRule.servedValue?.variationId == variationId) {
-            return MapEntry(
-                entry.key,
-                _parseSettingValue<T>(targetingRule.servedValue!.settingsValue,
-                    entry.value.type));
-          }
-          var targetRulePercentageOptions = targetingRule.percentageOptions;
-          if (targetRulePercentageOptions != null) {
-            for (final percentageOption in targetRulePercentageOptions) {
-              if (percentageOption.variationId == variationId) {
-                return MapEntry(
-                    entry.key,
-                    _parseSettingValue<T>(
-                        percentageOption.settingsValue, entry.value.type));
+          if (targetingRule.servedValue != null) {
+            if (targetingRule.servedValue?.variationId == variationId) {
+              return MapEntry(
+                  entry.key,
+                  _parseSettingValue<T>(
+                      targetingRule.servedValue!.settingsValue,
+                      entry.value.type));
+            }
+          } else {
+            var targetRulePercentageOptions = targetingRule.percentageOptions;
+            if (targetRulePercentageOptions != null) {
+              for (final percentageOption in targetRulePercentageOptions) {
+                if (percentageOption.variationId == variationId) {
+                  return MapEntry(
+                      entry.key,
+                      _parseSettingValue<T>(
+                          percentageOption.settingsValue, entry.value.type));
+                }
               }
             }
           }
@@ -489,7 +497,7 @@ class ConfigCatClient {
         "The type of a setting must match the type of the specified default value. Setting's type was {${_settingTypes[settingType]}} but the default value's type was {${T.runtimeType}}. Please use a default value which corresponds to the setting type {${_settingTypes[settingType]}}. Learn more: https://configcat.com/docs/sdk-reference/dotnet/#setting-type-mapping");
   }
 
-  void _validateReturnType<T>(T type) {
+  void _validateReturnType(Type type) {
     if (type != bool &&
         type != String &&
         type != int &&
