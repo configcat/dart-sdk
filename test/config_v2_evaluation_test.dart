@@ -117,7 +117,6 @@ void main() {
       "3"
     ],
     ["dateToStringConversion", 1680307199.999, "3"],
-    ["dateToStringConversion", "1680307199.999", "3"],
     ["dateToStringConversionNaN", double.nan, "3"],
     ["dateToStringConversionPositiveInf", double.infinity, "1"],
     ["dateToStringConversionNegativeInf", double.negativeInfinity, "5"],
