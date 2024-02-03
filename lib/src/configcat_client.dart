@@ -486,7 +486,7 @@ class ConfigCatClient {
       return settingsValue.doubleValue as T;
     }
     throw ArgumentError(
-        "The type of a setting must match the type of the setting's default value. Setting's type was {${_settingTypes[settingType]}} but the default value's type was {${T.runtimeType}}. Please use a default value which corresponds to the setting type {${_settingTypes[settingType]}}. Learn more: https://configcat.com/docs/sdk-reference/dotnet/#setting-type-mapping");
+        "The type of a setting must match the type of the specified default value. Setting's type was {${_settingTypes[settingType]}} but the default value's type was {${T.runtimeType}}. Please use a default value which corresponds to the setting type {${_settingTypes[settingType]}}. Learn more: https://configcat.com/docs/sdk-reference/dotnet/#setting-type-mapping");
   }
 
   void _validateReturnType<T>(T type) {
