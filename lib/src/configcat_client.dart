@@ -8,6 +8,7 @@ import 'configcat_cache.dart';
 import 'configcat_options.dart';
 import 'configcat_user.dart';
 import 'error_reporter.dart';
+import 'evaluate_logger.dart';
 import 'fetch/config_fetcher.dart';
 import 'fetch/config_service.dart';
 import 'json/setting.dart';

@@ -1,11 +1,10 @@
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:crypto/crypto.dart';
-import 'package:intl/intl.dart';
 import 'package:pub_semver/pub_semver.dart';
 
 import 'configcat_user.dart';
+import 'evaluate_logger.dart';
 import 'json/condition_accessor.dart';
 import 'json/percentage_option.dart';
 import 'json/segment.dart';
@@ -16,6 +15,7 @@ import 'json/segment_condition.dart';
 import 'json/settings_value.dart';
 import 'json/user_condition.dart';
 import 'log/configcat_logger.dart';
+import 'log_helper.dart';
 
 class EvaluationResult {
   final String variationId;
@@ -312,7 +312,7 @@ class RolloutEvaluator {
       String configSalt,
       String contextSalt,
       EvaluateLogger? evaluateLogger) {
-    evaluateLogger?.append(_LogHelper.formatUserCondition(userCondition));
+    evaluateLogger?.append(LogHelper.formatUserCondition(userCondition));
 
     var configCatUser = evaluationContext.user;
     if (configCatUser == null) {
@@ -334,7 +334,7 @@ class RolloutEvaluator {
     if (userAttributeValue == null ||
         (userAttributeValue is String && userAttributeValue.isEmpty)) {
       _logger.warning(3003,
-          "Cannot evaluate condition (${_LogHelper.formatUserCondition(userCondition)}) for setting '${evaluationContext.key}' (the User.$comparisonAttribute attribute is missing). You should set the User.$comparisonAttribute attribute in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/");
+          "Cannot evaluate condition (${LogHelper.formatUserCondition(userCondition)}) for setting '${evaluationContext.key}' (the User.$comparisonAttribute attribute is missing). You should set the User.$comparisonAttribute attribute in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/");
       throw RolloutEvaluatorException(cannotEvaluateTheUserPrefix +
           comparisonAttribute +
           cannotEvaluateTheUserAttributeMissing);
@@ -493,7 +493,7 @@ class RolloutEvaluator {
     }
     String? convertedUserAttribute = _userAttributeToString(userAttributeValue);
     _logger.warning(3005,
-        "Evaluation of condition (${_LogHelper.formatUserCondition(userCondition)}) for setting '$key' may not produce the expected result (the User.$userAttributeName attribute is not a string value, thus it was automatically converted to the string value '$convertedUserAttribute'). Please make sure that using a non-string value was intended.");
+        "Evaluation of condition (${LogHelper.formatUserCondition(userCondition)}) for setting '$key' may not produce the expected result (the User.$userAttributeName attribute is not a string value, thus it was automatically converted to the string value '$convertedUserAttribute'). Please make sure that using a non-string value was intended.");
     return convertedUserAttribute;
   }
 
@@ -508,7 +508,7 @@ class RolloutEvaluator {
     }
     String reason = "'$userValue' is not a valid semantic version";
     _logger.warning(3004,
-        "Cannot evaluate condition (${_LogHelper.formatUserCondition(userCondition)}) for setting '$key' ($reason). Please check the User.$comparisonAttribute attribute and make sure that its value corresponds to the comparison operator.");
+        "Cannot evaluate condition (${LogHelper.formatUserCondition(userCondition)}) for setting '$key' ($reason). Please check the User.$comparisonAttribute attribute and make sure that its value corresponds to the comparison operator.");
     throw RolloutEvaluatorException(
         "$cannotEvaluateTheUserPrefix$comparisonAttribute$cannotEvaluateTheUserAttributeInvalid$reason)");
   }
@@ -525,7 +525,7 @@ class RolloutEvaluator {
       //If cannot convert to double, continue with the error
       String reason = "'$userAttributeValue' is not a valid decimal number";
       _logger.warning(3004,
-          "Cannot evaluate condition (${_LogHelper.formatUserCondition(userCondition)}) for setting '$key' ($reason). Please check the User.$comparisonAttribute attribute and make sure that its value corresponds to the comparison operator.");
+          "Cannot evaluate condition (${LogHelper.formatUserCondition(userCondition)}) for setting '$key' ($reason). Please check the User.$comparisonAttribute attribute and make sure that its value corresponds to the comparison operator.");
       throw RolloutEvaluatorException(
           "$cannotEvaluateTheUserPrefix$comparisonAttribute$cannotEvaluateTheUserAttributeInvalid$reason)");
     }
@@ -545,7 +545,7 @@ class RolloutEvaluator {
       String reason =
           "'$userAttributeValue' is not a valid Unix timestamp (number of seconds elapsed since Unix epoch)";
       _logger.warning(3004,
-          "Cannot evaluate condition (${_LogHelper.formatUserCondition(userCondition)}) for setting '${context.key}' ($reason). Please check the User.$comparisonAttribute attribute and make sure that its value corresponds to the comparison operator.");
+          "Cannot evaluate condition (${LogHelper.formatUserCondition(userCondition)}) for setting '${context.key}' ($reason). Please check the User.$comparisonAttribute attribute and make sure that its value corresponds to the comparison operator.");
       throw RolloutEvaluatorException(
           "$cannotEvaluateTheUserPrefix$comparisonAttribute$cannotEvaluateTheUserAttributeInvalid$reason)");
     }
@@ -561,8 +561,8 @@ class RolloutEvaluator {
       if (userAttributeValue is List<String>) {
         result = userAttributeValue;
       }
-      if (userAttributeValue is Set<dynamic>) {
-        result = userAttributeValue.map((e) => e as String).toList();
+      if (userAttributeValue is Set<String>) {
+        result = userAttributeValue.toList();
       }
       if (userAttributeValue is String) {
         var decoded = jsonDecode(userAttributeValue);
@@ -576,7 +576,7 @@ class RolloutEvaluator {
     }
     String reason = "'$userAttributeValue' is not a valid JSON string array";
     _logger.warning(3004,
-        "Cannot evaluate condition (${_LogHelper.formatUserCondition(userCondition)}) for setting '${context.key}' ($reason). Please check the User.$comparisonAttribute attribute and make sure that its value corresponds to the comparison operator.");
+        "Cannot evaluate condition (${LogHelper.formatUserCondition(userCondition)}) for setting '${context.key}' ($reason). Please check the User.$comparisonAttribute attribute and make sure that its value corresponds to the comparison operator.");
     throw RolloutEvaluatorException(
         "$cannotEvaluateTheUserPrefix$comparisonAttribute$cannotEvaluateTheUserAttributeInvalid$reason)");
   }
@@ -591,6 +591,7 @@ class RolloutEvaluator {
     if (userAttribute is DateTime) {
       return (userAttribute.millisecondsSinceEpoch / 1000).toString();
     }
+    // TODO add doouble parse?
     return userAttribute.toString();
   }
 
@@ -604,10 +605,6 @@ class RolloutEvaluator {
     if (userAttribute is num) {
       return userAttribute.toDouble();
     }
-    if (userAttribute is int) {
-      return userAttribute.toDouble();
-    }
-
     throw FormatException();
   }
 
@@ -828,18 +825,19 @@ class RolloutEvaluator {
     List<String> comparisonValues =
         _ensureComparisonValue(userCondition.stringArrayValue);
 
-    try {
       var matched = false;
       for (final value in comparisonValues) {
         if (_ensureComparisonValue(value).isEmpty) {
           continue;
         }
-        matched = _parseVersion(value.trim()) == userVersion || matched;
+        try {
+          matched = _parseVersion(value.trim()) == userVersion || matched;
+        } catch (e) {
+          return false;
+        }
       }
       return negateSemverIsOneOf != matched;
-    } catch (e) {
-      return false;
-    }
+
   }
 
   bool _evaluateContainsAnyOf(bool negateContainsAnyOf,
@@ -867,7 +865,7 @@ class RolloutEvaluator {
       segment = segments[segmentIndex];
     }
     evaluateLogger?.append(
-        _LogHelper.formatSegmentFlagCondition(segmentCondition, segment));
+        LogHelper.formatSegmentFlagCondition(segmentCondition, segment));
 
     if (evaluationContext.user == null) {
       if (!evaluationContext.isUserMissing) {
@@ -923,7 +921,7 @@ class RolloutEvaluator {
       EvaluationContext evaluationContext,
       EvaluateLogger? evaluateLogger) {
     evaluateLogger?.append(
-        _LogHelper.formatPrerequisiteFlagCondition(prerequisiteFlagCondition));
+        LogHelper.formatPrerequisiteFlagCondition(prerequisiteFlagCondition));
 
     String prerequisiteFlagKey = prerequisiteFlagCondition.prerequisiteFlagKey;
     Setting? prerequisiteFlagSetting =
@@ -949,7 +947,7 @@ class RolloutEvaluator {
     visitedKeys ??= [];
     visitedKeys.add(evaluationContext.key);
     if (visitedKeys.contains(prerequisiteFlagKey)) {
-      String dependencyCycle = _LogHelper.formatCircularDependencyList(
+      String dependencyCycle = LogHelper.formatCircularDependencyList(
           visitedKeys, prerequisiteFlagKey);
       throw ArgumentError(
           "Circular dependency detected between the following depending flags: $dependencyCycle.");
@@ -1013,8 +1011,7 @@ class RolloutEvaluator {
     }
     String percentageOptionAttributeValue;
     String? percentageOptionAttributeName = percentageOptionAttribute;
-    if (percentageOptionAttributeName == null ||
-        percentageOptionAttributeName.isEmpty) {
+    if (percentageOptionAttributeName == null) {
       percentageOptionAttributeName = "Identifier";
       percentageOptionAttributeValue = evaluationContext.user!.identifier;
     } else {
@@ -1083,366 +1080,3 @@ class RolloutEvaluator {
   }
 }
 
-class EvaluateLogger {
-  int _indentLevel = 0;
-
-  final StringBuffer _stringBuffer = StringBuffer();
-
-  increaseIndentLevel() {
-    _indentLevel++;
-  }
-
-  decreaseIndentLevel() {
-    if (_indentLevel > 0) {
-      _indentLevel--;
-    }
-  }
-
-  newLine() {
-    _stringBuffer.write("\n");
-    for (int i = 0; i < _indentLevel; i++) {
-      _stringBuffer.write("  ");
-    }
-  }
-
-  append(final String line) {
-    _stringBuffer.write(line);
-  }
-
-  String toPrint() {
-    return _stringBuffer.toString();
-  }
-
-  logUserObject(final ConfigCatUser user) {
-    append(" for User '$user'");
-  }
-
-  logEvaluation(String key) {
-    append("Evaluating '$key'");
-  }
-
-  logPercentageOptionUserMissing() {
-    newLine();
-    append("Skipping % options because the User Object is missing.");
-  }
-
-  logPercentageOptionUserAttributeMissing(
-      String percentageOptionsAttributeName) {
-    newLine();
-    append(
-        "Skipping % options because the User.$percentageOptionsAttributeName attribute is missing.");
-  }
-
-  logPercentageOptionEvaluation(String percentageOptionsAttributeName) {
-    newLine();
-    append(
-        "Evaluating % options based on the User.$percentageOptionsAttributeName attribute:");
-  }
-
-  logPercentageOptionEvaluationHash(
-      String percentageOptionsAttributeName, int hashValue) {
-    newLine();
-    append(
-        "- Computing hash in the [0..99] range from User.$percentageOptionsAttributeName => $hashValue (this value is sticky and consistent across all SDKs)");
-  }
-
-  logReturnValue(String returnValue) {
-    newLine();
-    append("Returning '$returnValue'.");
-  }
-
-  logTargetingRules() {
-    newLine();
-    append("Evaluating targeting rules and applying the first match if any:");
-  }
-
-  logConditionConsequence(bool result) {
-    append(" => $result");
-    if (!result) {
-      append(", skipping the remaining AND conditions");
-    }
-  }
-
-  logTargetingRuleIgnored() {
-    increaseIndentLevel();
-    newLine();
-    append(
-        "The current targeting rule is ignored and the evaluation continues with the next rule.");
-    decreaseIndentLevel();
-  }
-
-  logTargetingRuleConsequence(TargetingRule targetingRule, String? error,
-      bool isMatch, bool isNewLine) {
-    increaseIndentLevel();
-    String valueFormat = "% options";
-    if (targetingRule.servedValue != null) {
-      valueFormat = "'${targetingRule.servedValue?.settingsValue}'";
-    }
-    if (isNewLine) {
-      newLine();
-    } else {
-      append(" ");
-    }
-    append("THEN $valueFormat => ");
-    if (error != null && error.isNotEmpty) {
-      append(error);
-    } else {
-      if (isMatch) {
-        append("MATCH, applying rule");
-      } else {
-        append("no match");
-      }
-    }
-    decreaseIndentLevel();
-  }
-
-  logPercentageEvaluationReturnValue(
-      int hashValue, int i, int percentage, SettingsValue settingsValue) {
-    String percentageOptionValue = settingsValue.toString();
-    newLine();
-    append(
-        "- Hash value $hashValue selects % option ${i + 1} ($percentage%), '$percentageOptionValue'.");
-  }
-
-  logSegmentEvaluationStart(String segmentName) {
-    newLine();
-    append("(");
-    increaseIndentLevel();
-    newLine();
-    append("Evaluating segment '$segmentName':");
-  }
-
-  logSegmentEvaluationResult(SegmentCondition segmentCondition, Segment segment,
-      bool result, bool segmentResult) {
-    newLine();
-    String segmentResultComparator = segmentResult
-        ? SegmentComparator.isInSegment.name
-        : SegmentComparator.isNotInSegment.name;
-    append("Segment evaluation result: User $segmentResultComparator.");
-    newLine();
-    append(
-        "Condition (${_LogHelper.formatSegmentFlagCondition(segmentCondition, segment)}) evaluates to $result.");
-    decreaseIndentLevel();
-    newLine();
-    append(")");
-  }
-
-  logSegmentEvaluationError(
-      SegmentCondition segmentCondition, Segment segment, String error) {
-    newLine();
-
-    append("Segment evaluation result: $error.");
-    newLine();
-    append(
-        "Condition (${_LogHelper.formatSegmentFlagCondition(segmentCondition, segment)}) failed to evaluate.");
-    decreaseIndentLevel();
-    newLine();
-    append(")");
-  }
-
-  logPrerequisiteFlagEvaluationStart(String prerequisiteFlagKey) {
-    newLine();
-    append("(");
-    increaseIndentLevel();
-    newLine();
-    append("Evaluating prerequisite flag '$prerequisiteFlagKey':");
-  }
-
-  logPrerequisiteFlagEvaluationResult(
-      PrerequisiteFlagCondition prerequisiteFlagCondition,
-      SettingsValue prerequisiteFlagValue,
-      bool result) {
-    newLine();
-    String prerequisiteFlagValueFormat = prerequisiteFlagValue.toString();
-    append(
-        "Prerequisite flag evaluation result: '$prerequisiteFlagValueFormat'.");
-    newLine();
-    append(
-        "Condition (${_LogHelper.formatPrerequisiteFlagCondition(prerequisiteFlagCondition)}) evaluates to $result.");
-    decreaseIndentLevel();
-    newLine();
-    append(")");
-  }
-}
-
-class _LogHelper {
-  static final String _hashedValue = "<hashed value>";
-  static final String _invalidValue = "<invalid value>";
-  static final String _invalidName = "<invalid name>";
-  static final String _invalidReference = "<invalid reference>";
-
-  static final int _maxListElement = 10;
-
-  static String formatCircularDependencyList(
-      List<String> visitedKeys, String key) {
-    StringBuffer builder = StringBuffer();
-    for (String visitedKey in visitedKeys) {
-      builder.write("'");
-      builder.write(visitedKey);
-      builder.write("' -> ");
-    }
-    builder.write("'");
-    builder.write(key);
-    builder.write("'");
-    return builder.toString();
-  }
-
-  static String formatUserCondition(UserCondition userCondition) {
-    UserComparator userComparator = UserComparator.values.firstWhere(
-        (element) => element.id == userCondition.comparator,
-        orElse: () => throw ArgumentError(comparisonOperatorIsInvalid));
-    String comparisonValue;
-    switch (userComparator) {
-      case UserComparator.isOneOf:
-      case UserComparator.isNotOneOf:
-      case UserComparator.containsAnyOf:
-      case UserComparator.notContainsAnyOf:
-      case UserComparator.semverIsOneOf:
-      case UserComparator.semverIsNotOneOf:
-      case UserComparator.textStartsWith:
-      case UserComparator.textNotStartsWith:
-      case UserComparator.textEndsWith:
-      case UserComparator.textNotEndsWith:
-      case UserComparator.textArrayContains:
-      case UserComparator.textArrayNotContains:
-        comparisonValue = _formatStringListComparisonValue(
-            userCondition.stringArrayValue, false);
-        break;
-      case UserComparator.semverLess:
-      case UserComparator.semverLessEquals:
-      case UserComparator.semverGreater:
-      case UserComparator.semverGreaterEquals:
-      case UserComparator.textEquals:
-      case UserComparator.textNotEquals:
-        comparisonValue =
-            _formatStringComparisonValue(userCondition.stringValue, false);
-        break;
-      case UserComparator.numberEquals:
-      case UserComparator.numberNotEquals:
-      case UserComparator.numberLess:
-      case UserComparator.numberLessEquals:
-      case UserComparator.numberGreater:
-      case UserComparator.numberGreaterEquals:
-        comparisonValue =
-            _formatDoubleComparisonValue(userCondition.doubleValue, false);
-        break;
-      case UserComparator.sensitiveIsOneOf:
-      case UserComparator.sensitiveIsNotOneOf:
-      case UserComparator.hashedStartsWith:
-      case UserComparator.hashedNotStartsWith:
-      case UserComparator.hashedEndsWith:
-      case UserComparator.hashedNotEndsWith:
-      case UserComparator.hashedArrayContains:
-      case UserComparator.hashedArrayNotContains:
-        comparisonValue = _formatStringListComparisonValue(
-            userCondition.stringArrayValue, true);
-        break;
-      case UserComparator.dateBefore:
-      case UserComparator.dateAfter:
-        comparisonValue =
-            _formatDoubleComparisonValue(userCondition.doubleValue, true);
-        break;
-      case UserComparator.hashedEquals:
-      case UserComparator.hashedNotEquals:
-        comparisonValue =
-            _formatStringComparisonValue(userCondition.stringValue, true);
-        break;
-      default:
-        comparisonValue = _invalidName;
-    }
-
-    return "User.${userCondition.comparisonAttribute} ${userComparator.name} $comparisonValue";
-  }
-
-  static String formatSegmentFlagCondition(
-      SegmentCondition segmentCondition, Segment? segment) {
-    String? segmentName;
-    if (segment != null) {
-      segmentName = segment.name;
-      if (segmentName == null || segmentName.isEmpty) {
-        segmentName = _invalidName;
-      }
-    } else {
-      segmentName = _invalidReference;
-    }
-    SegmentComparator segmentComparator = SegmentComparator.values.firstWhere(
-        (element) => element.id == segmentCondition.segmentComparator,
-        orElse: () =>
-            throw ArgumentError("Segment comparison operator is invalid."));
-    return "User ${segmentComparator.name} '$segmentName'";
-  }
-
-  static String formatPrerequisiteFlagCondition(
-      PrerequisiteFlagCondition prerequisiteFlagCondition) {
-    String prerequisiteFlagKey = prerequisiteFlagCondition.prerequisiteFlagKey;
-    PrerequisiteComparator prerequisiteComparator =
-        PrerequisiteComparator.values.firstWhere(
-            (element) =>
-                element.id == prerequisiteFlagCondition.prerequisiteComparator,
-            orElse: () => throw ArgumentError(
-                "Prerequisite Flag comparison operator is invalid."));
-    SettingsValue? prerequisiteValue = prerequisiteFlagCondition.value;
-    String comparisonValue = prerequisiteValue == null
-        ? _invalidValue
-        : prerequisiteValue.toString();
-    return "Flag '$prerequisiteFlagKey' ${prerequisiteComparator.name} '$comparisonValue'";
-  }
-
-  static String _formatStringListComparisonValue(
-      List<String>? comparisonValue, bool isSensitive) {
-    if (comparisonValue == null || comparisonValue.isEmpty) {
-      return _invalidValue;
-    }
-
-    String formattedList;
-    if (isSensitive) {
-      String sensitivePostFix =
-          comparisonValue.length == 1 ? "value" : "values";
-      formattedList = "<${comparisonValue.length} hashed $sensitivePostFix>";
-    } else {
-      String listPostFix = "";
-      if (comparisonValue.length > _maxListElement) {
-        int count = comparisonValue.length - _maxListElement;
-        String countPostFix = count == 1 ? "value" : "values";
-        listPostFix = ", ... <$count more $countPostFix>";
-      }
-      List<String> subList = comparisonValue.sublist(
-          0, min(_maxListElement, comparisonValue.length));
-      StringBuffer formatListBuilder = StringBuffer();
-      int subListSize = subList.length;
-      for (int i = 0; i < subListSize; i++) {
-        formatListBuilder.write("'");
-        formatListBuilder.write(subList[i]);
-        formatListBuilder.write("'");
-        if (i != subListSize - 1) {
-          formatListBuilder.write(", ");
-        }
-      }
-      formatListBuilder.write(listPostFix);
-      formattedList = formatListBuilder.toString();
-    }
-
-    return "[$formattedList]";
-  }
-
-  static String _formatStringComparisonValue(
-      String? comparisonValue, bool isSensitive) {
-    return "'${isSensitive ? _hashedValue : comparisonValue}'";
-  }
-
-  static String _formatDoubleComparisonValue(
-      double? comparisonValue, bool isDate) {
-    if (comparisonValue == null) {
-      return _invalidValue;
-    }
-    var decimalFormat = NumberFormat("0.######", "en");
-    if (isDate) {
-      var dateTimeInMilliseconds = comparisonValue * 1000;
-      var dateTime = DateTime.fromMillisecondsSinceEpoch(
-          isUtc: true, dateTimeInMilliseconds.toInt());
-
-      return "'${decimalFormat.format(comparisonValue)}' (${dateTime.toIso8601String()} UTC)";
-    }
-    return "'${decimalFormat.format(comparisonValue)}'";
-  }
-}

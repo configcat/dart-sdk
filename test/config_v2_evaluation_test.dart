@@ -94,7 +94,64 @@ void main() {
       "john@notsensitivecompany.com",
       OverrideBehaviour.localOnly,
       ""
-    ]
+    ],
+    [
+      "stringDependsOnInt",
+      "1",
+      "john@sensitivecompany.com",
+      null,
+      "Dog"
+    ],
+    [
+      "stringDependsOnInt",
+      "1",
+      "john@sensitivecompany.com",
+      OverrideBehaviour.remoteOverLocal,
+      "Dog"
+    ],
+    [
+      "stringDependsOnInt",
+      "1",
+      "john@sensitivecompany.com",
+      OverrideBehaviour.localOverRemote,
+      "Falcon"
+    ],
+    [
+      "stringDependsOnInt",
+      "1",
+      "john@sensitivecompany.com",
+      OverrideBehaviour.localOnly,
+      "Falcon"
+    ],
+    [
+      "stringDependsOnInt",
+      "2",
+      "john@notsensitivecompany.com",
+      null,
+      "Cat"
+    ],
+    [
+      "stringDependsOnInt",
+      "2",
+      "john@notsensitivecompany.com",
+      OverrideBehaviour.remoteOverLocal,
+      "Cat"
+    ],
+    [
+      "stringDependsOnInt",
+      "2",
+      "john@notsensitivecompany.com",
+      OverrideBehaviour.localOverRemote,
+      "Falcon"
+    ],
+    [
+      "stringDependsOnInt",
+      "2",
+      "john@notsensitivecompany.com",
+      OverrideBehaviour.localOnly,
+      "Falcon"
+    ],
+
   };
 
   final comparisonAttributeConversionToCanonicalStringRepresentationTestData = {
@@ -285,7 +342,10 @@ Future<void> _prerequisiteFlagOverrideTest(
     Object expectedValue) async {
   FlagOverrides? flagOverrides;
   if (overrideBehaviour != null) {
-    Map<String, Object> map = <String, Object>{"mainStringFlag": "private"};
+    Map<String, Object> map = <String, Object>{
+      "mainStringFlag": "private",
+      "stringDependsOnInt": "Falcon"
+    };
 
     flagOverrides = FlagOverrides(
         dataSource: OverrideDataSource.map(map), behaviour: overrideBehaviour);

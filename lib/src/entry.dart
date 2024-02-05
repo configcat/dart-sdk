@@ -1,4 +1,4 @@
-import 'dart:convert';
+import 'package:configcat_client/src/Utils.dart';
 
 import 'constants.dart';
 import 'json/config.dart';
@@ -43,8 +43,7 @@ class Entry {
     final configJson = cached.substring(eTagIndex + 1);
     final Config config;
     try {
-      final decoded = jsonDecode(configJson);
-      config = Config.fromJson(decoded);
+      config = Utils.deserializeConfig(configJson);
     } catch (e) {
       throw ArgumentError("Invalid config JSON content: $configJson");
     }
