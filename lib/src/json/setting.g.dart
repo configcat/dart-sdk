@@ -8,7 +8,7 @@ part of 'setting.dart';
 
 Setting _$SettingFromJson(Map<String, dynamic> json) => Setting(
       SettingsValue.fromJson(json['v'] as Map<String, dynamic>),
-      json['t'] as int? ?? 0,
+      json['t'] as int,
       (json['p'] as List<dynamic>?)
               ?.map((e) => PercentageOption.fromJson(e as Map<String, dynamic>))
               .toList() ??
@@ -17,7 +17,7 @@ Setting _$SettingFromJson(Map<String, dynamic> json) => Setting(
               ?.map((e) => TargetingRule.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
-      json['i'] as String? ?? '',
+      json['i'] as String,
       json['a'] as String?,
     );
 

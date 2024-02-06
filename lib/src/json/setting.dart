@@ -42,7 +42,7 @@ class Setting {
   final SettingsValue settingsValue;
 
   /// Setting type.
-  @JsonKey(name: 't', defaultValue: 0)
+  @JsonKey(name: 't')
   final int type;
 
   /// The list of percentage options.
@@ -54,7 +54,7 @@ class Setting {
   final List<TargetingRule> targetingRules;
 
   /// Variation ID.
-  @JsonKey(name: 'i', defaultValue: '')
+  @JsonKey(name: 'i')
   final String variationId;
 
   /// The User Object attribute which serves as the basis of percentage options evaluation.

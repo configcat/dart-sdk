@@ -9,7 +9,7 @@ part of 'segment_condition.dart';
 SegmentCondition _$SegmentConditionFromJson(Map<String, dynamic> json) =>
     SegmentCondition(
       json['s'] as int,
-      json['c'] as int? ?? 0,
+      json['c'] as int,
     );
 
 Map<String, dynamic> _$SegmentConditionToJson(SegmentCondition instance) =>

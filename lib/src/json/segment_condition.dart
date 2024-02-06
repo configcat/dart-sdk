@@ -10,7 +10,7 @@ class SegmentCondition {
   final int segmentIndex;
 
   /// The operator which defines the expected result of the evaluation of the segment.
-  @JsonKey(name: 'c', defaultValue: 0)
+  @JsonKey(name: 'c')
   final int segmentComparator;
 
   SegmentCondition(this.segmentIndex, this.segmentComparator);

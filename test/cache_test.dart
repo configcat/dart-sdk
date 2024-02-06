@@ -88,7 +88,7 @@ void main() {
   test('cache serialization', () async {
     // Arrange
     final testJson =
-        "{\"p\":{\"u\":\"https://cdn-global.configcat.com\",\"r\":0,\"s\":\"test-slat\"},\"f\":{\"testKey\":{\"v\":{\"s\":\"testValue\"},\"t\":1,\"p\":[],\"r\":[], \"a\":\"\"}}, \"s\":[] }";
+        "{\"p\":{\"u\":\"https://cdn-global.configcat.com\",\"r\":0,\"s\":\"test-slat\"},\"f\":{\"testKey\":{\"v\":{\"s\":\"testValue\"},\"t\":1,\"p\":[],\"r\":[], \"a\":\"\", \"i\":\"test-variation-id\"}}, \"s\":[] }";
 
     final time = DateTime.parse('2023-06-14T15:27:15.8440000Z');
     final eTag = 'test-etag';

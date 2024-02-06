@@ -12,7 +12,7 @@ class PrerequisiteFlagCondition {
   final String prerequisiteFlagKey;
 
   /// The operator which defines the relation between the evaluated value of the prerequisite flag and the comparison value.
-  @JsonKey(name: 'c', defaultValue: 0)
+  @JsonKey(name: 'c')
   final int prerequisiteComparator;
 
   /// The value that the evaluated value of the prerequisite flag is compared to.

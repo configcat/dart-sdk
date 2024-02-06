@@ -10,7 +10,7 @@ PrerequisiteFlagCondition _$PrerequisiteFlagConditionFromJson(
         Map<String, dynamic> json) =>
     PrerequisiteFlagCondition(
       json['f'] as String,
-      json['c'] as int? ?? 0,
+      json['c'] as int,
       json['v'] == null
           ? null
           : SettingsValue.fromJson(json['v'] as Map<String, dynamic>),
