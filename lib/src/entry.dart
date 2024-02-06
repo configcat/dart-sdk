@@ -1,4 +1,3 @@
-
 import 'package:configcat_client/src/utils.dart';
 
 import 'constants.dart';
