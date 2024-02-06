@@ -1,10 +1,8 @@
-
 import 'dart:convert';
 
 import '../configcat_client.dart';
 
-class Utils{
-
+class Utils {
   Utils._();
 
   static Config deserializeConfig(String configJson) {
@@ -22,5 +20,4 @@ class Utils{
     }
     return config;
   }
-
 }

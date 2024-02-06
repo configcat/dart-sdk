@@ -825,19 +825,18 @@ class RolloutEvaluator {
     List<String> comparisonValues =
         _ensureComparisonValue(userCondition.stringArrayValue);
 
-      var matched = false;
-      for (final value in comparisonValues) {
-        if (_ensureComparisonValue(value).isEmpty) {
-          continue;
-        }
-        try {
-          matched = _parseVersion(value.trim()) == userVersion || matched;
-        } catch (e) {
-          return false;
-        }
+    var matched = false;
+    for (final value in comparisonValues) {
+      if (_ensureComparisonValue(value).isEmpty) {
+        continue;
       }
-      return negateSemverIsOneOf != matched;
-
+      try {
+        matched = _parseVersion(value.trim()) == userVersion || matched;
+      } catch (e) {
+        return false;
+      }
+    }
+    return negateSemverIsOneOf != matched;
   }
 
   bool _evaluateContainsAnyOf(bool negateContainsAnyOf,
@@ -1079,4 +1078,3 @@ class RolloutEvaluator {
     return value;
   }
 }
-

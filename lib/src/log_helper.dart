@@ -29,7 +29,7 @@ class LogHelper {
 
   static String formatUserCondition(UserCondition userCondition) {
     UserComparator userComparator = UserComparator.values.firstWhere(
-            (element) => element.id == userCondition.comparator,
+        (element) => element.id == userCondition.comparator,
         orElse: () => throw ArgumentError(comparisonOperatorIsInvalid));
     String comparisonValue;
     switch (userComparator) {
@@ -106,9 +106,9 @@ class LogHelper {
       segmentName = _invalidReference;
     }
     SegmentComparator segmentComparator = SegmentComparator.values.firstWhere(
-            (element) => element.id == segmentCondition.segmentComparator,
+        (element) => element.id == segmentCondition.segmentComparator,
         orElse: () =>
-        throw ArgumentError("Segment comparison operator is invalid."));
+            throw ArgumentError("Segment comparison operator is invalid."));
     return "User ${segmentComparator.name} '$segmentName'";
   }
 
@@ -116,11 +116,11 @@ class LogHelper {
       PrerequisiteFlagCondition prerequisiteFlagCondition) {
     String prerequisiteFlagKey = prerequisiteFlagCondition.prerequisiteFlagKey;
     PrerequisiteComparator prerequisiteComparator =
-    PrerequisiteComparator.values.firstWhere(
+        PrerequisiteComparator.values.firstWhere(
             (element) =>
-        element.id == prerequisiteFlagCondition.prerequisiteComparator,
-        orElse: () => throw ArgumentError(
-            "Prerequisite Flag comparison operator is invalid."));
+                element.id == prerequisiteFlagCondition.prerequisiteComparator,
+            orElse: () => throw ArgumentError(
+                "Prerequisite Flag comparison operator is invalid."));
     SettingsValue? prerequisiteValue = prerequisiteFlagCondition.value;
     String comparisonValue = prerequisiteValue == null
         ? _invalidValue
@@ -137,7 +137,7 @@ class LogHelper {
     String formattedList;
     if (isSensitive) {
       String sensitivePostFix =
-      comparisonValue.length == 1 ? "value" : "values";
+          comparisonValue.length == 1 ? "value" : "values";
       formattedList = "<${comparisonValue.length} hashed $sensitivePostFix>";
     } else {
       String listPostFix = "";

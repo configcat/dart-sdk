@@ -95,13 +95,7 @@ void main() {
       OverrideBehaviour.localOnly,
       ""
     ],
-    [
-      "stringDependsOnInt",
-      "1",
-      "john@sensitivecompany.com",
-      null,
-      "Dog"
-    ],
+    ["stringDependsOnInt", "1", "john@sensitivecompany.com", null, "Dog"],
     [
       "stringDependsOnInt",
       "1",
@@ -123,13 +117,7 @@ void main() {
       OverrideBehaviour.localOnly,
       "Falcon"
     ],
-    [
-      "stringDependsOnInt",
-      "2",
-      "john@notsensitivecompany.com",
-      null,
-      "Cat"
-    ],
+    ["stringDependsOnInt", "2", "john@notsensitivecompany.com", null, "Cat"],
     [
       "stringDependsOnInt",
       "2",
@@ -151,7 +139,6 @@ void main() {
       OverrideBehaviour.localOnly,
       "Falcon"
     ],
-
   };
 
   final comparisonAttributeConversionToCanonicalStringRepresentationTestData = {
