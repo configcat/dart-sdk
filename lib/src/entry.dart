@@ -1,4 +1,5 @@
-import 'package:configcat_client/src/Utils.dart';
+
+import 'package:configcat_client/src/utils.dart';
 
 import 'constants.dart';
 import 'json/config.dart';

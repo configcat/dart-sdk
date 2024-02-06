@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:dio/dio.dart';
 
-import '../Utils.dart';
+import '../utils.dart';
 import '../error_reporter.dart';
 import '../entry.dart';
 import '../data_governance.dart';
