@@ -282,7 +282,9 @@ class RolloutEvaluator {
     }
 
     String comparisonAttribute = userCondition.comparisonAttribute;
-    UserComparator? comparator = UserComparator.tryFrom(userCondition.comparator);
+    UserComparator comparator = UserComparator.tryFrom(userCondition.comparator)
+      ?? (() => throw ArgumentError(comparisonOperatorIsInvalid))();
+
     Object? userAttributeValue =
         configCatUser.getAttribute(comparisonAttribute);
 
@@ -329,7 +331,7 @@ class RolloutEvaluator {
             _getUserAttributeAsVersion(evaluationContext.key, userCondition,
                 comparisonAttribute, userAttributeValue);
         return _evaluateSemver(userAttributeValueForSemverOperators,
-            userCondition, comparator!, comparisonAttribute);
+            userCondition, comparator, comparisonAttribute);
       case UserComparator.numberEquals:
       case UserComparator.numberNotEquals:
       case UserComparator.numberLess:
@@ -342,7 +344,7 @@ class RolloutEvaluator {
             comparisonAttribute,
             userAttributeValue);
         return _evaluateNumbers(userAttributeAsDouble, userCondition,
-            comparator!, comparisonAttribute);
+            comparator, comparisonAttribute);
       case UserComparator.isOneOf:
       case UserComparator.isNotOneOf:
       case UserComparator.sensitiveIsOneOf:
@@ -362,7 +364,7 @@ class RolloutEvaluator {
       case UserComparator.dateAfter:
         double userAttributeForDate = _getUserAttributeForDate(userCondition,
             evaluationContext, comparisonAttribute, userAttributeValue);
-        return _evaluateDate(userAttributeForDate, userCondition, comparator!,
+        return _evaluateDate(userAttributeForDate, userCondition, comparator,
             comparisonAttribute);
       case UserComparator.textEquals:
       case UserComparator.textNotEquals:
@@ -391,7 +393,7 @@ class RolloutEvaluator {
         return _evaluateHashedStartOrEndWith(
             userAttributeForHashedStartEndsWith,
             userCondition,
-            comparator!,
+            comparator,
             configSalt,
             contextSalt);
       case UserComparator.textStartsWith:
@@ -436,8 +438,6 @@ class RolloutEvaluator {
             configSalt,
             contextSalt,
             negateArrayContains);
-      default:
-        throw ArgumentError(comparisonOperatorIsInvalid);
     }
   }
 
