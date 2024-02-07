@@ -1,9 +1,10 @@
 import 'dart:math';
 
-import 'package:configcat_client/src/rollout_evaluator.dart';
+import 'package:configcat_client/src/json/prerequisite_comparator.dart';
 import 'package:intl/intl.dart';
 
 import '../configcat_client.dart';
+import 'json/segment_comparator.dart';
 import 'json/user_comparator.dart';
 
 class LogHelper {
@@ -30,7 +31,8 @@ class LogHelper {
   }
 
   static String formatUserCondition(UserCondition userCondition) {
-     UserComparator? userComparator = UserComparator.tryFrom(userCondition.comparator);
+    UserComparator? userComparator =
+        UserComparator.tryFrom(userCondition.comparator);
 
     String comparisonValue;
     switch (userComparator) {
@@ -92,7 +94,7 @@ class LogHelper {
         comparisonValue = _invalidValue;
     }
 
-    return "User.${userCondition.comparisonAttribute} ${userComparator?.name ?? _invalidOperator } $comparisonValue";
+    return "User.${userCondition.comparisonAttribute} ${userComparator?.name ?? _invalidOperator} $comparisonValue";
   }
 
   static String formatSegmentFlagCondition(
@@ -106,27 +108,23 @@ class LogHelper {
     } else {
       segmentName = _invalidReference;
     }
-    SegmentComparator segmentComparator = SegmentComparator.values.firstWhere(
-        (element) => element.id == segmentCondition.segmentComparator,
-        orElse: () =>
-            throw ArgumentError("Segment comparison operator is invalid."));
-    return "User ${segmentComparator.name} '$segmentName'";
+    SegmentComparator? segmentComparator =
+        SegmentComparator.tryFrom(segmentCondition.segmentComparator);
+    return "User ${segmentComparator?.name ?? _invalidOperator} '$segmentName'";
   }
 
   static String formatPrerequisiteFlagCondition(
       PrerequisiteFlagCondition prerequisiteFlagCondition) {
     String prerequisiteFlagKey = prerequisiteFlagCondition.prerequisiteFlagKey;
-    PrerequisiteComparator prerequisiteComparator =
-        PrerequisiteComparator.values.firstWhere(
-            (element) =>
-                element.id == prerequisiteFlagCondition.prerequisiteComparator,
-            orElse: () => throw ArgumentError(
-                "Prerequisite Flag comparison operator is invalid."));
+    PrerequisiteComparator? prerequisiteComparator =
+        PrerequisiteComparator.tryFrom(
+            prerequisiteFlagCondition.prerequisiteComparator);
+
     SettingsValue? prerequisiteValue = prerequisiteFlagCondition.value;
     String comparisonValue = prerequisiteValue == null
         ? _invalidValue
         : prerequisiteValue.toString();
-    return "Flag '$prerequisiteFlagKey' ${prerequisiteComparator.name} '$comparisonValue'";
+    return "Flag '$prerequisiteFlagKey' ${prerequisiteComparator?.name ?? _invalidOperator} '$comparisonValue'";
   }
 
   static String _formatStringListComparisonValue(

@@ -45,7 +45,7 @@ enum UserComparator {
 
   static UserComparator? tryFrom(int value) {
     return 0 <= value && value < UserComparator.values.length
-      ? UserComparator.values[value]
-      : null;
+        ? UserComparator.values[value]
+        : null;
   }
 }

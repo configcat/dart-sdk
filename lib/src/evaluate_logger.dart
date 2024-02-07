@@ -1,7 +1,7 @@
-import 'package:configcat_client/src/rollout_evaluator.dart';
 import 'package:configcat_client/src/utils.dart';
 
 import '../configcat_client.dart';
+import 'json/segment_comparator.dart';
 import 'log_helper.dart';
 
 class EvaluateLogger {

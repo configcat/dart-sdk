@@ -7,7 +7,9 @@ import 'configcat_user.dart';
 import 'evaluate_logger.dart';
 import 'json/condition_accessor.dart';
 import 'json/percentage_option.dart';
+import 'json/prerequisite_comparator.dart';
 import 'json/segment.dart';
+import 'json/segment_comparator.dart';
 import 'json/targeting_rule.dart';
 import 'json/setting.dart';
 import 'json/prerequisite_flag_condition.dart';
@@ -46,26 +48,6 @@ class RolloutEvaluatorException implements Exception {
   String message;
 
   RolloutEvaluatorException(this.message);
-}
-
-enum SegmentComparator {
-  isInSegment(id: 0, name: "IS IN SEGMENT"),
-  isNotInSegment(id: 1, name: "IS NOT IN SEGMENT");
-
-  final int id;
-  final String name;
-
-  const SegmentComparator({required this.id, required this.name});
-}
-
-enum PrerequisiteComparator {
-  equals(id: 0, name: "EQUALS"),
-  notEquals(id: 1, name: "NOT EQUALS");
-
-  final int id;
-  final String name;
-
-  const PrerequisiteComparator({required this.id, required this.name});
 }
 
 const String userObjectIsMissing = "cannot evaluate, User Object is missing";
@@ -282,8 +264,9 @@ class RolloutEvaluator {
     }
 
     String comparisonAttribute = userCondition.comparisonAttribute;
-    UserComparator comparator = UserComparator.tryFrom(userCondition.comparator)
-      ?? (() => throw ArgumentError(comparisonOperatorIsInvalid))();
+    UserComparator comparator =
+        UserComparator.tryFrom(userCondition.comparator) ??
+            (() => throw ArgumentError(comparisonOperatorIsInvalid))();
 
     Object? userAttributeValue =
         configCatUser.getAttribute(comparisonAttribute);
@@ -844,10 +827,9 @@ class RolloutEvaluator {
       bool segmentRulesResult = _evaluateConditions(segment.segmentRules, null,
           evaluationContext, configSalt, segmentName, segments, evaluateLogger);
 
-      SegmentComparator segmentComparator = SegmentComparator.values.firstWhere(
-          (element) => element.id == segmentCondition.segmentComparator,
-          orElse: () =>
-              throw ArgumentError("Segment comparison operator is invalid."));
+      SegmentComparator segmentComparator =
+          SegmentComparator.tryFrom(segmentCondition.segmentComparator) ??
+              (() => throw ArgumentError(comparisonOperatorIsInvalid))();
 
       switch (segmentComparator) {
         case SegmentComparator.isInSegment:
@@ -857,7 +839,7 @@ class RolloutEvaluator {
           result = !segmentRulesResult;
           break;
         default:
-          throw ArgumentError("Segment comparison operator is invalid.");
+          throw ArgumentError(comparisonOperatorIsInvalid);
       }
       evaluateLogger?.logSegmentEvaluationResult(
           segmentCondition, segment, result, segmentRulesResult);
@@ -921,11 +903,10 @@ class RolloutEvaluator {
     visitedKeys.remove(evaluationContext.key);
 
     PrerequisiteComparator prerequisiteComparator =
-        PrerequisiteComparator.values.firstWhere(
-            (element) =>
-                element.id == prerequisiteFlagCondition.prerequisiteComparator,
-            orElse: () => throw ArgumentError(
-                "Prerequisite Flag comparison operator is invalid."));
+        PrerequisiteComparator.tryFrom(
+                prerequisiteFlagCondition.prerequisiteComparator) ??
+            (() => throw ArgumentError(comparisonOperatorIsInvalid))();
+
     SettingsValue? conditionValue = prerequisiteFlagCondition.value;
     bool result;
 
@@ -937,8 +918,7 @@ class RolloutEvaluator {
         result = conditionValue != evaluateResult.value;
         break;
       default:
-        throw ArgumentError(
-            "Prerequisite Flag comparison operator is invalid.");
+        throw ArgumentError(comparisonOperatorIsInvalid);
     }
 
     evaluateLogger?.logPrerequisiteFlagEvaluationResult(
