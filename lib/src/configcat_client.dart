@@ -102,7 +102,7 @@ class ConfigCatClient {
   /// [key] the identifier of the feature flag or setting.
   /// [defaultValue] in case of any failure, this value will be returned.
   /// [user] the user object.
-  /// [T] the type of the desired feature flag or setting.
+  /// [T] the type of the desired feature flag or setting. Only [String], [int], [double], [bool] or [dynamic] types are supported.
   Future<T> getValue<T>({
     required String key,
     required T defaultValue,
@@ -152,7 +152,7 @@ class ConfigCatClient {
   /// [key] the identifier of the feature flag or setting.
   /// [defaultValue] in case of any failure, this value will be returned.
   /// [user] the user object.
-  /// [T] the type of the desired feature flag or setting.
+  /// [T] the type of the desired feature flag or setting. Only [String], [int], [double], [bool] or [dynamic] types are supported.
   Future<EvaluationDetails<T>> getValueDetails<T>({
     required String key,
     required T defaultValue,
@@ -284,7 +284,7 @@ class ConfigCatClient {
 
   /// Gets the key of a setting and its value identified by the given [variationId] (analytics).
   /// [variationId] the Variation ID.
-  /// [T] the type of the desired feature flag or setting.
+  /// [T] the type of the desired feature flag or setting. Only [String], [int], [double], [bool] or [dynamic] types are supported.
   Future<MapEntry<String, T>?> getKeyAndValue<T>(
       {required String variationId}) async {
     try {
@@ -505,7 +505,7 @@ class ConfigCatClient {
         type != double &&
         type != dynamic) {
       throw ArgumentError(
-          "Only String, Integer, Double, Boolean or dynamic types are supported.");
+          "Only String, int, double, bool or dynamic types are supported.");
     }
   }
 }
