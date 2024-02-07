@@ -8,7 +8,7 @@ part of 'served_value.dart';
 
 ServedValue _$ServedValueFromJson(Map<String, dynamic> json) => ServedValue(
       SettingsValue.fromJson(json['v'] as Map<String, dynamic>),
-      json['i'] as String,
+      json['i'] as String?,
     );
 
 Map<String, dynamic> _$ServedValueToJson(ServedValue instance) =>

@@ -10,7 +10,7 @@ PercentageOption _$PercentageOptionFromJson(Map<String, dynamic> json) =>
     PercentageOption(
       SettingsValue.fromJson(json['v'] as Map<String, dynamic>),
       (json['p'] as num?)?.toDouble() ?? 0,
-      json['i'] as String? ?? '',
+      json['i'] as String?,
     );
 
 Map<String, dynamic> _$PercentageOptionToJson(PercentageOption instance) =>

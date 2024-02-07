@@ -21,7 +21,7 @@ import 'log/configcat_logger.dart';
 import 'log_helper.dart';
 
 class EvaluationResult {
-  final String variationId;
+  final String? variationId;
   final SettingsValue value;
   final TargetingRule? matchedTargetingRule;
   final PercentageOption? matchedPercentageOption;

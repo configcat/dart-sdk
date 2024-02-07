@@ -15,7 +15,7 @@ import 'configcat_user.dart';
 /// Additional information about flag evaluation.
 class EvaluationDetails<T> {
   final String key;
-  final String variationId;
+  final String? variationId;
   final ConfigCatUser? user;
   final bool isDefaultValue;
   final String? error;

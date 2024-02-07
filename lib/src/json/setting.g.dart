@@ -17,7 +17,7 @@ Setting _$SettingFromJson(Map<String, dynamic> json) => Setting(
               ?.map((e) => TargetingRule.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
-      json['i'] as String,
+      json['i'] as String?,
       json['a'] as String?,
     );
 

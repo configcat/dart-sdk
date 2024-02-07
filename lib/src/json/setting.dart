@@ -55,7 +55,7 @@ class Setting {
 
   /// Variation ID.
   @JsonKey(name: 'i')
-  final String variationId;
+  final String? variationId;
 
   /// The User Object attribute which serves as the basis of percentage options evaluation.
   @JsonKey(name: 'a')

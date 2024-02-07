@@ -17,8 +17,8 @@ class PercentageOption {
   final double percentage;
 
   /// Variation ID.
-  @JsonKey(name: 'i', defaultValue: '')
-  final String variationId;
+  @JsonKey(name: 'i')
+  final String? variationId;
 
   PercentageOption(this.settingsValue, this.percentage, this.variationId);
 

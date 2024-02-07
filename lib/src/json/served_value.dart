@@ -10,7 +10,7 @@ class ServedValue {
   final SettingsValue settingsValue;
 
   @JsonKey(name: 'i')
-  final String variationId;
+  final String? variationId;
 
   ServedValue(this.settingsValue, this.variationId);
 
