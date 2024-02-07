@@ -13,6 +13,7 @@ import 'json/setting.dart';
 import 'json/prerequisite_flag_condition.dart';
 import 'json/segment_condition.dart';
 import 'json/settings_value.dart';
+import 'json/user_comparator.dart';
 import 'json/user_condition.dart';
 import 'log/configcat_logger.dart';
 import 'log_helper.dart';
@@ -65,50 +66,6 @@ enum PrerequisiteComparator {
   final String name;
 
   const PrerequisiteComparator({required this.id, required this.name});
-}
-
-enum UserComparator {
-  isOneOf(id: 0, name: "IS ONE OF"),
-  isNotOneOf(id: 1, name: "IS NOT ONE OF"),
-  containsAnyOf(id: 2, name: "CONTAINS ANY OF"),
-  notContainsAnyOf(id: 3, name: "NOT CONTAINS ANY OF"),
-  semverIsOneOf(id: 4, name: "IS ONE OF"),
-  semverIsNotOneOf(id: 5, name: "IS NOT ONE OF"),
-  semverLess(id: 6, name: "<"),
-  semverLessEquals(id: 7, name: "<="),
-  semverGreater(id: 8, name: ">"),
-  semverGreaterEquals(id: 9, name: ">="),
-  numberEquals(id: 10, name: "="),
-  numberNotEquals(id: 11, name: "!="),
-  numberLess(id: 12, name: "<"),
-  numberLessEquals(id: 13, name: "<="),
-  numberGreater(id: 14, name: ">"),
-  numberGreaterEquals(id: 15, name: ">="),
-  sensitiveIsOneOf(id: 16, name: "IS ONE OF"),
-  sensitiveIsNotOneOf(id: 17, name: "IS NOT ONE OF"),
-  dateBefore(id: 18, name: "BEFORE"),
-  dateAfter(id: 19, name: "AFTER"),
-  hashedEquals(id: 20, name: "EQUALS"),
-  hashedNotEquals(id: 21, name: "NOT EQUALS"),
-  hashedStartsWith(id: 22, name: "STARTS WITH ANY OF"),
-  hashedNotStartsWith(id: 23, name: "NOT STARTS WITH ANY OF"),
-  hashedEndsWith(id: 24, name: "ENDS WITH ANY OF"),
-  hashedNotEndsWith(id: 25, name: "NOT ENDS WITH ANY OF"),
-  hashedArrayContains(id: 26, name: "ARRAY CONTAINS ANY OF"),
-  hashedArrayNotContains(id: 27, name: "ARRAY NOT CONTAINS ANY OF"),
-  textEquals(id: 28, name: "EQUALS"),
-  textNotEquals(id: 29, name: "NOT EQUALS"),
-  textStartsWith(id: 30, name: "STARTS WITH ANY OF"),
-  textNotStartsWith(id: 31, name: "NOT STARTS WITH ANY OF"),
-  textEndsWith(id: 32, name: "ENDS WITH ANY OF"),
-  textNotEndsWith(id: 33, name: "NOT ENDS WITH ANY OF"),
-  textArrayContains(id: 34, name: "ARRAY CONTAINS ANY OF"),
-  textArrayNotContains(id: 35, name: "ARRAY NOT CONTAINS ANY OF");
-
-  final int id;
-  final String name;
-
-  const UserComparator({required this.id, required this.name});
 }
 
 const String userObjectIsMissing = "cannot evaluate, User Object is missing";
@@ -325,9 +282,7 @@ class RolloutEvaluator {
     }
 
     String comparisonAttribute = userCondition.comparisonAttribute;
-    UserComparator comparator = UserComparator.values.firstWhere(
-        (element) => element.id == userCondition.comparator,
-        orElse: () => throw ArgumentError(comparisonOperatorIsInvalid));
+    UserComparator? comparator = UserComparator.tryFrom(userCondition.comparator);
     Object? userAttributeValue =
         configCatUser.getAttribute(comparisonAttribute);
 
@@ -374,7 +329,7 @@ class RolloutEvaluator {
             _getUserAttributeAsVersion(evaluationContext.key, userCondition,
                 comparisonAttribute, userAttributeValue);
         return _evaluateSemver(userAttributeValueForSemverOperators,
-            userCondition, comparator, comparisonAttribute);
+            userCondition, comparator!, comparisonAttribute);
       case UserComparator.numberEquals:
       case UserComparator.numberNotEquals:
       case UserComparator.numberLess:
@@ -387,7 +342,7 @@ class RolloutEvaluator {
             comparisonAttribute,
             userAttributeValue);
         return _evaluateNumbers(userAttributeAsDouble, userCondition,
-            comparator, comparisonAttribute);
+            comparator!, comparisonAttribute);
       case UserComparator.isOneOf:
       case UserComparator.isNotOneOf:
       case UserComparator.sensitiveIsOneOf:
@@ -407,7 +362,7 @@ class RolloutEvaluator {
       case UserComparator.dateAfter:
         double userAttributeForDate = _getUserAttributeForDate(userCondition,
             evaluationContext, comparisonAttribute, userAttributeValue);
-        return _evaluateDate(userAttributeForDate, userCondition, comparator,
+        return _evaluateDate(userAttributeForDate, userCondition, comparator!,
             comparisonAttribute);
       case UserComparator.textEquals:
       case UserComparator.textNotEquals:
@@ -436,7 +391,7 @@ class RolloutEvaluator {
         return _evaluateHashedStartOrEndWith(
             userAttributeForHashedStartEndsWith,
             userCondition,
-            comparator,
+            comparator!,
             configSalt,
             contextSalt);
       case UserComparator.textStartsWith:

@@ -4,11 +4,13 @@ import 'package:configcat_client/src/rollout_evaluator.dart';
 import 'package:intl/intl.dart';
 
 import '../configcat_client.dart';
+import 'json/user_comparator.dart';
 
 class LogHelper {
   static final String _hashedValue = "<hashed value>";
   static final String _invalidValue = "<invalid value>";
   static final String _invalidName = "<invalid name>";
+  static final String _invalidOperator = "<invalid operator>";
   static final String _invalidReference = "<invalid reference>";
 
   static final int _maxListElement = 10;
@@ -28,9 +30,8 @@ class LogHelper {
   }
 
   static String formatUserCondition(UserCondition userCondition) {
-    UserComparator userComparator = UserComparator.values.firstWhere(
-        (element) => element.id == userCondition.comparator,
-        orElse: () => throw ArgumentError(comparisonOperatorIsInvalid));
+     UserComparator? userComparator = UserComparator.tryFrom(userCondition.comparator);
+
     String comparisonValue;
     switch (userComparator) {
       case UserComparator.isOneOf:
@@ -88,10 +89,10 @@ class LogHelper {
             _formatStringComparisonValue(userCondition.stringValue, true);
         break;
       default:
-        comparisonValue = _invalidName;
+        comparisonValue = _invalidValue;
     }
 
-    return "User.${userCondition.comparisonAttribute} ${userComparator.name} $comparisonValue";
+    return "User.${userCondition.comparisonAttribute} ${userComparator?.name ?? _invalidOperator } $comparisonValue";
   }
 
   static String formatSegmentFlagCondition(
