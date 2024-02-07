@@ -1,4 +1,5 @@
 import 'package:configcat_client/src/rollout_evaluator.dart';
+import 'package:configcat_client/src/utils.dart';
 
 import '../configcat_client.dart';
 import 'log_helper.dart';
@@ -19,7 +20,7 @@ class EvaluateLogger {
   }
 
   newLine() {
-    _stringBuffer.write("\n");
+    _stringBuffer.write(Utils.lineTerminator);
     for (int i = 0; i < _indentLevel; i++) {
       _stringBuffer.write("  ");
     }

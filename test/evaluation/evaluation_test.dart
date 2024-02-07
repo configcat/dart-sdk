@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:configcat_client/configcat_client.dart';
+import 'package:configcat_client/src/utils.dart';
 
 import 'package:test/test.dart';
 
@@ -96,7 +97,7 @@ Future<void> _runTest(String testCaseName) async {
 
     for (LogEvent log in testLogger.getLogList()) {
       logResultBuffer.write(log.message);
-      logResultBuffer.write("\n");
+      logResultBuffer.write(Utils.lineTerminator);
     }
 
     String logResult = logResultBuffer.toString();
