@@ -341,8 +341,13 @@ class RolloutEvaluator {
             userCondition,
             comparisonAttribute,
             userAttributeValue);
-        return _evaluateIsOneOf(userCondition, sensitiveIsOneOf,
-            userAttributeForIsOneOf, _ensureConfigSalt(configSalt), contextSalt, negateIsOneOf);
+        return _evaluateIsOneOf(
+            userCondition,
+            sensitiveIsOneOf,
+            userAttributeForIsOneOf,
+            _ensureConfigSalt(configSalt),
+            contextSalt,
+            negateIsOneOf);
       case UserComparator.dateBefore:
       case UserComparator.dateAfter:
         double userAttributeForDate = _getUserAttributeForDate(userCondition,
@@ -362,8 +367,13 @@ class RolloutEvaluator {
             userCondition,
             comparisonAttribute,
             userAttributeValue);
-        return _evaluateEquals(hashedEquals, userAttributeForEqual, _ensureConfigSalt(configSalt),
-            contextSalt, userCondition, negateEquals);
+        return _evaluateEquals(
+            hashedEquals,
+            userAttributeForEqual,
+            _ensureConfigSalt(configSalt),
+            contextSalt,
+            userCondition,
+            negateEquals);
       case UserComparator.hashedStartsWith:
       case UserComparator.hashedNotStartsWith:
       case UserComparator.hashedEndsWith:
@@ -1008,11 +1018,12 @@ class RolloutEvaluator {
 
   T _ensureComparisonValue<T>(T? value) {
     return value ??
-        (() => throw ArgumentError("Comparison value is missing or invalid."))();
+        (() =>
+            throw ArgumentError("Comparison value is missing or invalid."))();
   }
 
-  String _ensureConfigSalt(String? configSalt){
+  String _ensureConfigSalt(String? configSalt) {
     return configSalt ??
-      (() => throw ArgumentError("Config JSON salt is missing."))();
+        (() => throw ArgumentError("Config JSON salt is missing."))();
   }
 }

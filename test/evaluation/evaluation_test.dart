@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:configcat_client/configcat_client.dart';
-import 'package:configcat_client/src/utils.dart';
 
 import 'package:test/test.dart';
 
@@ -91,7 +90,7 @@ Future<void> _runTest(String testCaseName) async {
 
     final expectedLog =
         (await File("$testSetPath$testCaseName/${test.expectedLog}")
-            .readAsString())
+                .readAsString())
             .replaceAll("\r\n", "\n");
 
     StringBuffer logResultBuffer = StringBuffer();
