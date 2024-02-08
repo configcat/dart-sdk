@@ -467,10 +467,11 @@ class ConfigCatClient {
   }
 
   T _parseSettingValue<T>(SettingsValue settingsValue, int settingType) {
-    SettingType settingTypeEnum =  SettingType.tryFrom(settingType)
-      ?? (() => throw ArgumentError("Setting type is invalid."))();
+    SettingType settingTypeEnum = SettingType.tryFrom(settingType) ??
+        (() => throw ArgumentError("Setting type is invalid."))();
 
-    bool allowsAnyType = T == Object || Utils.typesEqual<T, Object?>() || T == dynamic;
+    bool allowsAnyType =
+        T == Object || Utils.typesEqual<T, Object?>() || T == dynamic;
 
     if ((T == bool || Utils.typesEqual<T, bool?>() || allowsAnyType) &&
         settingTypeEnum == SettingType.boolean &&
@@ -498,19 +499,17 @@ class ConfigCatClient {
   }
 
   void _validateReturnType<T>() {
-    if (
-      T != bool &&
-      T != String &&
-      T != int &&
-      T != double &&
-      T != Object &&
-      !Utils.typesEqual<T, bool?>() &&
-      !Utils.typesEqual<T, String?>() &&
-      !Utils.typesEqual<T, int?>() &&
-      !Utils.typesEqual<T, double?>() &&
-      !Utils.typesEqual<T, Object?>() &&
-      T != dynamic) {
-
+    if (T != bool &&
+        T != String &&
+        T != int &&
+        T != double &&
+        T != Object &&
+        !Utils.typesEqual<T, bool?>() &&
+        !Utils.typesEqual<T, String?>() &&
+        !Utils.typesEqual<T, int?>() &&
+        !Utils.typesEqual<T, double?>() &&
+        !Utils.typesEqual<T, Object?>() &&
+        T != dynamic) {
       throw ArgumentError(
           "Only the following types are supported: $String, $bool, $int, $double, $Object (both nullable and non-nullable) and $dynamic.");
     }

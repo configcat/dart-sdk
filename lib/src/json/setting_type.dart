@@ -7,7 +7,7 @@ import 'dart:core' as core;
 enum SettingType {
   boolean(name: 'Boolean'),
   string(name: 'String'),
-  int(name: 'Integer'),
+  int(name: 'Int'),
   double(name: 'Double');
 
   final String name;
@@ -16,7 +16,7 @@ enum SettingType {
 
   static SettingType? tryFrom(core.int value) {
     return 0 <= value && value < SettingType.values.length
-      ? SettingType.values[value]
-      : null;
+        ? SettingType.values[value]
+        : null;
   }
 }

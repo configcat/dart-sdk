@@ -18,7 +18,6 @@ import 'json/settings_value.dart';
 import 'json/user_comparator.dart';
 import 'json/user_condition.dart';
 import 'log/configcat_logger.dart';
-import 'log_helper.dart';
 
 class EvaluationResult {
   final String? variationId;
@@ -251,7 +250,7 @@ class RolloutEvaluator {
       String? configSalt,
       String contextSalt,
       EvaluateLogger? evaluateLogger) {
-    evaluateLogger?.append(LogHelper.formatUserCondition(userCondition));
+    evaluateLogger?.append(EvaluateLogger.formatUserCondition(userCondition));
 
     var configCatUser = evaluationContext.user;
     if (configCatUser == null) {
@@ -274,7 +273,7 @@ class RolloutEvaluator {
     if (userAttributeValue == null ||
         (userAttributeValue is String && userAttributeValue.isEmpty)) {
       _logger.warning(3003,
-          "Cannot evaluate condition (${LogHelper.formatUserCondition(userCondition)}) for setting '${evaluationContext.key}' (the User.$comparisonAttribute attribute is missing). You should set the User.$comparisonAttribute attribute in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/");
+          "Cannot evaluate condition (${EvaluateLogger.formatUserCondition(userCondition)}) for setting '${evaluationContext.key}' (the User.$comparisonAttribute attribute is missing). You should set the User.$comparisonAttribute attribute in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/");
       throw RolloutEvaluatorException(cannotEvaluateTheUserPrefix +
           comparisonAttribute +
           cannotEvaluateTheUserAttributeMissing);
@@ -441,7 +440,7 @@ class RolloutEvaluator {
     }
     String? convertedUserAttribute = _userAttributeToString(userAttributeValue);
     _logger.warning(3005,
-        "Evaluation of condition (${LogHelper.formatUserCondition(userCondition)}) for setting '$key' may not produce the expected result (the User.$userAttributeName attribute is not a string value, thus it was automatically converted to the string value '$convertedUserAttribute'). Please make sure that using a non-string value was intended.");
+        "Evaluation of condition (${EvaluateLogger.formatUserCondition(userCondition)}) for setting '$key' may not produce the expected result (the User.$userAttributeName attribute is not a string value, thus it was automatically converted to the string value '$convertedUserAttribute'). Please make sure that using a non-string value was intended.");
     return convertedUserAttribute;
   }
 
@@ -456,7 +455,7 @@ class RolloutEvaluator {
     }
     String reason = "'$userValue' is not a valid semantic version";
     _logger.warning(3004,
-        "Cannot evaluate condition (${LogHelper.formatUserCondition(userCondition)}) for setting '$key' ($reason). Please check the User.$comparisonAttribute attribute and make sure that its value corresponds to the comparison operator.");
+        "Cannot evaluate condition (${EvaluateLogger.formatUserCondition(userCondition)}) for setting '$key' ($reason). Please check the User.$comparisonAttribute attribute and make sure that its value corresponds to the comparison operator.");
     throw RolloutEvaluatorException(
         "$cannotEvaluateTheUserPrefix$comparisonAttribute$cannotEvaluateTheUserAttributeInvalid$reason)");
   }
@@ -473,7 +472,7 @@ class RolloutEvaluator {
       //If cannot convert to double, continue with the error
       String reason = "'$userAttributeValue' is not a valid decimal number";
       _logger.warning(3004,
-          "Cannot evaluate condition (${LogHelper.formatUserCondition(userCondition)}) for setting '$key' ($reason). Please check the User.$comparisonAttribute attribute and make sure that its value corresponds to the comparison operator.");
+          "Cannot evaluate condition (${EvaluateLogger.formatUserCondition(userCondition)}) for setting '$key' ($reason). Please check the User.$comparisonAttribute attribute and make sure that its value corresponds to the comparison operator.");
       throw RolloutEvaluatorException(
           "$cannotEvaluateTheUserPrefix$comparisonAttribute$cannotEvaluateTheUserAttributeInvalid$reason)");
     }
@@ -493,7 +492,7 @@ class RolloutEvaluator {
       String reason =
           "'$userAttributeValue' is not a valid Unix timestamp (number of seconds elapsed since Unix epoch)";
       _logger.warning(3004,
-          "Cannot evaluate condition (${LogHelper.formatUserCondition(userCondition)}) for setting '${context.key}' ($reason). Please check the User.$comparisonAttribute attribute and make sure that its value corresponds to the comparison operator.");
+          "Cannot evaluate condition (${EvaluateLogger.formatUserCondition(userCondition)}) for setting '${context.key}' ($reason). Please check the User.$comparisonAttribute attribute and make sure that its value corresponds to the comparison operator.");
       throw RolloutEvaluatorException(
           "$cannotEvaluateTheUserPrefix$comparisonAttribute$cannotEvaluateTheUserAttributeInvalid$reason)");
     }
@@ -524,7 +523,7 @@ class RolloutEvaluator {
     }
     String reason = "'$userAttributeValue' is not a valid JSON string array";
     _logger.warning(3004,
-        "Cannot evaluate condition (${LogHelper.formatUserCondition(userCondition)}) for setting '${context.key}' ($reason). Please check the User.$comparisonAttribute attribute and make sure that its value corresponds to the comparison operator.");
+        "Cannot evaluate condition (${EvaluateLogger.formatUserCondition(userCondition)}) for setting '${context.key}' ($reason). Please check the User.$comparisonAttribute attribute and make sure that its value corresponds to the comparison operator.");
     throw RolloutEvaluatorException(
         "$cannotEvaluateTheUserPrefix$comparisonAttribute$cannotEvaluateTheUserAttributeInvalid$reason)");
   }
@@ -539,7 +538,6 @@ class RolloutEvaluator {
     if (userAttribute is DateTime) {
       return (userAttribute.millisecondsSinceEpoch / 1000).toString();
     }
-    // TODO add doouble parse?
     return userAttribute.toString();
   }
 
@@ -812,7 +810,7 @@ class RolloutEvaluator {
       segment = segments[segmentIndex];
     }
     evaluateLogger?.append(
-        LogHelper.formatSegmentFlagCondition(segmentCondition, segment));
+        EvaluateLogger.formatSegmentFlagCondition(segmentCondition, segment));
 
     if (evaluationContext.user == null) {
       if (!evaluationContext.isUserMissing) {
@@ -866,8 +864,8 @@ class RolloutEvaluator {
       PrerequisiteFlagCondition prerequisiteFlagCondition,
       EvaluationContext evaluationContext,
       EvaluateLogger? evaluateLogger) {
-    evaluateLogger?.append(
-        LogHelper.formatPrerequisiteFlagCondition(prerequisiteFlagCondition));
+    evaluateLogger?.append(EvaluateLogger.formatPrerequisiteFlagCondition(
+        prerequisiteFlagCondition));
 
     String prerequisiteFlagKey = prerequisiteFlagCondition.prerequisiteFlagKey;
     Setting? prerequisiteFlagSetting =
@@ -893,7 +891,7 @@ class RolloutEvaluator {
     visitedKeys ??= [];
     visitedKeys.add(evaluationContext.key);
     if (visitedKeys.contains(prerequisiteFlagKey)) {
-      String dependencyCycle = LogHelper.formatCircularDependencyList(
+      String dependencyCycle = EvaluateLogger.formatCircularDependencyList(
           visitedKeys, prerequisiteFlagKey);
       throw ArgumentError(
           "Circular dependency detected between the following depending flags: $dependencyCycle.");
