@@ -62,7 +62,7 @@ class Setting {
   final String? percentageAttribute;
 
   @JsonKey(includeFromJson: false, includeToJson: false)
-  String salt = "";
+  String? salt;
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   List<Segment> segments = List.empty();

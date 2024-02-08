@@ -11,7 +11,7 @@ class Preferences {
   final int redirect;
 
   @JsonKey(name: 's')
-  final String salt;
+  final String? salt;
 
   Preferences(this.baseUrl, this.redirect, this.salt);
 

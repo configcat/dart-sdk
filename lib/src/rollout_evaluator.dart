@@ -171,7 +171,7 @@ class RolloutEvaluator {
       List<ConditionAccessor> conditions,
       TargetingRule? targetingRule,
       EvaluationContext evaluationContext,
-      String configSalt,
+      String? configSalt,
       String contextSalt,
       List<Segment> segments,
       EvaluateLogger? evaluateLogger) {
@@ -248,7 +248,7 @@ class RolloutEvaluator {
   bool _evaluateUserCondition(
       UserCondition userCondition,
       EvaluationContext evaluationContext,
-      String configSalt,
+      String? configSalt,
       String contextSalt,
       EvaluateLogger? evaluateLogger) {
     evaluateLogger?.append(LogHelper.formatUserCondition(userCondition));
@@ -342,7 +342,7 @@ class RolloutEvaluator {
             comparisonAttribute,
             userAttributeValue);
         return _evaluateIsOneOf(userCondition, sensitiveIsOneOf,
-            userAttributeForIsOneOf, configSalt, contextSalt, negateIsOneOf);
+            userAttributeForIsOneOf, _ensureConfigSalt(configSalt), contextSalt, negateIsOneOf);
       case UserComparator.dateBefore:
       case UserComparator.dateAfter:
         double userAttributeForDate = _getUserAttributeForDate(userCondition,
@@ -362,7 +362,7 @@ class RolloutEvaluator {
             userCondition,
             comparisonAttribute,
             userAttributeValue);
-        return _evaluateEquals(hashedEquals, userAttributeForEqual, configSalt,
+        return _evaluateEquals(hashedEquals, userAttributeForEqual, _ensureConfigSalt(configSalt),
             contextSalt, userCondition, negateEquals);
       case UserComparator.hashedStartsWith:
       case UserComparator.hashedNotStartsWith:
@@ -377,7 +377,7 @@ class RolloutEvaluator {
             userAttributeForHashedStartEndsWith,
             userCondition,
             comparator,
-            configSalt,
+            _ensureConfigSalt(configSalt),
             contextSalt);
       case UserComparator.textStartsWith:
       case UserComparator.textNotStartsWith:
@@ -418,7 +418,7 @@ class RolloutEvaluator {
             userAttributeForArrayContains,
             comparisonAttribute,
             hashedArrayContains,
-            configSalt,
+            _ensureConfigSalt(configSalt),
             contextSalt,
             negateArrayContains);
     }
@@ -793,7 +793,7 @@ class RolloutEvaluator {
   bool _evaluateSegmentCondition(
       SegmentCondition segmentCondition,
       EvaluationContext evaluationContext,
-      String configSalt,
+      String? configSalt,
       List<Segment> segments,
       EvaluateLogger? evaluateLogger) {
     int segmentIndex = segmentCondition.segmentIndex;
@@ -1007,9 +1007,12 @@ class RolloutEvaluator {
   }
 
   T _ensureComparisonValue<T>(T? value) {
-    if (value == null) {
-      throw ArgumentError("Comparison value is missing or invalid.");
-    }
-    return value;
+    return value ??
+        (() => throw ArgumentError("Comparison value is missing or invalid."))();
+  }
+
+  String _ensureConfigSalt(String? configSalt){
+    return configSalt ??
+      (() => throw ArgumentError("Config JSON salt is missing."))();
   }
 }

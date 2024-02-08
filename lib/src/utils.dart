@@ -9,10 +9,7 @@ class Utils {
   static Config deserializeConfig(String configJson) {
     final decoded = jsonDecode(configJson);
     Config config = Config.fromJson(decoded);
-    String salt = config.preferences.salt;
-    if (salt.isEmpty) {
-      throw ArgumentError("Config JSON salt is missing.");
-    }
+    String? salt = config.preferences.salt;
     List<Segment> segments = config.segments;
 
     for (Setting setting in config.entries.values) {
