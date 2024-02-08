@@ -90,14 +90,15 @@ Future<void> _runTest(String testCaseName) async {
     }
 
     final expectedLog =
-        await File("$testSetPath$testCaseName/${test.expectedLog}")
-            .readAsString();
+        (await File("$testSetPath$testCaseName/${test.expectedLog}")
+            .readAsString())
+            .replaceAll("\r\n", "\n");
 
     StringBuffer logResultBuffer = StringBuffer();
 
     for (LogEvent log in testLogger.getLogList()) {
-      logResultBuffer.write(log.message);
-      logResultBuffer.write(Utils.lineTerminator);
+      logResultBuffer.write(log.message.replaceAll("\r\n", "\n"));
+      logResultBuffer.write("\n");
     }
 
     String logResult = logResultBuffer.toString();
