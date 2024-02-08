@@ -610,7 +610,7 @@ void main() {
         throwsA(predicate((e) =>
             e is ArgumentError &&
             e.message ==
-                'Only String, Integer, Double, Boolean or dynamic types are supported.')));
+                'Only the following types are supported: String, bool, int, double, Object (both nullable and non-nullable) and dynamic.')));
 
     //ConfigCatUser
     expect(
@@ -620,7 +620,7 @@ void main() {
         throwsA(predicate((e) =>
             e is ArgumentError &&
             e.message ==
-                'Only String, Integer, Double, Boolean or dynamic types are supported.')));
+                'Only the following types are supported: String, bool, int, double, Object (both nullable and non-nullable) and dynamic.')));
   });
 }
 

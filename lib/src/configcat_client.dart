@@ -1,7 +1,9 @@
 import 'package:configcat_client/src/constants.dart';
 import 'package:configcat_client/src/fetch/refresh_result.dart';
+import 'package:configcat_client/src/json/setting_type.dart';
 import 'package:configcat_client/src/json/settings_value.dart';
 import 'package:configcat_client/src/log/logger.dart';
+import 'package:configcat_client/src/utils.dart';
 import 'package:dio/dio.dart';
 
 import 'configcat_cache.dart';
@@ -19,13 +21,6 @@ import 'rollout_evaluator.dart';
 
 /// ConfigCat SDK client.
 class ConfigCatClient {
-  static const _settingTypes = [
-    'Boolean',
-    'String',
-    'Integer',
-    'Double',
-  ];
-
   late final ConfigCatLogger _logger;
   late final LogLevel _logLevel;
   late final ConfigService? _configService;
@@ -111,7 +106,7 @@ class ConfigCatClient {
     if (key.isEmpty) {
       throw ArgumentError("'key' cannot be empty.");
     }
-    _validateReturnType(T);
+    _validateReturnType<T>();
 
     final evalUser = user ?? _defaultUser;
     try {
@@ -161,7 +156,7 @@ class ConfigCatClient {
     if (key.isEmpty) {
       throw ArgumentError("'key' cannot be empty.");
     }
-    _validateReturnType(T);
+    _validateReturnType<T>();
 
     final evalUser = user ?? _defaultUser;
     try {
@@ -287,6 +282,8 @@ class ConfigCatClient {
   /// [T] the type of the desired feature flag or setting.
   Future<MapEntry<String, T>?> getKeyAndValue<T>(
       {required String variationId}) async {
+    _validateReturnType<T>();
+
     try {
       final result = await _getSettings();
       if (result.isEmpty) {
@@ -470,42 +467,52 @@ class ConfigCatClient {
   }
 
   T _parseSettingValue<T>(SettingsValue settingsValue, int settingType) {
-    _validateReturnType(T);
+    SettingType settingTypeEnum =  SettingType.tryFrom(settingType)
+      ?? (() => throw ArgumentError("Setting type is invalid."))();
 
-    bool isDynamic = T == dynamic;
+    bool allowsAnyType = T == Object || Utils.typesEqual<T, Object?>() || T == dynamic;
 
-    if ((T == bool || isDynamic) &&
-        settingType == 0 &&
+    if ((T == bool || Utils.typesEqual<T, bool?>() || allowsAnyType) &&
+        settingTypeEnum == SettingType.boolean &&
         settingsValue.booleanValue != null) {
       return settingsValue.booleanValue as T;
     }
-    if ((T == String || isDynamic) &&
-        settingType == 1 &&
+    if ((T == String || Utils.typesEqual<T, String?>() || allowsAnyType) &&
+        settingTypeEnum == SettingType.string &&
         settingsValue.stringValue != null) {
       return settingsValue.stringValue as T;
     }
-    if ((T == int || isDynamic) &&
-        settingType == 2 &&
+    if ((T == int || Utils.typesEqual<T, int?>() || allowsAnyType) &&
+        settingTypeEnum == SettingType.int &&
         settingsValue.intValue != null) {
       return settingsValue.intValue as T;
     }
-    if ((T == double || isDynamic) &&
-        settingType == 3 &&
+    if ((T == double || Utils.typesEqual<T, double?>() || allowsAnyType) &&
+        settingTypeEnum == SettingType.double &&
         settingsValue.doubleValue != null) {
       return settingsValue.doubleValue as T;
     }
+
     throw ArgumentError(
-        "The type of a setting must match the type of the specified default value. Setting's type was {${_settingTypes[settingType]}} but the default value's type was {${T.runtimeType}}. Please use a default value which corresponds to the setting type {${_settingTypes[settingType]}}. Learn more: https://configcat.com/docs/sdk-reference/dotnet/#setting-type-mapping");
+        "The type of a setting must match the type of the specified default value. Setting's type was ${settingTypeEnum.name} but the default value's type was $T. Please use a default value which corresponds to the setting type ${settingTypeEnum.name}. Learn more: https://configcat.com/docs/sdk-reference/dotnet/#setting-type-mapping");
   }
 
-  void _validateReturnType(Type type) {
-    if (type != bool &&
-        type != String &&
-        type != int &&
-        type != double &&
-        type != dynamic) {
+  void _validateReturnType<T>() {
+    if (
+      T != bool &&
+      T != String &&
+      T != int &&
+      T != double &&
+      T != Object &&
+      !Utils.typesEqual<T, bool?>() &&
+      !Utils.typesEqual<T, String?>() &&
+      !Utils.typesEqual<T, int?>() &&
+      !Utils.typesEqual<T, double?>() &&
+      !Utils.typesEqual<T, Object?>() &&
+      T != dynamic) {
+
       throw ArgumentError(
-          "Only String, Integer, Double, Boolean or dynamic types are supported.");
+          "Only the following types are supported: $String, $bool, $int, $double, $Object (both nullable and non-nullable) and $dynamic.");
     }
   }
 }
