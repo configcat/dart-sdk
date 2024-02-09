@@ -344,7 +344,7 @@ class RolloutEvaluator {
             userCondition,
             sensitiveIsOneOf,
             userAttributeForIsOneOf,
-            _ensureConfigSalt(configSalt),
+            configSalt,
             contextSalt,
             negateIsOneOf);
       case UserComparator.dateBefore:
@@ -369,7 +369,7 @@ class RolloutEvaluator {
         return _evaluateEquals(
             hashedEquals,
             userAttributeForEqual,
-            _ensureConfigSalt(configSalt),
+            configSalt,
             contextSalt,
             userCondition,
             negateEquals);
@@ -427,7 +427,7 @@ class RolloutEvaluator {
             userAttributeForArrayContains,
             comparisonAttribute,
             hashedArrayContains,
-            _ensureConfigSalt(configSalt),
+            configSalt,
             contextSalt,
             negateArrayContains);
     }
@@ -559,7 +559,7 @@ class RolloutEvaluator {
       List<String> userContainsValues,
       String comparisonAttribute,
       bool hashedArrayContains,
-      String configSalt,
+      String? configSalt,
       String contextSalt,
       bool negateArrayContains) {
     List<String> comparisonValues =
@@ -570,7 +570,7 @@ class RolloutEvaluator {
 
     for (String userContainsValue in userContainsValues) {
       String userContainsValueConverted = hashedArrayContains
-          ? _getSaltedUserValue(userContainsValue, configSalt, contextSalt)
+          ? _getSaltedUserValue(userContainsValue, _ensureConfigSalt(configSalt), contextSalt)
           : userContainsValue;
 
       for (String inValuesElement in comparisonValues) {
@@ -670,14 +670,14 @@ class RolloutEvaluator {
   bool _evaluateEquals(
       bool hashedEquals,
       String userAttributeValue,
-      String configSalt,
+      String? configSalt,
       String contextSalt,
       UserCondition userCondition,
       bool negateEquals) {
     String comparisonValue = _ensureComparisonValue(userCondition.stringValue);
 
     String valueEquals = hashedEquals
-        ? _getSaltedUserValue(userAttributeValue, configSalt, contextSalt)
+        ? _getSaltedUserValue(userAttributeValue, _ensureConfigSalt(configSalt), contextSalt)
         : userAttributeValue;
     return negateEquals != (valueEquals == comparisonValue);
   }
@@ -696,14 +696,14 @@ class RolloutEvaluator {
       UserCondition userCondition,
       bool sensitiveIsOneOf,
       String userAttributeValue,
-      String configSalt,
+      String? configSalt,
       String contextSalt,
       bool negateIsOneOf) {
     List<String> comparisonValues =
         _ensureComparisonValue(userCondition.stringArrayValue);
 
     String userIsOneOfValue = sensitiveIsOneOf
-        ? _getSaltedUserValue(userAttributeValue, configSalt, contextSalt)
+        ? _getSaltedUserValue(userAttributeValue, _ensureConfigSalt(configSalt), contextSalt)
         : userAttributeValue;
 
     for (String inValuesElement in comparisonValues) {
@@ -846,8 +846,6 @@ class RolloutEvaluator {
         case SegmentComparator.isNotInSegment:
           result = !segmentRulesResult;
           break;
-        default:
-          throw ArgumentError(comparisonOperatorIsInvalid);
       }
       evaluateLogger?.logSegmentEvaluationResult(
           segmentCondition, segment, result, segmentRulesResult);
@@ -925,8 +923,6 @@ class RolloutEvaluator {
       case PrerequisiteComparator.notEquals:
         result = conditionValue != evaluateResult.value;
         break;
-      default:
-        throw ArgumentError(comparisonOperatorIsInvalid);
     }
 
     evaluateLogger?.logPrerequisiteFlagEvaluationResult(
