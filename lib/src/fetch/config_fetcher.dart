@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:configcat_client/src/platform_spec/request_builder.dart';
 import 'package:dio/dio.dart';
 
 import '../utils.dart';
@@ -63,8 +64,6 @@ abstract class Fetcher {
 class ConfigFetcher implements Fetcher {
   static const globalBaseUrl = 'https://cdn-global.configcat.com';
   static const euOnlyBaseUrl = 'https://cdn-eu.configcat.com';
-  static const _userAgentHeaderName = 'X-ConfigCat-UserAgent';
-  static const _ifNoneMatchHeaderName = 'If-None-Match';
   static const _eTagHeaderName = 'Etag';
   static const _successStatusCodes = [200, 201, 202, 203, 204];
 
@@ -163,17 +162,14 @@ class ConfigFetcher implements Fetcher {
   }
 
   Future<FetchResponse> _doFetch(String eTag) async {
-    Map<String, String> headers = {
-      _userAgentHeaderName:
-          'ConfigCat-Dart/${_options.pollingMode.getPollingIdentifier()}-$version',
-      if (eTag.isNotEmpty) _ifNoneMatchHeaderName: eTag
-    };
-
     try {
+      final request = RequestBuilder.build(
+          'ConfigCat-Dart/${_options.pollingMode.getPollingIdentifier()}-$version',
+          eTag);
       final response = await _httpClient.get(
-        '$_url/configuration-files/$_sdkKey/$configJsonName',
-        options: Options(headers: headers),
-      );
+          '$_url/configuration-files/$_sdkKey/$configJsonName',
+          queryParameters: request.queryParameters,
+          options: Options(headers: request.headers));
       if (_successStatusCodes.contains(response.statusCode)) {
         final eTag = response.headers.value(_eTagHeaderName) ?? '';
         _logger.debug('Fetch was successful: new config fetched.');

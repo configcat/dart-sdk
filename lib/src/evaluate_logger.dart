@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:configcat_client/src/utils.dart';
+import 'package:configcat_client/src/platform_spec/platform.dart';
 
 import '../configcat_client.dart';
 import 'json/prerequisite_comparator.dart';
@@ -31,7 +31,7 @@ class EvaluateLogger {
   }
 
   newLine() {
-    _stringBuffer.write(Utils.lineTerminator);
+    _stringBuffer.write(Platform.lineTerminator);
     for (int i = 0; i < _indentLevel; i++) {
       _stringBuffer.write("  ");
     }
