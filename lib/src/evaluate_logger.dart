@@ -1,7 +1,6 @@
 import 'dart:math';
 
 import 'package:configcat_client/src/utils.dart';
-import 'package:intl/intl.dart';
 
 import '../configcat_client.dart';
 import 'json/prerequisite_comparator.dart';
@@ -355,14 +354,16 @@ class EvaluateLogger {
     if (comparisonValue == null) {
       return _invalidValue;
     }
-    var decimalFormat = NumberFormat("0.######", "en");
+    var comparisonValueFormatted = comparisonValue
+        .toString()
+        .replaceAllMapped(RegExp(r'\.0+(e|$)'), (m) => m[1]!);
     if (isDate) {
       var dateTimeInMilliseconds = comparisonValue * 1000;
       var dateTime = DateTime.fromMillisecondsSinceEpoch(
           isUtc: true, dateTimeInMilliseconds.toInt());
 
-      return "'${decimalFormat.format(comparisonValue)}' (${dateTime.toIso8601String()} UTC)";
+      return "'$comparisonValueFormatted' (${dateTime.toIso8601String()} UTC)";
     }
-    return "'${decimalFormat.format(comparisonValue)}'";
+    return "'$comparisonValueFormatted'";
   }
 }
