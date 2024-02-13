@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'package:dio/dio.dart';
 
+import '../utils.dart';
 import '../error_reporter.dart';
 import '../entry.dart';
 import '../data_governance.dart';
 import '../configcat_options.dart';
 import '../constants.dart';
+import '../json/config.dart';
 import '../log/configcat_logger.dart';
 
 enum _Status { fetched, notModified, failure }
@@ -127,7 +129,8 @@ class ConfigFetcher implements Fetcher {
     final response = await _doFetch(eTag);
 
     final preferences = response.entry.config.preferences;
-    if (!response.isFetched || preferences == null) {
+
+    if (!response.isFetched) {
       return response;
     }
 
@@ -174,8 +177,18 @@ class ConfigFetcher implements Fetcher {
       if (_successStatusCodes.contains(response.statusCode)) {
         final eTag = response.headers.value(_eTagHeaderName) ?? '';
         _logger.debug('Fetch was successful: new config fetched.');
-        return FetchResponse.success(Entry.fromConfigJson(
-            response.data.toString(), eTag, DateTime.now().toUtc()));
+        var configJson = response.data.toString();
+        Config config;
+        try {
+          config = Utils.deserializeConfig(configJson);
+        } catch (e) {
+          String error =
+              "Fetching config JSON was successful but the HTTP response content was invalid.";
+          _errorReporter.error(1105, error);
+          return FetchResponse.failure(error, false);
+        }
+        return FetchResponse.success(
+            Entry(configJson, config, eTag, DateTime.now().toUtc()));
       } else if (response.statusCode == 304) {
         _logger.debug('Fetch was successful: config not modified.');
         return FetchResponse.notModified();
@@ -199,12 +212,18 @@ class ConfigFetcher implements Fetcher {
         _errorReporter.error(1102, error, e, s);
         return FetchResponse.failure(error, true);
       }
-      _errorReporter.error(1103,
-          'Unexpected error occurred while trying to fetch config JSON.', e, s);
+      _errorReporter.error(
+          1103,
+          'Unexpected error occurred while trying to fetch config JSON. It is most likely due to a local network issue. Please make sure your application can reach the ConfigCat CDN servers (or your proxy server) over HTTP.',
+          e,
+          s);
       return FetchResponse.failure(e.toString(), true);
     } catch (e, s) {
-      _errorReporter.error(1103,
-          'Unexpected error occurred while trying to fetch config JSON.', e, s);
+      _errorReporter.error(
+          1103,
+          'Unexpected error occurred while trying to fetch config JSON. It is most likely due to a local network issue. Please make sure your application can reach the ConfigCat CDN servers (or your proxy server) over HTTP.',
+          e,
+          s);
       return FetchResponse.failure(e.toString(), true);
     }
   }

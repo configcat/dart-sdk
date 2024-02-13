@@ -1,12 +1,14 @@
+import 'dart:convert';
+
 import 'package:configcat_client/configcat_client.dart';
 import 'package:configcat_client/src/entry.dart';
-import 'package:http_mock_adapter/http_mock_adapter.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:test/test.dart';
 
 import 'cache_test.mocks.dart';
 import 'helpers.dart';
+import 'http_adapter.dart';
 
 @GenerateMocks([ConfigCatCache])
 void main() {
@@ -23,13 +25,12 @@ void main() {
 
     final client = ConfigCatClient.get(
         sdkKey: testSdkKey, options: ConfigCatOptions(cache: cache));
-    final dioAdapter = DioAdapter(dio: client.httpClient);
-    dioAdapter.onGet(getPath(), (server) {
-      server.reply(200, createTestConfig({'value': 'test'}).toJson());
-    });
+    final testAdapter = HttpTestAdapter(client.httpClient);
+    testAdapter.enqueueResponse(
+        getPath(), 200, createTestConfig({'value': 'test'}).toJson());
 
     // Act
-    final value = await client.getValue(key: 'value', defaultValue: '');
+    final String value = await client.getValue(key: 'value', defaultValue: '');
 
     // Assert
     expect(value, equals('test'));
@@ -43,10 +44,8 @@ void main() {
 
     final client = ConfigCatClient.get(
         sdkKey: testSdkKey, options: ConfigCatOptions(cache: cache));
-    final dioAdapter = DioAdapter(dio: client.httpClient);
-    dioAdapter.onGet(getPath(), (server) {
-      server.reply(500, null);
-    });
+    final testAdapter = HttpTestAdapter(client.httpClient);
+    testAdapter.enqueueResponse(getPath(), 500, null);
 
     // Act
     final value = await client.getValue(key: 'value', defaultValue: '');
@@ -57,8 +56,10 @@ void main() {
 
   group('cache key generation', () {
     final inputs = {
-      'test1': '147c5b4c2b2d7c77e1605b1a4309f0ea6684a0c6',
-      'test2': 'c09513b1756de9e4bc48815ec7a142b2441ed4d5',
+      'configcat-sdk-1/TEST_KEY-0123456789012/1234567890123456789012':
+          'f83ba5d45bceb4bb704410f51b704fb6dfa19942',
+      'configcat-sdk-1/TEST_KEY2-123456789012/1234567890123456789012':
+          'da7bfd8662209c8ed3f9db96daed4f8d91ba5876',
     };
 
     inputs.forEach((sdkKey, cacheKey) {
@@ -70,10 +71,9 @@ void main() {
 
         final client = ConfigCatClient.get(
             sdkKey: sdkKey, options: ConfigCatOptions(cache: cache));
-        final dioAdapter = DioAdapter(dio: client.httpClient);
-        dioAdapter.onGet(getPath(sdkKey: sdkKey), (server) {
-          server.reply(200, createTestConfig({'value': 'test2'}).toJson());
-        });
+        final testAdapter = HttpTestAdapter(client.httpClient);
+        testAdapter.enqueueResponse(getPath(sdkKey: sdkKey), 200,
+            createTestConfig({'value': 'test2'}).toJson());
 
         // Act
         await client.getValue(key: 'value', defaultValue: '');
@@ -88,18 +88,20 @@ void main() {
   test('cache serialization', () async {
     // Arrange
     final testJson =
-        "{\"p\":{\"u\":\"https://cdn-global.configcat.com\",\"r\":0},\"f\":{\"testKey\":{\"v\":\"testValue\",\"t\":1,\"p\":[],\"r\":[]}}}";
+        "{\"p\":{\"u\":\"https://cdn-global.configcat.com\",\"r\":0,\"s\":\"test-slat\"},\"f\":{\"testKey\":{\"v\":{\"s\":\"testValue\"},\"t\":1,\"p\":[],\"r\":[], \"a\":\"\", \"i\":\"test-variation-id\"}}, \"s\":[] }";
 
     final time = DateTime.parse('2023-06-14T15:27:15.8440000Z');
     final eTag = 'test-etag';
 
-    final expectedPayload = '1686756435844\ntest-etag\n$testJson';
+    final decodedJson = jsonDecode(testJson);
+    final config = Config.fromJson(decodedJson);
 
-    final entry = Entry.fromConfigJson(testJson, eTag, time);
+    final entry = Entry(testJson, config, eTag, time);
 
     // Act
     final cached = entry.serialize();
 
+    final expectedPayload = '1686756435844\ntest-etag\n$testJson';
     // Assert
     expect(cached, equals(expectedPayload));
 

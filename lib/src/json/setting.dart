@@ -1,50 +1,76 @@
 import 'package:json_annotation/json_annotation.dart';
 
-import 'percentage_rule.dart';
-import 'rollout_rule.dart';
+import 'percentage_option.dart';
+import 'segment.dart';
+import 'targeting_rule.dart';
+import 'settings_value.dart';
 
 part 'setting.g.dart';
 
 extension SettingConvert on Object {
   /// Creates a basic [Setting] instance from an [Object].
   Setting toSetting() {
-    return Setting(this, 0, [], [], '');
+    SettingsValue settingsValue;
+    int settingType;
+    if (this is bool) {
+      settingsValue = SettingsValue(this as bool?, null, null, null);
+      settingType = 0;
+    } else if (this is String) {
+      settingsValue = SettingsValue(null, this as String?, null, null);
+      settingType = 1;
+    } else if (this is int) {
+      settingsValue = SettingsValue(null, null, this as int?, null);
+      settingType = 2;
+    } else if (this is double) {
+      settingsValue = SettingsValue(null, null, null, this as double?);
+      settingType = 3;
+    } else {
+      throw ArgumentError(
+          "Only String, Integer, Double or Boolean types are supported.");
+    }
+    return Setting(
+        settingsValue, settingType, List.empty(), List.empty(), "", "");
   }
 }
 
-/// Describes a ConfigCat Feature Flag / Setting
+/// Feature flag or setting.
 @JsonSerializable()
 class Setting {
-  /// Value of the feature flag / setting.
+  /// Setting value.
+  /// Can be a value of the following types: {@link Boolean}, {@link String}, {@link Integer} or {@link Double}.
   @JsonKey(name: 'v')
-  final dynamic value;
+  final SettingsValue settingsValue;
 
-  /// Type of the feature flag / setting.
-  ///
-  /// 0 -> [bool],
-  /// 1 -> [String],
-  /// 2 -> [int],
-  /// 3 -> [double],
-  @JsonKey(name: 't', defaultValue: 0)
+  /// Setting type.
+  @JsonKey(name: 't')
   final int type;
 
-  /// Collection of percentage rules that belongs to the feature flag / setting.
+  /// The list of percentage options.
   @JsonKey(name: 'p', defaultValue: [])
-  final List<PercentageRule> percentageItems;
+  final List<PercentageOption> percentageOptions;
 
-  /// Collection of targeting rules that belongs to the feature flag / setting.
+  /// The list of targeting rules (where there is a logical OR relation between the items).
   @JsonKey(name: 'r', defaultValue: [])
-  final List<RolloutRule> rolloutRules;
+  final List<TargetingRule> targetingRules;
 
-  /// Variation ID (for analytical purposes).
-  @JsonKey(name: 'i', defaultValue: '')
-  final String variationId;
+  /// Variation ID.
+  @JsonKey(name: 'i')
+  final String? variationId;
 
-  Setting(this.value, this.type, this.percentageItems, this.rolloutRules,
-      this.variationId);
+  /// The User Object attribute which serves as the basis of percentage options evaluation.
+  @JsonKey(name: 'a')
+  final String? percentageAttribute;
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  String? salt;
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  List<Segment> segments = List.empty();
+
+  Setting(this.settingsValue, this.type, this.percentageOptions,
+      this.targetingRules, this.variationId, this.percentageAttribute);
 
   factory Setting.fromJson(Map<String, dynamic> json) =>
       _$SettingFromJson(json);
-
   Map<String, dynamic> toJson() => _$SettingToJson(this);
 }

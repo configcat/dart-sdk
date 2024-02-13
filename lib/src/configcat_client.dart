@@ -1,22 +1,28 @@
 import 'package:configcat_client/src/constants.dart';
 import 'package:configcat_client/src/fetch/refresh_result.dart';
+import 'package:configcat_client/src/json/setting_type.dart';
+import 'package:configcat_client/src/json/settings_value.dart';
+import 'package:configcat_client/src/log/logger.dart';
+import 'package:configcat_client/src/utils.dart';
 import 'package:dio/dio.dart';
 
-import 'error_reporter.dart';
-import 'fetch/config_fetcher.dart';
+import 'configcat_cache.dart';
 import 'configcat_options.dart';
 import 'configcat_user.dart';
+import 'error_reporter.dart';
+import 'evaluate_logger.dart';
+import 'fetch/config_fetcher.dart';
+import 'fetch/config_service.dart';
+import 'json/setting.dart';
+import 'log/configcat_logger.dart';
 import 'override/behaviour.dart';
 import 'override/flag_overrides.dart';
 import 'rollout_evaluator.dart';
-import 'configcat_cache.dart';
-import 'json/setting.dart';
-import 'log/configcat_logger.dart';
-import 'fetch/config_service.dart';
 
 /// ConfigCat SDK client.
 class ConfigCatClient {
   late final ConfigCatLogger _logger;
+  late final LogLevel _logLevel;
   late final ConfigService? _configService;
   late final RolloutEvaluator _rolloutEvaluator;
   late final Fetcher _fetcher;
@@ -31,7 +37,12 @@ class ConfigCatClient {
       {required String sdkKey,
       ConfigCatOptions options = ConfigCatOptions.defaultOptions}) {
     if (sdkKey.isEmpty) {
-      throw ArgumentError('The SDK key cannot be empty.');
+      throw ArgumentError('SDK Key cannot be empty.');
+    }
+
+    if (options.override?.behaviour != OverrideBehaviour.localOnly &&
+        !_isValidKey(sdkKey, options.isBaseUrlCustom())) {
+      throw ArgumentError("SDK Key '$sdkKey' is invalid.");
     }
 
     var client = _instanceRepository[sdkKey];
@@ -53,6 +64,7 @@ class ConfigCatClient {
 
   ConfigCatClient._(String sdkKey, ConfigCatOptions options) {
     _logger = options.logger ?? ConfigCatLogger();
+    _logLevel = _logger.getLogLevel();
     _override = options.override;
     _defaultUser = options.defaultUser;
     _hooks = options.hooks ?? Hooks();
@@ -82,14 +94,20 @@ class ConfigCatClient {
 
   /// Gets the value of a feature flag or setting as [T] identified by the given [key].
   ///
-  /// [key] is the identifier of the feature flag or setting.
-  /// In case of any failure, [defaultValue] will be returned.
-  /// [user] is the user object to identify the caller.
+  /// [key] the identifier of the feature flag or setting.
+  /// [defaultValue] in case of any failure, this value will be returned.
+  /// [user] the user object.
+  /// [T] the type of the desired feature flag or setting. Only the following types are allowed: [String], [bool], [int], [double], [Object] (both nullable and non-nullable) and [dynamic].
   Future<T> getValue<T>({
     required String key,
     required T defaultValue,
     ConfigCatUser? user,
   }) async {
+    if (key.isEmpty) {
+      throw ArgumentError("'key' cannot be empty.");
+    }
+    _validateReturnType<T>();
+
     final evalUser = user ?? _defaultUser;
     try {
       final result = await _getSettings();
@@ -111,7 +129,9 @@ class ConfigCatClient {
         return defaultValue;
       }
 
-      return _evaluate(key, setting, evalUser, result.fetchTime).value;
+      return _evaluate<T>(
+              key, setting, evalUser, result.fetchTime, result.settings)
+          .value;
     } catch (e, s) {
       final err =
           'Error occurred in the `getValue` method while evaluating setting \'$key\'. Returning the `defaultValue` parameter that you specified in your application: \'$defaultValue\'.';
@@ -124,13 +144,20 @@ class ConfigCatClient {
 
   /// Gets the value and evaluation details of a feature flag or setting identified by the given [key].
   ///
-  /// [key] is the identifier of the feature flag or setting.
-  /// [user] is the user object to identify the caller.
+  /// [key] the identifier of the feature flag or setting.
+  /// [defaultValue] in case of any failure, this value will be returned.
+  /// [user] the user object.
+  /// [T] the type of the desired feature flag or setting. Only the following types are allowed: [String], [bool], [int], [double], [Object] (both nullable and non-nullable) and [dynamic].
   Future<EvaluationDetails<T>> getValueDetails<T>({
     required String key,
     required T defaultValue,
     ConfigCatUser? user,
   }) async {
+    if (key.isEmpty) {
+      throw ArgumentError("'key' cannot be empty.");
+    }
+    _validateReturnType<T>();
+
     final evalUser = user ?? _defaultUser;
     try {
       final result = await _getSettings();
@@ -154,21 +181,23 @@ class ConfigCatClient {
         return details;
       }
 
-      return _evaluate(key, setting, evalUser, result.fetchTime);
+      return _evaluate<T>(
+          key, setting, evalUser, result.fetchTime, result.settings);
     } catch (e, s) {
       final err =
           'Error occurred in the `getValueDetails` method while evaluating setting \'$key\'. Returning the `defaultValue` parameter that you specified in your application: \'$defaultValue\'.';
       _errorReporter.error(1002, err, e, s);
-      final details =
-          EvaluationDetails.makeError(key, defaultValue, err, evalUser);
+      final details = EvaluationDetails.makeError(
+          key, defaultValue, e.toString(), evalUser);
       hooks.invokeFlagEvaluated(details);
       return details;
     }
   }
 
-  /// Gets the values along with evaluation details of all feature flags and settings.
+  /// Gets the detailed values of all feature flags or settings.
   ///
-  /// [user] is the user object to identify the caller.
+  /// [user] the user object.
+  /// Return a collection of all the evaluation results with details.
   Future<List<EvaluationDetails>> getAllValueDetails({
     ConfigCatUser? user,
   }) async {
@@ -182,7 +211,8 @@ class ConfigCatClient {
       }
       final detailsResult = List<EvaluationDetails>.empty(growable: true);
       result.settings.forEach((key, value) {
-        detailsResult.add(_evaluate(key, value, evalUser, result.fetchTime));
+        detailsResult.add(
+            _evaluate(key, value, evalUser, result.fetchTime, result.settings));
       });
 
       return detailsResult;
@@ -219,7 +249,7 @@ class ConfigCatClient {
 
   /// Gets the values of all feature flags or settings.
   ///
-  /// [user] is the user object to identify the caller.
+  /// [user] the user object.
   Future<Map<String, dynamic>> getAllValues({ConfigCatUser? user}) async {
     try {
       final settingsResult = await _getSettings();
@@ -231,8 +261,8 @@ class ConfigCatClient {
 
       final result = <String, dynamic>{};
       settingsResult.settings.forEach((key, value) {
-        result[key] = _evaluate(
-                key, value, user ?? _defaultUser, settingsResult.fetchTime)
+        result[key] = _evaluate(key, value, user ?? _defaultUser,
+                settingsResult.fetchTime, settingsResult.settings)
             .value;
       });
 
@@ -248,8 +278,12 @@ class ConfigCatClient {
   }
 
   /// Gets the key of a setting and its value identified by the given [variationId] (analytics).
+  /// [variationId] the Variation ID.
+  /// [T] the type of the desired feature flag or setting. Only the following types are allowed: [String], [bool], [int], [double], [Object] (both nullable and non-nullable) and [dynamic].
   Future<MapEntry<String, T>?> getKeyAndValue<T>(
       {required String variationId}) async {
+    _validateReturnType<T>();
+
     try {
       final result = await _getSettings();
       if (result.isEmpty) {
@@ -260,18 +294,42 @@ class ConfigCatClient {
 
       for (final entry in result.settings.entries) {
         if (entry.value.variationId == variationId) {
-          return MapEntry(entry.key, entry.value.value);
+          return MapEntry(
+              entry.key,
+              _parseSettingValue<T>(
+                  entry.value.settingsValue, entry.value.type));
         }
 
-        for (final rolloutRule in entry.value.rolloutRules) {
-          if (rolloutRule.variationId == variationId) {
-            return MapEntry(entry.key, rolloutRule.value);
+        for (final targetingRule in entry.value.targetingRules) {
+          if (targetingRule.servedValue != null) {
+            if (targetingRule.servedValue?.variationId == variationId) {
+              return MapEntry(
+                  entry.key,
+                  _parseSettingValue<T>(
+                      targetingRule.servedValue!.settingsValue,
+                      entry.value.type));
+            }
+          } else {
+            var targetRulePercentageOptions = targetingRule.percentageOptions;
+            if (targetRulePercentageOptions != null) {
+              for (final percentageOption in targetRulePercentageOptions) {
+                if (percentageOption.variationId == variationId) {
+                  return MapEntry(
+                      entry.key,
+                      _parseSettingValue<T>(
+                          percentageOption.settingsValue, entry.value.type));
+                }
+              }
+            }
           }
         }
 
-        for (final percentageRule in entry.value.percentageItems) {
-          if (percentageRule.variationId == variationId) {
-            return MapEntry(entry.key, percentageRule.value);
+        for (final percentageOption in entry.value.percentageOptions) {
+          if (percentageOption.variationId == variationId) {
+            return MapEntry(
+                entry.key,
+                _parseSettingValue<T>(
+                    percentageOption.settingsValue, entry.value.type));
           }
         }
       }
@@ -306,25 +364,51 @@ class ConfigCatClient {
             'The SDK uses the LOCAL_ONLY flag override behavior which prevents making HTTP requests.'));
   }
 
-  /// Sets the default user.
+  /// Sets defaultUser value.
+  /// If no user specified in the following calls {getValue}, {getAllValues}, {getValueDetails}, {getAllValueDetails}
+  /// the default user value will be used.
+  ///
+  /// [user] The new default user.
   void setDefaultUser(ConfigCatUser? user) => _defaultUser = user;
 
   /// Sets the default user to null.
   void clearDefaultUser() => _defaultUser = null;
 
-  /// Configures the SDK to not initiate HTTP requests.
+  /// Set the client to offline mode. HTTP calls are not allowed.
   void setOffline() => _configService?.offline();
 
-  /// Configures the SDK to allow HTTP requests.
+  /// Set the client to online mode. HTTP calls are allowed.
   void setOnline() => _configService?.online();
 
-  /// True when the SDK is configured not to initiate HTTP requests, otherwise false.
+  /// Get the client offline mode status.
+  ///
+  /// Return true if the client is in offline mode, otherwise false.
   bool isOffline() => _configService?.isOffline() ?? true;
 
   /// Closes the underlying resources.
   void close() {
     _closeResources();
     _instanceRepository.removeWhere((key, value) => value == this);
+  }
+
+  static bool _isValidKey(String sdkKey, bool isCustomBaseURL) {
+    if (isCustomBaseURL &&
+        sdkKey.length > sdkKeyProxyPrefix.length &&
+        sdkKey.startsWith(sdkKeyProxyPrefix)) {
+      return true;
+    }
+    List<String> splitSDKKey = sdkKey.split("/");
+    //22/22 rules
+    if (splitSDKKey.length == 2 &&
+        splitSDKKey[0].length == sdkKeySectionLength &&
+        splitSDKKey[1].length == sdkKeySectionLength) {
+      return true;
+    }
+    //configcat-sdk-1/22/22 rules
+    return splitSDKKey.length == 3 &&
+        splitSDKKey[0] == sdkKeyPrefix &&
+        splitSDKKey[1].length == sdkKeySectionLength &&
+        splitSDKKey[2].length == sdkKeySectionLength;
   }
 
   void _closeResources() {
@@ -359,21 +443,75 @@ class ConfigCatClient {
     return await _configService?.getSettings() ?? SettingResult.empty;
   }
 
-  EvaluationDetails<T> _evaluate<T>(
-      String key, Setting setting, ConfigCatUser? user, DateTime fetchTime) {
-    final eval = _rolloutEvaluator.evaluate<T>(setting, key, user);
+  EvaluationDetails<T> _evaluate<T>(String key, Setting setting,
+      ConfigCatUser? user, DateTime fetchTime, Map<String, Setting> settings) {
+    EvaluateLogger? evaluateLogger;
+    if (_logLevel.index <= LogLevel.info.index) {
+      evaluateLogger = EvaluateLogger();
+    }
+    final eval = _rolloutEvaluator.evaluate(
+        setting, key, user, settings, evaluateLogger);
     final details = EvaluationDetails<T>(
         key: key,
         variationId: eval.variationId,
         user: user,
         isDefaultValue: false,
         error: null,
-        value: eval.value,
+        value: _parseSettingValue<T>(eval.value, setting.type),
         fetchTime: fetchTime,
-        matchedEvaluationRule: eval.matchedEvaluationRule,
-        matchedEvaluationPercentageRule: eval.matchedEvaluationPercentageRule);
+        matchedTargetingRule: eval.matchedTargetingRule,
+        matchedPercentageOption: eval.matchedPercentageOption);
 
     _hooks.invokeFlagEvaluated(details);
     return details;
+  }
+
+  T _parseSettingValue<T>(SettingsValue settingsValue, int settingType) {
+    SettingType settingTypeEnum = SettingType.tryFrom(settingType) ??
+        (() => throw ArgumentError("Setting type is invalid."))();
+
+    bool allowsAnyType =
+        T == Object || Utils.typesEqual<T, Object?>() || T == dynamic;
+
+    if ((T == bool || Utils.typesEqual<T, bool?>() || allowsAnyType) &&
+        settingTypeEnum == SettingType.boolean &&
+        settingsValue.booleanValue != null) {
+      return settingsValue.booleanValue as T;
+    }
+    if ((T == String || Utils.typesEqual<T, String?>() || allowsAnyType) &&
+        settingTypeEnum == SettingType.string &&
+        settingsValue.stringValue != null) {
+      return settingsValue.stringValue as T;
+    }
+    if ((T == int || Utils.typesEqual<T, int?>() || allowsAnyType) &&
+        settingTypeEnum == SettingType.int &&
+        settingsValue.intValue != null) {
+      return settingsValue.intValue as T;
+    }
+    if ((T == double || Utils.typesEqual<T, double?>() || allowsAnyType) &&
+        settingTypeEnum == SettingType.double &&
+        settingsValue.doubleValue != null) {
+      return settingsValue.doubleValue as T;
+    }
+
+    throw ArgumentError(
+        "The type of a setting must match the type of the specified default value. Setting's type was ${settingTypeEnum.name} but the default value's type was $T. Please use a default value which corresponds to the setting type ${settingTypeEnum.name}. Learn more: https://configcat.com/docs/sdk-reference/dotnet/#setting-type-mapping");
+  }
+
+  void _validateReturnType<T>() {
+    if (T != bool &&
+        T != String &&
+        T != int &&
+        T != double &&
+        T != Object &&
+        !Utils.typesEqual<T, bool?>() &&
+        !Utils.typesEqual<T, String?>() &&
+        !Utils.typesEqual<T, int?>() &&
+        !Utils.typesEqual<T, double?>() &&
+        !Utils.typesEqual<T, Object?>() &&
+        T != dynamic) {
+      throw ArgumentError(
+          "Only the following types are supported: $String, $bool, $int, $double, $Object (both nullable and non-nullable) and $dynamic.");
+    }
   }
 }

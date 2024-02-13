@@ -7,10 +7,15 @@ class Preferences {
   @JsonKey(name: 'u')
   final String baseUrl;
 
-  @JsonKey(name: 'r')
+  @JsonKey(name: 'r', defaultValue: 0)
   final int redirect;
 
-  Preferences(this.baseUrl, this.redirect);
+  @JsonKey(name: 's')
+  final String? salt;
+
+  Preferences(this.baseUrl, this.redirect, this.salt);
+
+  static Preferences empty = Preferences("", 0, "");
 
   factory Preferences.fromJson(Map<String, dynamic> json) =>
       _$PreferencesFromJson(json);

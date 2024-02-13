@@ -1,8 +1,8 @@
 import 'package:configcat_client/configcat_client.dart';
-import 'package:http_mock_adapter/http_mock_adapter.dart';
 import 'package:test/test.dart';
 
 import 'helpers.dart';
+import 'http_adapter.dart';
 
 void main() {
   group('Hooks Tests', () {
@@ -19,12 +19,10 @@ void main() {
                   onConfigChanged: (map) => configChanged = true,
                   onClientReady: () => ready = true,
                   onFlagEvaluated: (ctx) => eval = true)));
-      final dioAdapter = DioAdapter(dio: client.httpClient);
+      final testAdapter = HttpTestAdapter(client.httpClient);
 
       final body = createTestConfig({'stringValue': 'testValue'}).toJson();
-      dioAdapter.onGet(getPath(), (server) {
-        server.reply(200, body);
-      });
+      testAdapter.enqueueResponse(getPath(), 200, body);
 
       // Act
       await client.forceRefresh();
@@ -38,7 +36,7 @@ void main() {
 
       // Cleanup
       client.close();
-      dioAdapter.close();
+      testAdapter.close();
     });
 
     test('subscribe', () async {
@@ -48,12 +46,10 @@ void main() {
       final client = ConfigCatClient.get(
           sdkKey: testSdkKey,
           options: ConfigCatOptions(pollingMode: PollingMode.manualPoll()));
-      final dioAdapter = DioAdapter(dio: client.httpClient);
+      final testAdapter = HttpTestAdapter(client.httpClient);
 
       final body = createTestConfig({'stringValue': 'testValue'}).toJson();
-      dioAdapter.onGet(getPath(), (server) {
-        server.reply(200, body);
-      });
+      testAdapter.enqueueResponse(getPath(), 200, body);
 
       // Act
       client.hooks.addOnConfigChanged((p0) => configChanged = true);
@@ -69,7 +65,7 @@ void main() {
 
       // Cleanup
       client.close();
-      dioAdapter.close();
+      testAdapter.close();
     });
 
     test('evaluation', () async {
@@ -78,11 +74,9 @@ void main() {
       final client = ConfigCatClient.get(
           sdkKey: testSdkKey,
           options: ConfigCatOptions(pollingMode: PollingMode.manualPoll()));
-      final dioAdapter = DioAdapter(dio: client.httpClient);
+      final testAdapter = HttpTestAdapter(client.httpClient);
 
-      dioAdapter.onGet(getPath(), (server) {
-        server.reply(200, createTestConfigWithRules());
-      });
+      testAdapter.enqueueResponse(getPath(), 200, createTestConfigWithRules());
 
       // Act
       client.hooks.addOnFlagEvaluated((details) {
@@ -91,12 +85,15 @@ void main() {
         expect(details.variationId, equals('variationId1'));
         expect(details.isDefaultValue, isFalse);
         expect(details.error, isNull);
-        expect(details.matchedEvaluationPercentageRule, isNull);
-        expect(details.matchedEvaluationRule?.value, equals('fake1'));
-        expect(details.matchedEvaluationRule?.comparator, equals(2));
-        expect(details.matchedEvaluationRule?.comparisonAttribute,
+
+        expect(details.matchedPercentageOption, isNull);
+        expect(details.matchedTargetingRule?.conditions.length, 1);
+
+        Condition? condition = details.matchedTargetingRule?.conditions[0];
+        expect(condition?.userCondition?.comparisonAttribute,
             equals('Identifier'));
-        expect(details.matchedEvaluationRule?.comparisonValue,
+        expect(condition?.userCondition?.comparator, equals(2));
+        expect(condition?.userCondition?.stringArrayValue?[0],
             equals('@test1.com'));
         expect(
             details.fetchTime.isAfter(
@@ -114,7 +111,7 @@ void main() {
 
       // Cleanup
       client.close();
-      dioAdapter.close();
+      testAdapter.close();
     });
   });
 }

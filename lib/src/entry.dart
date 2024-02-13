@@ -1,4 +1,4 @@
-import 'dart:convert';
+import 'package:configcat_client/src/utils.dart';
 
 import 'constants.dart';
 import 'json/config.dart';
@@ -21,12 +21,6 @@ class Entry {
     return '${fetchTime.millisecondsSinceEpoch}\n$eTag\n$configJsonString';
   }
 
-  static Entry fromConfigJson(String configJson, String eTag, DateTime time) {
-    final decoded = jsonDecode(configJson);
-    final config = Config.fromJson(decoded);
-    return Entry(configJson, config, eTag, time);
-  }
-
   static Entry fromCached(String cached) {
     final timeIndex = cached.indexOf('\n');
     if (timeIndex == -1) {
@@ -47,7 +41,12 @@ class Entry {
     final fetchTime = DateTime.fromMillisecondsSinceEpoch(time, isUtc: true);
     final eTag = cached.substring(timeIndex + 1, eTagIndex);
     final configJson = cached.substring(eTagIndex + 1);
-
-    return fromConfigJson(configJson, eTag, fetchTime);
+    final Config config;
+    try {
+      config = Utils.deserializeConfig(configJson);
+    } catch (e) {
+      throw ArgumentError("Invalid config JSON content: $configJson");
+    }
+    return Entry(configJson, config, eTag, fetchTime);
   }
 }

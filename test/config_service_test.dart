@@ -3,35 +3,29 @@ import 'package:configcat_client/src/constants.dart';
 import 'package:configcat_client/src/error_reporter.dart';
 import 'package:configcat_client/src/fetch/config_fetcher.dart';
 import 'package:configcat_client/src/fetch/config_service.dart';
-import 'package:dio/dio.dart';
-import 'package:http_mock_adapter/http_mock_adapter.dart';
 import 'package:mockito/mockito.dart';
-import 'package:sprintf/sprintf.dart';
 import 'package:test/test.dart';
 
 import 'cache_test.mocks.dart';
 import 'helpers.dart';
+import 'http_adapter.dart';
 
 void main() {
-  late RequestCounterInterceptor interceptor;
   final ConfigCatLogger logger = ConfigCatLogger();
   late MockConfigCatCache cache;
   late ConfigFetcher fetcher;
-  late DioAdapter dioAdapter;
+  late HttpTestAdapter testAdapter;
   setUp(() {
-    interceptor = RequestCounterInterceptor();
     cache = MockConfigCatCache();
     fetcher = ConfigFetcher(
         logger: logger,
         sdkKey: testSdkKey,
         options: const ConfigCatOptions(),
         errorReporter: ErrorReporter(logger, Hooks()));
-    fetcher.httpClient.interceptors.add(interceptor);
-    dioAdapter = DioAdapter(dio: fetcher.httpClient);
+    testAdapter = HttpTestAdapter(fetcher.httpClient);
   });
   tearDown(() {
-    interceptor.clear();
-    dioAdapter.close();
+    testAdapter.close();
   });
 
   ConfigService createService(PollingMode pollingMode,
@@ -53,11 +47,8 @@ void main() {
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
       final service = createService(PollingMode.manualPoll());
 
-      dioAdapter.onGet(
-          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
-          (server) {
-        server.reply(200, createTestConfig({'key': 'test1'}).toJson());
-      });
+      testAdapter.enqueueResponse(
+          getPath(), 200, createTestConfig({'key': 'test1'}).toJson());
 
       // Act
       final future1 = service.refresh();
@@ -68,7 +59,7 @@ void main() {
       await future3;
 
       // Assert
-      expect(interceptor.allRequestCount(), 1);
+      expect(testAdapter.capturedRequests.length, 1);
 
       // Cleanup
       service.close();
@@ -82,35 +73,29 @@ void main() {
 
       final service = createService(PollingMode.autoPoll());
 
-      dioAdapter
-        ..onGet(sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
-            (server) {
-          server.reply(200, createTestConfig({'key': 'test1'}).toJson(),
-              headers: {
-                Headers.contentTypeHeader: [Headers.jsonContentType],
-                'Etag': ['tag1']
-              });
-        })
-        ..onGet(sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
-            (server) {
-          server.reply(200, createTestConfig({'key': 'test2'}).toJson());
-        }, headers: {'If-None-Match': 'tag1'});
+      testAdapter.enqueueResponse(
+          getPath(), 200, createTestConfig({'key': 'test1'}).toJson(),
+          headers: {'Etag': 'tag1'});
+      testAdapter.enqueueResponse(
+          getPath(), 200, createTestConfig({'key': 'test2'}).toJson());
 
       // Act
       await service.refresh();
       final settings1 = await service.getSettings();
 
       // Assert
-      expect(settings1.settings['key']?.value, 'test1');
+      expect(settings1.settings['key']?.settingsValue.stringValue, 'test1');
 
       // Act
       await service.refresh();
       final settings2 = await service.getSettings();
 
       // Assert
-      expect(settings2.settings['key']?.value, 'test2');
+      expect(settings2.settings['key']?.settingsValue.stringValue, 'test2');
       verify(cache.write(any, any)).called(equals(2));
-      expect(interceptor.allRequestCount(), 2);
+      expect(testAdapter.capturedRequests.length, 2);
+      expect(
+          testAdapter.capturedRequests.last.headers['If-None-Match'], 'tag1');
 
       // Cleanup
       service.close();
@@ -122,44 +107,39 @@ void main() {
 
       final service = createService(
           PollingMode.autoPoll(autoPollInterval: const Duration(seconds: 1)));
-      dioAdapter
-        ..onGet(sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
-            (server) {
-          server.reply(200, createTestConfig({'key': 'test1'}).toJson(),
-              headers: {
-                Headers.contentTypeHeader: [Headers.jsonContentType],
-                'Etag': ['tag1']
-              });
-        })
-        ..onGet(sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
-            (server) {
-          server.reply(200, createTestConfig({'key': 'test2'}).toJson(),
-              headers: {
-                Headers.contentTypeHeader: [Headers.jsonContentType],
-                'Etag': ['tag2']
-              });
-        }, headers: {'If-None-Match': 'tag1'});
+
+      testAdapter.enqueueResponse(
+          getPath(), 200, createTestConfig({'key': 'test1'}).toJson(),
+          headers: {'Etag': 'tag1'});
+      testAdapter.enqueueResponse(
+          getPath(), 200, createTestConfig({'key': 'test2'}).toJson(),
+          headers: {'Etag': 'tag2'});
 
       // Act
       final settings1 = await service.getSettings();
 
       // Assert
-      expect(settings1.settings['key']?.value, 'test1');
+      expect(settings1.settings['key']?.settingsValue.stringValue, 'test1');
+      verify(cache.write(any, argThat(contains("tag1")))).called(1);
 
       // Act
       final settings2 = await service.getSettings();
 
       // Assert
-      expect(settings2.settings['key']?.value, 'test1');
+      expect(settings2.settings['key']?.settingsValue.stringValue, 'test1');
+      verifyNever(cache.write(any, any));
 
       await until(() async {
         final settings3 = await service.getSettings();
-        final value = settings3.settings['key']?.value ?? '';
+        final value =
+            settings3.settings['key']?.settingsValue.stringValue ?? '';
         return value == 'test2';
       }, const Duration(milliseconds: 2500));
 
-      verify(cache.write(any, any)).called(2);
-      expect(interceptor.allRequestCount(), 2);
+      expect(testAdapter.capturedRequests.length, 2);
+      expect(
+          testAdapter.capturedRequests.last.headers['If-None-Match'], 'tag1');
+      verify(cache.write(any, argThat(contains("tag2")))).called(1);
 
       // Cleanup
       service.close();
@@ -170,11 +150,7 @@ void main() {
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
 
       final service = createService(PollingMode.autoPoll());
-      dioAdapter.onGet(
-          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
-          (server) {
-        server.reply(500, {});
-      });
+      testAdapter.enqueueResponse(getPath(), 500, {});
 
       // Act
       await service.getSettings();
@@ -182,7 +158,7 @@ void main() {
       await service.getSettings();
 
       // Assert
-      expect(interceptor.allRequestCount(), 1);
+      expect(testAdapter.capturedRequests.length, 1);
 
       // Cleanup
       service.close();
@@ -195,20 +171,18 @@ void main() {
 
       final service = createService(PollingMode.autoPoll(
           autoPollInterval: const Duration(milliseconds: 200)));
-      dioAdapter.onGet(
-          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
-          (server) {
-        server.reply(200, createTestConfig({'key': true}).toJson());
-      });
+
+      testAdapter.enqueueResponse(
+          getPath(), 200, createTestConfig({'key': true}).toJson());
 
       // Assert
-      expect(interceptor.allRequestCount(), 0);
+      expect(testAdapter.capturedRequests.length, 0);
 
       // Act
       await Future.delayed(const Duration(milliseconds: 300));
 
       // Assert
-      expect(interceptor.allRequestCount(), 1);
+      expect(testAdapter.capturedRequests.length, 1);
 
       // Cleanup
       service.close();
@@ -220,14 +194,14 @@ void main() {
 
       final service = createService(PollingMode.autoPoll(
           autoPollInterval: const Duration(milliseconds: 200)));
-      dioAdapter.onGet(getPath(), (server) {
-        server.reply(200, createTestConfig({'key': 'test1'}).toJson());
-      });
+
+      testAdapter.enqueueResponse(
+          getPath(), 200, createTestConfig({'key': 'test1'}).toJson());
 
       // Act
       await Future.delayed(const Duration(milliseconds: 500));
       service.offline();
-      var reqCount = interceptor.allRequestCount();
+      var reqCount = testAdapter.capturedRequests.length;
 
       // Assert
       expect(reqCount, greaterThanOrEqualTo(3));
@@ -236,14 +210,14 @@ void main() {
       await Future.delayed(const Duration(milliseconds: 500));
 
       // Assert
-      expect(interceptor.allRequestCount(), equals(reqCount));
+      expect(testAdapter.capturedRequests.length, equals(reqCount));
 
       // Act
       service.online();
       await Future.delayed(const Duration(milliseconds: 500));
 
       // Assert
-      expect(interceptor.allRequestCount(), greaterThanOrEqualTo(6));
+      expect(testAdapter.capturedRequests.length, greaterThanOrEqualTo(6));
 
       // Cleanup
       service.close();
@@ -257,22 +231,21 @@ void main() {
           PollingMode.autoPoll(
               autoPollInterval: const Duration(milliseconds: 200)),
           offline: true);
-      dioAdapter.onGet(getPath(), (server) {
-        server.reply(200, createTestConfig({'key': 'test1'}).toJson());
-      });
+      testAdapter.enqueueResponse(
+          getPath(), 200, createTestConfig({'key': 'test1'}).toJson());
 
       // Act
       await Future.delayed(const Duration(milliseconds: 500));
 
       // Assert
-      expect(interceptor.allRequestCount(), equals(0));
+      expect(testAdapter.capturedRequests.length, equals(0));
 
       // Act
       service.online();
       await Future.delayed(const Duration(milliseconds: 500));
 
       // Assert
-      expect(interceptor.allRequestCount(), greaterThanOrEqualTo(3));
+      expect(testAdapter.capturedRequests.length, greaterThanOrEqualTo(3));
 
       // Cleanup
       service.close();
@@ -284,33 +257,27 @@ void main() {
 
       final service = createService(PollingMode.autoPoll(
           autoPollInterval: const Duration(milliseconds: 100)));
-      dioAdapter
-        ..onGet(sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
-            (server) {
-          server.reply(200, createTestConfig({'key': 'test1'}).toJson(),
-              headers: {
-                Headers.contentTypeHeader: [Headers.jsonContentType],
-                'Etag': ['tag1']
-              });
-        })
-        ..onGet(sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
-            (server) {
-          server.reply(500, {});
-        }, headers: {'If-None-Match': 'tag1'});
+
+      testAdapter.enqueueResponse(
+          getPath(), 200, createTestConfig({'key': 'test1'}).toJson(),
+          headers: {'Etag': 'tag1'});
+      testAdapter.enqueueResponse(getPath(), 500, {});
 
       // Act
       final settings1 = await service.getSettings();
 
       // Assert
-      expect(settings1.settings['key']?.value, 'test1');
+      expect(settings1.settings['key']?.settingsValue.stringValue, 'test1');
 
       // Act
       await Future.delayed(const Duration(milliseconds: 500));
       final settings2 = await service.getSettings();
 
       // Assert
-      expect(settings2.settings['key']?.value, 'test1');
+      expect(settings2.settings['key']?.settingsValue.stringValue, 'test1');
       verify(cache.write(any, any)).called(greaterThanOrEqualTo(1));
+      expect(
+          testAdapter.capturedRequests.last.headers['If-None-Match'], 'tag1');
 
       // Cleanup
       service.close();
@@ -323,12 +290,9 @@ void main() {
       final service = createService(PollingMode.autoPoll(
           maxInitWaitTime: const Duration(milliseconds: 100)));
 
-      dioAdapter.onGet(
-          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
-          (server) {
-        server.reply(200, createTestConfig({'key': 'test1'}).toJson(),
-            delay: const Duration(seconds: 2));
-      });
+      testAdapter.enqueueResponse(
+          getPath(), 200, createTestConfig({'key': 'test1'}).toJson(),
+          delay: const Duration(seconds: 2));
 
       // Act
       final current = DateTime.now();
@@ -344,7 +308,7 @@ void main() {
 
       // Assert
       expect(result2.isEmpty, isTrue);
-      expect(interceptor.allRequestCount(), 1);
+      expect(testAdapter.capturedRequests.length, 1);
 
       // Cleanup
       service.close();
@@ -359,12 +323,9 @@ void main() {
           maxInitWaitTime: const Duration(milliseconds: 300),
           autoPollInterval: const Duration(milliseconds: 100)));
 
-      dioAdapter.onGet(
-          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
-          (server) {
-        server.reply(200, createTestConfig({'key': 'test1'}).toJson(),
-            delay: const Duration(seconds: 2));
-      });
+      testAdapter.enqueueResponse(
+          getPath(), 200, createTestConfig({'key': 'test1'}).toJson(),
+          delay: const Duration(seconds: 2));
 
       // Act
       await Future.delayed(const Duration(milliseconds: 110));
@@ -381,7 +342,7 @@ void main() {
 
       // Assert
       expect(result2.isEmpty, isFalse);
-      expect(interceptor.allRequestCount(), 1);
+      expect(testAdapter.capturedRequests.length, 1);
 
       // Cleanup
       service.close();
@@ -396,12 +357,9 @@ void main() {
       final service = createService(PollingMode.autoPoll(
           maxInitWaitTime: const Duration(milliseconds: 100)));
 
-      dioAdapter.onGet(
-          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
-          (server) {
-        server.reply(200, createTestConfig({'key': false}).toJson(),
-            delay: const Duration(seconds: 2));
-      });
+      testAdapter.enqueueResponse(
+          getPath(), 200, createTestConfig({'key': false}).toJson(),
+          delay: const Duration(seconds: 2));
 
       // Act
       final current = DateTime.now();
@@ -410,7 +368,7 @@ void main() {
       // Assert
       expect(DateTime.now().difference(current),
           lessThan(const Duration(milliseconds: 200)));
-      expect(result.settings['key']?.value, isTrue);
+      expect(result.settings['key']?.settingsValue.booleanValue, isTrue);
 
       // Cleanup
       service.close();
@@ -423,35 +381,30 @@ void main() {
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
       final service = createService(PollingMode.lazyLoad(
           cacheRefreshInterval: const Duration(milliseconds: 100)));
-      dioAdapter
-        ..onGet(sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
-            (server) {
-          server.reply(200, createTestConfig({'key': 'test1'}).toJson(),
-              headers: {
-                Headers.contentTypeHeader: [Headers.jsonContentType],
-                'Etag': ['tag1']
-              });
-        })
-        ..onGet(sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
-            (server) {
-          server.reply(200, createTestConfig({'key': 'test2'}).toJson());
-        }, headers: {'If-None-Match': 'tag1'});
+
+      testAdapter.enqueueResponse(
+          getPath(), 200, createTestConfig({'key': 'test1'}).toJson(),
+          headers: {'Etag': 'tag1'});
+      testAdapter.enqueueResponse(
+          getPath(), 200, createTestConfig({'key': 'test2'}).toJson());
 
       // Act
       await service.refresh();
       final settings1 = await service.getSettings();
 
       // Assert
-      expect(settings1.settings['key']?.value, 'test1');
+      expect(settings1.settings['key']?.settingsValue.stringValue, 'test1');
 
       // Act
       await service.refresh();
       final settings2 = await service.getSettings();
 
       // Assert
-      expect(settings2.settings['key']?.value, 'test2');
+      expect(settings2.settings['key']?.settingsValue.stringValue, 'test2');
       verify(cache.write(any, any)).called(2);
-      expect(interceptor.allRequestCount(), 2);
+      expect(testAdapter.capturedRequests.length, 2);
+      expect(
+          testAdapter.capturedRequests.last.headers['If-None-Match'], 'tag1');
 
       // Cleanup
       service.close();
@@ -463,33 +416,28 @@ void main() {
       final service = createService(PollingMode.lazyLoad(
           cacheRefreshInterval: const Duration(milliseconds: 100)));
 
-      dioAdapter
-        ..onGet(sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
-            (server) {
-          server.reply(200, createTestConfig({'key': 'test1'}).toJson(),
-              headers: {
-                Headers.contentTypeHeader: [Headers.jsonContentType],
-                'Etag': ['tag1']
-              });
-        })
-        ..onGet(sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
-            (server) {
-          server.reply(200, createTestConfig({'key': 'test2'}).toJson());
-        }, headers: {'If-None-Match': 'tag1'});
+      testAdapter.enqueueResponse(
+          getPath(), 200, createTestConfig({'key': 'test1'}).toJson(),
+          headers: {'Etag': 'tag1'});
+      testAdapter.enqueueResponse(
+          getPath(), 200, createTestConfig({'key': 'test2'}).toJson());
 
       final settings1 = await service.getSettings();
-      expect(settings1.settings['key']?.value, 'test1');
+      expect(settings1.settings['key']?.settingsValue.stringValue, 'test1');
       final settings2 = await service.getSettings();
-      expect(settings2.settings['key']?.value, 'test1');
+      expect(settings2.settings['key']?.settingsValue.stringValue, 'test1');
 
       await until(() async {
         final settings3 = await service.getSettings();
-        final value = settings3.settings['key']?.value ?? '';
+        final value =
+            settings3.settings['key']?.settingsValue.stringValue ?? '';
         return value == 'test2';
       }, const Duration(milliseconds: 150));
 
       verify(cache.write(any, any)).called(2);
-      expect(interceptor.allRequestCount(), 2);
+      expect(testAdapter.capturedRequests.length, 2);
+      expect(
+          testAdapter.capturedRequests.last.headers['If-None-Match'], 'tag1');
 
       // Cleanup
       service.close();
@@ -502,18 +450,15 @@ void main() {
           PollingMode.lazyLoad(
               cacheRefreshInterval: const Duration(milliseconds: 200)),
           customCache: cache);
-      dioAdapter.onGet(
-          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
-          (server) {
-        server.reply(200, createTestConfig({'key': true}).toJson());
-      });
+      testAdapter.enqueueResponse(
+          getPath(), 200, createTestConfig({'key': true}).toJson());
 
       // Act
       await service.getSettings();
       await service.getSettings();
 
       // Assert
-      expect(interceptor.allRequestCount(), 0);
+      expect(testAdapter.capturedRequests.length, 0);
 
       // Act
       await Future.delayed(const Duration(milliseconds: 300));
@@ -521,7 +466,7 @@ void main() {
       await service.getSettings();
 
       // Assert
-      expect(interceptor.allRequestCount(), 1);
+      expect(testAdapter.capturedRequests.length, 1);
 
       // Cleanup
       service.close();
@@ -531,11 +476,7 @@ void main() {
       // Arrange
       final cache = CustomCache(createTestEntry({'key': true}).serialize());
 
-      dioAdapter.onGet(
-          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
-          (server) {
-        server.reply(304, {});
-      });
+      testAdapter.enqueueResponse(getPath(), 304, {});
 
       // Act
       final service = createService(
@@ -546,7 +487,7 @@ void main() {
       await service.getSettings();
 
       // Assert
-      expect(interceptor.allRequestCount(), 0);
+      expect(testAdapter.capturedRequests.length, 0);
 
       // Act
       await Future.delayed(const Duration(milliseconds: 300));
@@ -560,11 +501,45 @@ void main() {
       await service2.getSettings();
 
       // Assert
-      expect(interceptor.allRequestCount(), 1);
+      expect(testAdapter.capturedRequests.length, 1);
 
       // Cleanup
       service.close();
       service2.close();
+    });
+
+    test('ensure cached TTL respects external cache', () async {
+      final cache = CustomCache(
+          createTestEntryWithETag({'key': 'test-local'}, "etag").serialize());
+      final service = createService(
+          PollingMode.lazyLoad(
+              cacheRefreshInterval: const Duration(milliseconds: 200)),
+          customCache: cache);
+
+      testAdapter.enqueueResponse(
+          getPath(), 200, createTestConfig({'key': 'test-remote'}).toJson());
+
+      // Act
+      final settings = await service.getSettings();
+
+      // Assert
+      expect(settings.settings["key"]!.settingsValue.stringValue, 'test-local');
+      expect(testAdapter.capturedRequests.length, 0);
+
+      // Act
+      await Future.delayed(const Duration(milliseconds: 300));
+      cache.write("",
+          createTestEntryWithETag({'key': 'test-local2'}, "etag2").serialize());
+
+      final settings2 = await service.getSettings();
+
+      // Assert
+      expect(
+          settings2.settings["key"]!.settingsValue.stringValue, 'test-local2');
+      expect(testAdapter.capturedRequests.length, 0);
+
+      // Cleanup
+      service.close();
     });
   });
 
@@ -573,19 +548,12 @@ void main() {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
       final service = createService(PollingMode.manualPoll());
-      dioAdapter
-        ..onGet(sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
-            (server) {
-          server.reply(200, createTestConfig({'key': 'test1'}).toJson(),
-              headers: {
-                Headers.contentTypeHeader: [Headers.jsonContentType],
-                'Etag': ['tag1']
-              });
-        })
-        ..onGet(sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
-            (server) {
-          server.reply(200, createTestConfig({'key': 'test2'}).toJson());
-        }, headers: {'If-None-Match': 'tag1'});
+
+      testAdapter.enqueueResponse(
+          getPath(), 200, createTestConfig({'key': 'test1'}).toJson(),
+          headers: {'Etag': 'tag1'});
+      testAdapter.enqueueResponse(
+          getPath(), 200, createTestConfig({'key': 'test2'}).toJson());
 
       // Act
       final result = await service.refresh();
@@ -594,16 +562,18 @@ void main() {
       // Assert
       expect(result.isSuccess, isTrue);
       expect(result.error, isNull);
-      expect(settings1.settings['key']?.value, 'test1');
+      expect(settings1.settings['key']?.settingsValue.stringValue, 'test1');
 
       // Act
       await service.refresh();
       final settings2 = await service.getSettings();
 
       // Assert
-      expect(settings2.settings['key']?.value, 'test2');
+      expect(settings2.settings['key']?.settingsValue.stringValue, 'test2');
       verify(cache.write(any, any)).called(2);
-      expect(interceptor.allRequestCount(), 2);
+      expect(testAdapter.capturedRequests.length, 2);
+      expect(
+          testAdapter.capturedRequests.last.headers['If-None-Match'], 'tag1');
 
       // Cleanup
       service.close();
@@ -613,11 +583,8 @@ void main() {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
       final service = createService(PollingMode.manualPoll());
-      dioAdapter.onGet(
-          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
-          (server) {
-        server.reply(500, {});
-      });
+
+      testAdapter.enqueueResponse(getPath(), 500, {});
 
       // Act
       final result = await service.refresh();
@@ -632,7 +599,7 @@ void main() {
       expect(settings1.settings, isEmpty);
 
       verifyNever(cache.write(any, any));
-      expect(interceptor.allRequestCount(), 1);
+      expect(testAdapter.capturedRequests.length, 1);
 
       // Cleanup
       service.close();
@@ -642,11 +609,8 @@ void main() {
       // Arrange
       when(cache.read(any)).thenAnswer((_) => Future.value(''));
       final service = createService(PollingMode.manualPoll());
-      dioAdapter.onGet(
-          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]),
-          (server) {
-        server.reply(404, {});
-      });
+
+      testAdapter.enqueueResponse(getPath(), 404, {});
 
       // Act
       final result = await service.refresh();
@@ -661,7 +625,7 @@ void main() {
       expect(settings1.settings, isEmpty);
 
       verifyNever(cache.write(any, any));
-      expect(interceptor.allRequestCount(), 1);
+      expect(testAdapter.capturedRequests.length, 1);
 
       // Cleanup
       service.close();
@@ -678,7 +642,7 @@ void main() {
 
       // Assert
       verifyNever(cache.write(any, any));
-      expect(interceptor.allRequestCount(), 0);
+      expect(testAdapter.capturedRequests.length, 0);
 
       // Cleanup
       service.close();

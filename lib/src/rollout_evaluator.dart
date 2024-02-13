@@ -3,347 +3,997 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:pub_semver/pub_semver.dart';
 
-import 'json/rollout_rule.dart';
-import 'json/percentage_rule.dart';
 import 'configcat_user.dart';
+import 'evaluate_logger.dart';
+import 'json/condition_accessor.dart';
+import 'json/percentage_option.dart';
+import 'json/prerequisite_comparator.dart';
+import 'json/segment.dart';
+import 'json/segment_comparator.dart';
+import 'json/targeting_rule.dart';
 import 'json/setting.dart';
+import 'json/prerequisite_flag_condition.dart';
+import 'json/segment_condition.dart';
+import 'json/settings_value.dart';
+import 'json/user_comparator.dart';
+import 'json/user_condition.dart';
 import 'log/configcat_logger.dart';
 
-class EvaluationResult<T> {
-  final String key;
-  final String variationId;
-  final T value;
-  final RolloutRule? matchedEvaluationRule;
-  final PercentageRule? matchedEvaluationPercentageRule;
+class EvaluationResult {
+  final String? variationId;
+  final SettingsValue value;
+  final TargetingRule? matchedTargetingRule;
+  final PercentageOption? matchedPercentageOption;
 
   EvaluationResult(
-      {required this.key,
-      required this.variationId,
+      {required this.variationId,
       required this.value,
-      required this.matchedEvaluationRule,
-      required this.matchedEvaluationPercentageRule});
+      required this.matchedTargetingRule,
+      required this.matchedPercentageOption});
 }
 
-class RolloutEvaluator {
-  static const _comparatorTexts = [
-    'IS ONE OF',
-    'IS NOT ONE OF',
-    'CONTAINS',
-    'DOES NOT CONTAIN',
-    'IS ONE OF (SemVer)',
-    'IS NOT ONE OF (SemVer)',
-    '< (SemVer)',
-    '<= (SemVer)',
-    '> (SemVer)',
-    '>= (SemVer)',
-    '= (Number)',
-    '<> (Number)',
-    '< (Number)',
-    '<= (Number)',
-    '> (Number)',
-    '>= (Number',
-    'IS ONE OF (Sensitive)',
-    'IS NOT ONE OF (Sensitive)',
-  ];
+class EvaluationContext {
+  String key;
+  ConfigCatUser? user;
+  List<String>? visitedKeys;
+  Map<String, Setting> settings;
+  bool isUserMissing = false;
+  bool isUserAttributeMissing = false;
 
+  EvaluationContext(this.key, this.user, this.visitedKeys, this.settings);
+}
+
+class RolloutEvaluatorException implements Exception {
+  String message;
+
+  RolloutEvaluatorException(this.message);
+}
+
+const String userObjectIsMissing = "cannot evaluate, User Object is missing";
+const String cannotEvaluateTheUserPrefix = "cannot evaluate, the User.";
+const String comparisonOperatorIsInvalid = "Comparison operator is invalid.";
+const String comparisonValueIsMissingOrInvalid =
+    "Comparison value is missing or invalid.";
+const String cannotEvaluateTheUserAttributeInvalid = " attribute is invalid (";
+const String cannotEvaluateTheUserAttributeMissing = " attribute is missing";
+
+class RolloutEvaluator {
   final ConfigCatLogger _logger;
 
   RolloutEvaluator(this._logger);
 
-  EvaluationResult<Value> evaluate<Value>(
-      Setting setting, String key, ConfigCatUser? user) {
-    final logEntries = _LogEntries();
-    logEntries.add('Evaluating getValue($key)');
-
-    EvaluationResult<Value> produceResult(
-        {RolloutRule? rolloutRule, PercentageRule? percentageItem}) {
-      return EvaluationResult(
-          key: key,
-          variationId: rolloutRule?.variationId ??
-              percentageItem?.variationId ??
-              setting.variationId,
-          value: rolloutRule?.value ?? percentageItem?.value ?? setting.value,
-          matchedEvaluationRule: rolloutRule,
-          matchedEvaluationPercentageRule: percentageItem);
-    }
-
+  EvaluationResult evaluate(Setting setting, String key, ConfigCatUser? user,
+      Map<String, Setting> settings, EvaluateLogger? evaluateLogger) {
     try {
-      if (user == null) {
-        if (setting.rolloutRules.isNotEmpty ||
-            setting.percentageItems.isNotEmpty) {
-          _logger.warning(3001,
-              'Cannot evaluate targeting rules and % options for setting \'$key\' (User Object is missing). You should pass a User Object to the evaluation methods like `getValue()` in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/');
-        }
-        logEntries.add('Returning ${setting.value}');
-        return produceResult();
+      evaluateLogger?.logEvaluation(key);
+
+      if (user != null) {
+        evaluateLogger?.logUserObject(user);
       }
+      evaluateLogger?.increaseIndentLevel();
 
-      logEntries.add('User object: $user');
+      EvaluationContext evaluationContext =
+          EvaluationContext(key, user, null, settings);
+      EvaluationResult evaluationResult =
+          _evaluateSetting(setting, evaluationContext, evaluateLogger);
 
-      for (final rule in setting.rolloutRules) {
-        final comparisonAttribute = rule.comparisonAttribute;
-        final comparisonValue = rule.comparisonValue;
-        final comparator = rule.comparator;
-        final userValue = user.getAttribute(comparisonAttribute);
-        final returnValue = rule.value as Value;
-
-        if (userValue == null || comparisonValue.isEmpty || userValue.isEmpty) {
-          logEntries.add(_formatNoMatchRule(
-              comparisonAttribute: comparisonAttribute,
-              userValue: userValue ?? '',
-              comparator: comparator,
-              comparisonValue: comparisonValue));
-          continue;
-        }
-
-        switch (comparator) {
-          // IS ONE OF
-          case 0:
-            final split =
-                comparisonValue.split(',').map((value) => value.trim());
-            if (split.contains(userValue)) {
-              logEntries.add(_formatMatchRule(
-                  comparisonAttribute: comparisonAttribute,
-                  userValue: userValue,
-                  comparator: comparator,
-                  comparisonValue: comparisonValue,
-                  value: returnValue));
-              return produceResult(rolloutRule: rule);
-            }
-            break;
-          // IS NOT ONE OF
-          case 1:
-            final split =
-                comparisonValue.split(',').map((value) => value.trim());
-            if (!split.contains(userValue)) {
-              logEntries.add(_formatMatchRule(
-                  comparisonAttribute: comparisonAttribute,
-                  userValue: userValue,
-                  comparator: comparator,
-                  comparisonValue: comparisonValue,
-                  value: returnValue));
-              return produceResult(rolloutRule: rule);
-            }
-            break;
-          // CONTAINS
-          case 2:
-            if (userValue.contains(comparisonValue)) {
-              logEntries.add(_formatMatchRule(
-                  comparisonAttribute: comparisonAttribute,
-                  userValue: userValue,
-                  comparator: comparator,
-                  comparisonValue: comparisonValue,
-                  value: returnValue));
-              return produceResult(rolloutRule: rule);
-            }
-            break;
-          // DOES NOT CONTAIN
-          case 3:
-            if (!userValue.contains(comparisonValue)) {
-              logEntries.add(_formatMatchRule(
-                  comparisonAttribute: comparisonAttribute,
-                  userValue: userValue,
-                  comparator: comparator,
-                  comparisonValue: comparisonValue,
-                  value: returnValue));
-              return produceResult(rolloutRule: rule);
-            }
-            break;
-          // IS ONE OF (Semantic version), IS NOT ONE OF (Semantic version)
-          case 4:
-          case 5:
-            final split = comparisonValue
-                .split(',')
-                .map((value) => value.trim())
-                .where((value) => value.isNotEmpty);
-
-            try {
-              final userVersion = _parseVersion(userValue);
-              var matched = false;
-              for (final value in split) {
-                matched = _parseVersion(value) == userVersion || matched;
-              }
-
-              if ((matched && comparator == 4) ||
-                  (!matched && comparator == 5)) {
-                logEntries.add(_formatMatchRule(
-                    comparisonAttribute: comparisonAttribute,
-                    userValue: userValue,
-                    comparator: comparator,
-                    comparisonValue: comparisonValue,
-                    value: returnValue));
-                return produceResult(rolloutRule: rule);
-              }
-            } catch (e) {
-              final message = _formatValidationErrorRule(
-                  comparisonAttribute: comparisonAttribute,
-                  userValue: userValue,
-                  comparator: comparator,
-                  comparisonValue: comparisonValue,
-                  error: e);
-              _logger.warning(0, message);
-              logEntries.add(message);
-            }
-            break;
-          // LESS THAN, LESS THAN OR EQUALS TO, GREATER THAN, GREATER THAN OR EQUALS TO (Semantic version)
-          case 6:
-          case 7:
-          case 8:
-          case 9:
-            try {
-              final userValueVersion = _parseVersion(userValue);
-              final comparisonVersion = _parseVersion(comparisonValue.trim());
-
-              if ((comparator == 6 && userValueVersion < comparisonVersion) ||
-                  (comparator == 7 && userValueVersion <= comparisonVersion) ||
-                  (comparator == 8 && userValueVersion > comparisonVersion) ||
-                  (comparator == 9 && userValueVersion >= comparisonVersion)) {
-                logEntries.add(_formatMatchRule(
-                    comparisonAttribute: comparisonAttribute,
-                    userValue: userValue,
-                    comparator: comparator,
-                    comparisonValue: comparisonValue,
-                    value: returnValue));
-                return produceResult(rolloutRule: rule);
-              }
-            } catch (e) {
-              final message = _formatValidationErrorRule(
-                  comparisonAttribute: comparisonAttribute,
-                  userValue: userValue,
-                  comparator: comparator,
-                  comparisonValue: comparisonValue,
-                  error: e);
-              _logger.warning(0, message);
-              logEntries.add(message);
-            }
-            break;
-          case 10:
-          case 11:
-          case 12:
-          case 13:
-          case 14:
-          case 15:
-            try {
-              final uvDouble = double.parse(userValue.replaceAll(',', '.'));
-              final cvDouble =
-                  double.parse(comparisonValue.replaceAll(',', '.'));
-              if ((comparator == 10 && uvDouble == cvDouble) ||
-                  (comparator == 11 && uvDouble != cvDouble) ||
-                  (comparator == 12 && uvDouble < cvDouble) ||
-                  (comparator == 13 && uvDouble <= cvDouble) ||
-                  (comparator == 14 && uvDouble > cvDouble) ||
-                  (comparator == 15 && uvDouble >= cvDouble)) {
-                logEntries.add(_formatMatchRule(
-                    comparisonAttribute: comparisonAttribute,
-                    userValue: userValue,
-                    comparator: comparator,
-                    comparisonValue: comparisonValue,
-                    value: returnValue));
-                return produceResult(rolloutRule: rule);
-              }
-            } catch (e) {
-              final message = _formatValidationErrorRule(
-                  comparisonAttribute: comparisonAttribute,
-                  userValue: userValue,
-                  comparator: comparator,
-                  comparisonValue: comparisonValue,
-                  error: e);
-              _logger.warning(0, message);
-              logEntries.add(message);
-            }
-            break;
-          // IS ONE OF (Sensitive)
-          case 16:
-            final split = comparisonValue
-                .split(',')
-                .map((value) => value.trim())
-                .where((value) => value.isNotEmpty);
-            final userValueHash =
-                sha1.convert(utf8.encode(userValue)).toString();
-            if (split.contains(userValueHash)) {
-              logEntries.add(_formatMatchRule(
-                  comparisonAttribute: comparisonAttribute,
-                  userValue: userValue,
-                  comparator: comparator,
-                  comparisonValue: comparisonValue,
-                  value: returnValue));
-              return produceResult(rolloutRule: rule);
-            }
-            break;
-          // IS NOT ONE OF (Sensitive)
-          case 17:
-            final split = comparisonValue
-                .split(',')
-                .map((value) => value.trim())
-                .where((value) => value.isNotEmpty);
-            final userValueHash =
-                sha1.convert(utf8.encode(userValue)).toString();
-            if (!split.contains(userValueHash)) {
-              logEntries.add(_formatMatchRule(
-                  comparisonAttribute: comparisonAttribute,
-                  userValue: userValue,
-                  comparator: comparator,
-                  comparisonValue: comparisonValue,
-                  value: returnValue));
-              return produceResult(rolloutRule: rule);
-            }
-            break;
-          default:
-            logEntries.add(_formatNoMatchRule(
-                comparisonAttribute: comparisonAttribute,
-                userValue: userValue,
-                comparator: comparator,
-                comparisonValue: comparisonValue));
-        }
-      }
-
-      if (setting.percentageItems.isNotEmpty) {
-        final hashCandidate = key + user.identifier;
-        final userValueHash = sha1.convert(utf8.encode(hashCandidate));
-        final hash = userValueHash.toString().substring(0, 7);
-        final num = int.parse(hash, radix: 16);
-        final scaled = num % 100;
-        double bucket = 0;
-        for (final rule in setting.percentageItems) {
-          bucket += rule.percentage;
-          if (scaled < bucket) {
-            logEntries.add('Evaluating %% options. Returning ${rule.value}');
-            return produceResult(percentageItem: rule);
-          }
-        }
-      }
-
-      logEntries.add('Returning ${setting.value}');
-      return produceResult();
+      evaluateLogger?.logReturnValue(evaluationResult.value.toString());
+      evaluateLogger?.decreaseIndentLevel();
+      return evaluationResult;
     } finally {
-      _logger.info(5000, logEntries);
+      if (evaluateLogger != null) {
+        _logger.info(5000, evaluateLogger.toPrint());
+      }
     }
   }
 
-  String _formatMatchRule<Value>(
-      {required String comparisonAttribute,
-      required String userValue,
-      required int comparator,
-      required String comparisonValue,
-      required Value? value}) {
-    return 'Evaluating rule: [$comparisonAttribute:$userValue] [${RolloutEvaluator._comparatorTexts[comparator]}] [$comparisonValue] => match, returning: $value';
+  EvaluationResult _evaluateSetting(Setting setting,
+      EvaluationContext evaluationContext, EvaluateLogger? evaluateLogger) {
+    EvaluationResult? evaluationResult;
+    if (setting.targetingRules.isNotEmpty) {
+      evaluationResult =
+          _evaluateTargetingRules(setting, evaluationContext, evaluateLogger);
+    }
+    if (evaluationResult == null && setting.percentageOptions.isNotEmpty) {
+      evaluationResult = _evaluatePercentageOptions(setting.percentageOptions,
+          setting.percentageAttribute, evaluationContext, null, evaluateLogger);
+    }
+    evaluationResult ??= EvaluationResult(
+        variationId: setting.variationId,
+        value: setting.settingsValue,
+        matchedTargetingRule: null,
+        matchedPercentageOption: null);
+
+    return evaluationResult;
   }
 
-  String _formatNoMatchRule(
-      {required String comparisonAttribute,
-      required String userValue,
-      required int comparator,
-      required String comparisonValue}) {
-    return 'Evaluating rule: [$comparisonAttribute:$userValue] [${RolloutEvaluator._comparatorTexts[comparator]}] [$comparisonValue] => no match';
+  EvaluationResult? _evaluateTargetingRules(Setting setting,
+      EvaluationContext evaluationContext, EvaluateLogger? evaluateLogger) {
+    evaluateLogger?.logTargetingRules();
+    for (TargetingRule rule in setting.targetingRules) {
+      bool evaluateConditionsResult;
+      String? error;
+      try {
+        evaluateConditionsResult = _evaluateConditions(
+            rule.conditions,
+            rule,
+            evaluationContext,
+            setting.salt,
+            evaluationContext.key,
+            setting.segments,
+            evaluateLogger);
+      } on RolloutEvaluatorException catch (rolloutEvaluatorException) {
+        error = rolloutEvaluatorException.message;
+        evaluateConditionsResult = false;
+      }
+
+      if (!evaluateConditionsResult) {
+        if (error != null) {
+          evaluateLogger?.logTargetingRuleIgnored();
+        }
+        continue;
+      }
+      if (rule.servedValue != null) {
+        return EvaluationResult(
+            variationId: rule.servedValue!.variationId,
+            value: rule.servedValue!.settingsValue,
+            matchedTargetingRule: rule,
+            matchedPercentageOption: null);
+      }
+
+      if (rule.percentageOptions?.isEmpty ?? true) {
+        throw ArgumentError("Targeting rule THEN part is missing or invalid.");
+      }
+
+      evaluateLogger?.increaseIndentLevel();
+      EvaluationResult? evaluatePercentageOptionsResult =
+          _evaluatePercentageOptions(
+              rule.percentageOptions!,
+              setting.percentageAttribute,
+              evaluationContext,
+              rule,
+              evaluateLogger);
+      evaluateLogger?.decreaseIndentLevel();
+
+      if (evaluatePercentageOptionsResult == null) {
+        evaluateLogger?.logTargetingRuleIgnored();
+        continue;
+      }
+
+      return evaluatePercentageOptionsResult;
+    }
+
+    return null;
   }
 
-  String _formatValidationErrorRule(
-      {required String comparisonAttribute,
-      required String userValue,
-      required int comparator,
-      required String comparisonValue,
-      required dynamic error}) {
-    return 'Evaluating rule: [$comparisonAttribute:$userValue] [${RolloutEvaluator._comparatorTexts[comparator]}] [$comparisonValue] => Skip rule. Validation error: $error';
+  bool _evaluateConditions(
+      List<ConditionAccessor> conditions,
+      TargetingRule? targetingRule,
+      EvaluationContext evaluationContext,
+      String? configSalt,
+      String contextSalt,
+      List<Segment> segments,
+      EvaluateLogger? evaluateLogger) {
+    bool firstConditionFlag = true;
+    bool conditionsEvaluationResult = true;
+    String? error;
+    bool newLine = false;
+    for (ConditionAccessor condition in conditions) {
+      if (firstConditionFlag) {
+        firstConditionFlag = false;
+        evaluateLogger?.newLine();
+        evaluateLogger?.append("- IF ");
+        evaluateLogger?.increaseIndentLevel();
+      } else {
+        evaluateLogger?.increaseIndentLevel();
+        evaluateLogger?.newLine();
+        evaluateLogger?.append("AND ");
+      }
+
+      final userCondition = condition.userCondition;
+      final segmentCondition = condition.segmentCondition;
+      final prerequisiteFlagCondition = condition.prerequisiteFlagCondition;
+      if (userCondition != null) {
+        try {
+          conditionsEvaluationResult = _evaluateUserCondition(userCondition,
+              evaluationContext, configSalt, contextSalt, evaluateLogger);
+        } on RolloutEvaluatorException catch (rolloutEvaluatorException) {
+          error = rolloutEvaluatorException.message;
+          conditionsEvaluationResult = false;
+        }
+        newLine = conditions.length > 1;
+      } else if (segmentCondition != null) {
+        try {
+          conditionsEvaluationResult = _evaluateSegmentCondition(
+              segmentCondition,
+              evaluationContext,
+              configSalt,
+              segments,
+              evaluateLogger);
+        } on RolloutEvaluatorException catch (rolloutEvaluatorException) {
+          error = rolloutEvaluatorException.message;
+          conditionsEvaluationResult = false;
+        }
+        newLine = userObjectIsMissing != error || conditions.length > 1;
+      } else if (prerequisiteFlagCondition != null) {
+        try {
+          conditionsEvaluationResult = _evaluatePrerequisiteFlagCondition(
+              prerequisiteFlagCondition, evaluationContext, evaluateLogger);
+        } on RolloutEvaluatorException catch (rolloutEvaluatorException) {
+          error = rolloutEvaluatorException.message;
+          conditionsEvaluationResult = false;
+        }
+        newLine = error == null || conditions.length > 1;
+      }
+
+      if (targetingRule == null || conditions.length > 1) {
+        evaluateLogger?.logConditionConsequence(conditionsEvaluationResult);
+      }
+      evaluateLogger?.decreaseIndentLevel();
+      if (!conditionsEvaluationResult) {
+        break;
+      }
+    }
+    if (targetingRule != null) {
+      evaluateLogger?.logTargetingRuleConsequence(
+          targetingRule, error, conditionsEvaluationResult, newLine);
+    }
+    if (error != null) {
+      throw RolloutEvaluatorException(error);
+    }
+    return conditionsEvaluationResult;
+  }
+
+  bool _evaluateUserCondition(
+      UserCondition userCondition,
+      EvaluationContext evaluationContext,
+      String? configSalt,
+      String contextSalt,
+      EvaluateLogger? evaluateLogger) {
+    evaluateLogger?.append(EvaluateLogger.formatUserCondition(userCondition));
+
+    var configCatUser = evaluationContext.user;
+    if (configCatUser == null) {
+      if (!evaluationContext.isUserMissing) {
+        evaluationContext.isUserMissing = true;
+        _logger.warning(3001,
+            "Cannot evaluate targeting rules and % options for setting '${evaluationContext.key}' (User Object is missing). You should pass a User Object to the evaluation methods like `getValue()` in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/");
+      }
+      throw RolloutEvaluatorException(userObjectIsMissing);
+    }
+
+    String comparisonAttribute = userCondition.comparisonAttribute;
+    UserComparator comparator =
+        UserComparator.tryFrom(userCondition.comparator) ??
+            (() => throw ArgumentError(comparisonOperatorIsInvalid))();
+
+    Object? userAttributeValue =
+        configCatUser.getAttribute(comparisonAttribute);
+
+    if (userAttributeValue == null ||
+        (userAttributeValue is String && userAttributeValue.isEmpty)) {
+      _logger.warning(3003,
+          "Cannot evaluate condition (${EvaluateLogger.formatUserCondition(userCondition)}) for setting '${evaluationContext.key}' (the User.$comparisonAttribute attribute is missing). You should set the User.$comparisonAttribute attribute in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/");
+      throw RolloutEvaluatorException(cannotEvaluateTheUserPrefix +
+          comparisonAttribute +
+          cannotEvaluateTheUserAttributeMissing);
+    }
+
+    switch (comparator) {
+      case UserComparator.containsAnyOf:
+      case UserComparator.notContainsAnyOf:
+        bool negateContainsAnyOf =
+            UserComparator.notContainsAnyOf == comparator;
+        String userAttributeForContains = _getUserAttributeAsString(
+            evaluationContext.key,
+            userCondition,
+            comparisonAttribute,
+            userAttributeValue);
+        return _evaluateContainsAnyOf(
+            negateContainsAnyOf, userCondition, userAttributeForContains);
+      case UserComparator.semverIsOneOf:
+      case UserComparator.semverIsNotOneOf:
+        bool negateSemverIsOneOf =
+            UserComparator.semverIsNotOneOf == comparator;
+        Version userAttributeValueForSemverIsOneOf = _getUserAttributeAsVersion(
+            evaluationContext.key,
+            userCondition,
+            comparisonAttribute,
+            userAttributeValue);
+        return _evaluateSemverIsOneOf(
+            userCondition,
+            userAttributeValueForSemverIsOneOf,
+            negateSemverIsOneOf,
+            comparisonAttribute);
+      case UserComparator.semverLess:
+      case UserComparator.semverLessEquals:
+      case UserComparator.semverGreater:
+      case UserComparator.semverGreaterEquals:
+        Version userAttributeValueForSemverOperators =
+            _getUserAttributeAsVersion(evaluationContext.key, userCondition,
+                comparisonAttribute, userAttributeValue);
+        return _evaluateSemver(userAttributeValueForSemverOperators,
+            userCondition, comparator, comparisonAttribute);
+      case UserComparator.numberEquals:
+      case UserComparator.numberNotEquals:
+      case UserComparator.numberLess:
+      case UserComparator.numberLessEquals:
+      case UserComparator.numberGreater:
+      case UserComparator.numberGreaterEquals:
+        double userAttributeAsDouble = _getUserAttributeAsDouble(
+            evaluationContext.key,
+            userCondition,
+            comparisonAttribute,
+            userAttributeValue);
+        return _evaluateNumbers(userAttributeAsDouble, userCondition,
+            comparator, comparisonAttribute);
+      case UserComparator.isOneOf:
+      case UserComparator.isNotOneOf:
+      case UserComparator.sensitiveIsOneOf:
+      case UserComparator.sensitiveIsNotOneOf:
+        bool negateIsOneOf = UserComparator.sensitiveIsNotOneOf == comparator ||
+            UserComparator.isNotOneOf == comparator;
+        bool sensitiveIsOneOf = UserComparator.sensitiveIsOneOf == comparator ||
+            UserComparator.sensitiveIsNotOneOf == comparator;
+        String userAttributeForIsOneOf = _getUserAttributeAsString(
+            evaluationContext.key,
+            userCondition,
+            comparisonAttribute,
+            userAttributeValue);
+        return _evaluateIsOneOf(userCondition, sensitiveIsOneOf,
+            userAttributeForIsOneOf, configSalt, contextSalt, negateIsOneOf);
+      case UserComparator.dateBefore:
+      case UserComparator.dateAfter:
+        double userAttributeForDate = _getUserAttributeForDate(userCondition,
+            evaluationContext, comparisonAttribute, userAttributeValue);
+        return _evaluateDate(userAttributeForDate, userCondition, comparator,
+            comparisonAttribute);
+      case UserComparator.textEquals:
+      case UserComparator.textNotEquals:
+      case UserComparator.hashedEquals:
+      case UserComparator.hashedNotEquals:
+        bool negateEquals = UserComparator.hashedNotEquals == comparator ||
+            UserComparator.textNotEquals == comparator;
+        bool hashedEquals = UserComparator.hashedEquals == comparator ||
+            UserComparator.hashedNotEquals == comparator;
+        String userAttributeForEqual = _getUserAttributeAsString(
+            evaluationContext.key,
+            userCondition,
+            comparisonAttribute,
+            userAttributeValue);
+        return _evaluateEquals(hashedEquals, userAttributeForEqual, configSalt,
+            contextSalt, userCondition, negateEquals);
+      case UserComparator.hashedStartsWith:
+      case UserComparator.hashedNotStartsWith:
+      case UserComparator.hashedEndsWith:
+      case UserComparator.hashedNotEndsWith:
+        String userAttributeForHashedStartEndsWith = _getUserAttributeAsString(
+            evaluationContext.key,
+            userCondition,
+            comparisonAttribute,
+            userAttributeValue);
+        return _evaluateHashedStartOrEndWith(
+            userAttributeForHashedStartEndsWith,
+            userCondition,
+            comparator,
+            _ensureConfigSalt(configSalt),
+            contextSalt);
+      case UserComparator.textStartsWith:
+      case UserComparator.textNotStartsWith:
+        bool negateTextStartWith =
+            UserComparator.textNotStartsWith == comparator;
+        String userAttributeFoTextStartWith = _getUserAttributeAsString(
+            evaluationContext.key,
+            userCondition,
+            comparisonAttribute,
+            userAttributeValue);
+        return _evaluateTextStartWith(
+            userCondition, userAttributeFoTextStartWith, negateTextStartWith);
+      case UserComparator.textEndsWith:
+      case UserComparator.textNotEndsWith:
+        bool negateTextEndsWith = UserComparator.textNotEndsWith == comparator;
+        String userAttributeForTextEndsWith = _getUserAttributeAsString(
+            evaluationContext.key,
+            userCondition,
+            comparisonAttribute,
+            userAttributeValue);
+        return _evaluateTextEndsWith(
+            userCondition, userAttributeForTextEndsWith, negateTextEndsWith);
+      case UserComparator.textArrayContains:
+      case UserComparator.textArrayNotContains:
+      case UserComparator.hashedArrayContains:
+      case UserComparator.hashedArrayNotContains:
+        bool negateArrayContains =
+            UserComparator.hashedArrayNotContains == comparator ||
+                UserComparator.textArrayNotContains == comparator;
+        bool hashedArrayContains =
+            UserComparator.hashedArrayContains == comparator ||
+                UserComparator.hashedArrayNotContains == comparator;
+        List<String> userAttributeForArrayContains =
+            _getUserAttributeAsStringList(userCondition, evaluationContext,
+                comparisonAttribute, userAttributeValue);
+        return _evaluateArrayContains(
+            userCondition,
+            userAttributeForArrayContains,
+            comparisonAttribute,
+            hashedArrayContains,
+            configSalt,
+            contextSalt,
+            negateArrayContains);
+    }
+  }
+
+  String _getUserAttributeAsString(String key, UserCondition userCondition,
+      String userAttributeName, Object userAttributeValue) {
+    if (userAttributeValue is String) {
+      return userAttributeValue;
+    }
+    String? convertedUserAttribute = _userAttributeToString(userAttributeValue);
+    _logger.warning(3005,
+        "Evaluation of condition (${EvaluateLogger.formatUserCondition(userCondition)}) for setting '$key' may not produce the expected result (the User.$userAttributeName attribute is not a string value, thus it was automatically converted to the string value '$convertedUserAttribute'). Please make sure that using a non-string value was intended.");
+    return convertedUserAttribute;
+  }
+
+  Version _getUserAttributeAsVersion(String key, UserCondition userCondition,
+      String comparisonAttribute, Object userValue) {
+    if (userValue is String) {
+      try {
+        return _parseVersion(userValue.trim());
+      } catch (e) {
+        // Version parse failed continue with the RolloutEvaluatorException
+      }
+    }
+    String reason = "'$userValue' is not a valid semantic version";
+    _logger.warning(3004,
+        "Cannot evaluate condition (${EvaluateLogger.formatUserCondition(userCondition)}) for setting '$key' ($reason). Please check the User.$comparisonAttribute attribute and make sure that its value corresponds to the comparison operator.");
+    throw RolloutEvaluatorException(
+        "$cannotEvaluateTheUserPrefix$comparisonAttribute$cannotEvaluateTheUserAttributeInvalid$reason)");
+  }
+
+  double _getUserAttributeAsDouble(String key, UserCondition userCondition,
+      String comparisonAttribute, Object userAttributeValue) {
+    try {
+      if (userAttributeValue is double) {
+        return userAttributeValue;
+      } else {
+        return _userAttributeToDouble(userAttributeValue);
+      }
+    } catch (e) {
+      //If cannot convert to double, continue with the error
+      String reason = "'$userAttributeValue' is not a valid decimal number";
+      _logger.warning(3004,
+          "Cannot evaluate condition (${EvaluateLogger.formatUserCondition(userCondition)}) for setting '$key' ($reason). Please check the User.$comparisonAttribute attribute and make sure that its value corresponds to the comparison operator.");
+      throw RolloutEvaluatorException(
+          "$cannotEvaluateTheUserPrefix$comparisonAttribute$cannotEvaluateTheUserAttributeInvalid$reason)");
+    }
+  }
+
+  double _getUserAttributeForDate(
+      UserCondition userCondition,
+      EvaluationContext context,
+      String comparisonAttribute,
+      Object userAttributeValue) {
+    try {
+      if (userAttributeValue is DateTime) {
+        return userAttributeValue.millisecondsSinceEpoch / 1000;
+      }
+      return _userAttributeToDouble(userAttributeValue);
+    } catch (e) {
+      String reason =
+          "'$userAttributeValue' is not a valid Unix timestamp (number of seconds elapsed since Unix epoch)";
+      _logger.warning(3004,
+          "Cannot evaluate condition (${EvaluateLogger.formatUserCondition(userCondition)}) for setting '${context.key}' ($reason). Please check the User.$comparisonAttribute attribute and make sure that its value corresponds to the comparison operator.");
+      throw RolloutEvaluatorException(
+          "$cannotEvaluateTheUserPrefix$comparisonAttribute$cannotEvaluateTheUserAttributeInvalid$reason)");
+    }
+  }
+
+  List<String> _getUserAttributeAsStringList(
+      UserCondition userCondition,
+      EvaluationContext context,
+      String comparisonAttribute,
+      Object userAttributeValue) {
+    try {
+      List<String>? result;
+      if (userAttributeValue is List<String>) {
+        result = userAttributeValue;
+      }
+      if (userAttributeValue is Set<String>) {
+        result = userAttributeValue.toList();
+      }
+      if (userAttributeValue is String) {
+        var decoded = jsonDecode(userAttributeValue);
+        result = List<String>.from(decoded);
+      }
+      if (result != null && !result.contains(null)) {
+        return result;
+      }
+    } catch (e) {
+      // String array parse failed continue with the RolloutEvaluatorException
+    }
+    String reason = "'$userAttributeValue' is not a valid JSON string array";
+    _logger.warning(3004,
+        "Cannot evaluate condition (${EvaluateLogger.formatUserCondition(userCondition)}) for setting '${context.key}' ($reason). Please check the User.$comparisonAttribute attribute and make sure that its value corresponds to the comparison operator.");
+    throw RolloutEvaluatorException(
+        "$cannotEvaluateTheUserPrefix$comparisonAttribute$cannotEvaluateTheUserAttributeInvalid$reason)");
+  }
+
+  String _userAttributeToString(Object userAttribute) {
+    if (userAttribute is String) {
+      return userAttribute;
+    }
+    if (userAttribute is List) {
+      return jsonEncode(userAttribute);
+    }
+    if (userAttribute is DateTime) {
+      return (userAttribute.millisecondsSinceEpoch / 1000).toString();
+    }
+    return userAttribute.toString();
+  }
+
+  double _userAttributeToDouble(Object userAttribute) {
+    if (userAttribute is double) {
+      return userAttribute;
+    }
+    if (userAttribute is String) {
+      return double.parse(userAttribute.trim().replaceAll(",", "."));
+    }
+    if (userAttribute is num) {
+      return userAttribute.toDouble();
+    }
+    throw FormatException();
+  }
+
+  bool _evaluateArrayContains(
+      UserCondition userCondition,
+      List<String> userContainsValues,
+      String comparisonAttribute,
+      bool hashedArrayContains,
+      String? configSalt,
+      String contextSalt,
+      bool negateArrayContains) {
+    List<String> comparisonValues =
+        _ensureComparisonValue(userCondition.stringArrayValue);
+    if (userContainsValues.isEmpty) {
+      return false;
+    }
+
+    for (String userContainsValue in userContainsValues) {
+      String userContainsValueConverted = hashedArrayContains
+          ? _getSaltedUserValue(
+              userContainsValue, _ensureConfigSalt(configSalt), contextSalt)
+          : userContainsValue;
+
+      for (String inValuesElement in comparisonValues) {
+        if (_ensureComparisonValue(inValuesElement) ==
+            userContainsValueConverted) {
+          return !negateArrayContains;
+        }
+      }
+    }
+    return negateArrayContains;
+  }
+
+  bool _evaluateTextEndsWith(UserCondition userCondition,
+      String userAttributeValue, bool negateTextEndsWith) {
+    List<String> comparisonValues =
+        _ensureComparisonValue(userCondition.stringArrayValue);
+
+    for (String textValue in comparisonValues) {
+      if (userAttributeValue.endsWith(_ensureComparisonValue(textValue))) {
+        return !negateTextEndsWith;
+      }
+    }
+    return negateTextEndsWith;
+  }
+
+  bool _evaluateTextStartWith(UserCondition userCondition,
+      String userAttributeValue, bool negateTextStartWith) {
+    List<String> comparisonValues =
+        _ensureComparisonValue(userCondition.stringArrayValue);
+
+    for (String textValue in comparisonValues) {
+      if (userAttributeValue.startsWith(_ensureComparisonValue(textValue))) {
+        return !negateTextStartWith;
+      }
+    }
+    return negateTextStartWith;
+  }
+
+  bool _evaluateHashedStartOrEndWith(
+      String userAttributeValue,
+      UserCondition userCondition,
+      UserComparator comparator,
+      String configSalt,
+      String contextSalt) {
+    List<String> comparisonValues =
+        _ensureComparisonValue(userCondition.stringArrayValue);
+    List<int> userAttributeValueUTF8 = utf8.encode(userAttributeValue);
+
+    bool foundEqual = false;
+    for (String comparisonValueHashedStartsEnds in comparisonValues) {
+      int indexOf =
+          _ensureComparisonValue(comparisonValueHashedStartsEnds).indexOf("_");
+      if (indexOf <= 0) {
+        throw ArgumentError(comparisonValueIsMissingOrInvalid);
+      }
+      String comparedTextLength =
+          comparisonValueHashedStartsEnds.substring(0, indexOf);
+      int comparedTextLengthInt;
+      try {
+        comparedTextLengthInt = int.parse(comparedTextLength);
+      } catch (e) {
+        throw ArgumentError(comparisonValueIsMissingOrInvalid);
+      }
+      if (userAttributeValueUTF8.length < comparedTextLengthInt) {
+        continue;
+      }
+      String comparisonHashValue =
+          comparisonValueHashedStartsEnds.substring(indexOf + 1);
+      if (comparisonHashValue.isEmpty) {
+        throw ArgumentError(comparisonValueIsMissingOrInvalid);
+      }
+      List<int> userValueSubStringByteArray;
+      if (UserComparator.hashedStartsWith == comparator ||
+          UserComparator.hashedNotStartsWith == comparator) {
+        userValueSubStringByteArray =
+            userAttributeValueUTF8.sublist(0, comparedTextLengthInt);
+      } else {
+        //HASHED_ENDS_WITH & HASHED_NOT_ENDS_WITH
+        userValueSubStringByteArray = userAttributeValueUTF8.sublist(
+            userAttributeValueUTF8.length - comparedTextLengthInt,
+            userAttributeValueUTF8.length);
+      }
+      String hashUserValueSub = _getSaltedUserValueSlice(
+          userValueSubStringByteArray, configSalt, contextSalt);
+      if (hashUserValueSub == comparisonHashValue) {
+        foundEqual = true;
+        break;
+      }
+    }
+    if (UserComparator.hashedNotStartsWith == comparator ||
+        UserComparator.hashedNotEndsWith == comparator) {
+      return !foundEqual;
+    }
+    return foundEqual;
+  }
+
+  bool _evaluateEquals(
+      bool hashedEquals,
+      String userAttributeValue,
+      String? configSalt,
+      String contextSalt,
+      UserCondition userCondition,
+      bool negateEquals) {
+    String comparisonValue = _ensureComparisonValue(userCondition.stringValue);
+
+    String valueEquals = hashedEquals
+        ? _getSaltedUserValue(
+            userAttributeValue, _ensureConfigSalt(configSalt), contextSalt)
+        : userAttributeValue;
+    return negateEquals != (valueEquals == comparisonValue);
+  }
+
+  bool _evaluateDate(double userDoubleValue, UserCondition userCondition,
+      UserComparator comparator, String comparisonAttribute) {
+    double comparisonDoubleValue =
+        _ensureComparisonValue(userCondition.doubleValue);
+    return (UserComparator.dateBefore == comparator &&
+            userDoubleValue < comparisonDoubleValue) ||
+        UserComparator.dateAfter == comparator &&
+            userDoubleValue > comparisonDoubleValue;
+  }
+
+  bool _evaluateIsOneOf(
+      UserCondition userCondition,
+      bool sensitiveIsOneOf,
+      String userAttributeValue,
+      String? configSalt,
+      String contextSalt,
+      bool negateIsOneOf) {
+    List<String> comparisonValues =
+        _ensureComparisonValue(userCondition.stringArrayValue);
+
+    String userIsOneOfValue = sensitiveIsOneOf
+        ? _getSaltedUserValue(
+            userAttributeValue, _ensureConfigSalt(configSalt), contextSalt)
+        : userAttributeValue;
+
+    for (String inValuesElement in comparisonValues) {
+      if (_ensureComparisonValue(inValuesElement) == userIsOneOfValue) {
+        return !negateIsOneOf;
+      }
+    }
+    return negateIsOneOf;
+  }
+
+  String _getSaltedUserValue(
+      String userValue, String configSalt, String contextSalt) {
+    return sha256
+        .convert(utf8.encode(userValue + configSalt + contextSalt))
+        .toString();
+  }
+
+  String _getSaltedUserValueSlice(
+      List<int> userValueSliceUTF8, String configSalt, String contextSalt) {
+    List<int> configSaltByteArray = utf8.encode(configSalt);
+    List<int> contextSaltByteArray = utf8.encode(contextSalt);
+
+    List<int> concatByteArrays =
+        userValueSliceUTF8 + configSaltByteArray + contextSaltByteArray;
+
+    return sha256.convert(concatByteArrays).toString();
+  }
+
+  bool _evaluateNumbers(double uvDouble, UserCondition userCondition,
+      UserComparator comparator, String comparisonAttribute) {
+    final cvDouble = _ensureComparisonValue(userCondition.doubleValue);
+    return ((comparator == UserComparator.numberEquals &&
+            uvDouble == cvDouble) ||
+        (comparator == UserComparator.numberNotEquals &&
+            uvDouble != cvDouble) ||
+        (comparator == UserComparator.numberLess && uvDouble < cvDouble) ||
+        (comparator == UserComparator.numberLessEquals &&
+            uvDouble <= cvDouble) ||
+        (comparator == UserComparator.numberGreater && uvDouble > cvDouble) ||
+        (comparator == UserComparator.numberGreaterEquals &&
+            uvDouble >= cvDouble));
+  }
+
+  bool _evaluateSemver(Version userValueVersion, UserCondition userCondition,
+      UserComparator comparator, String comparisonAttribute) {
+    final comparisonValue = _ensureComparisonValue(userCondition.stringValue);
+    try {
+      final comparisonVersion = _parseVersion(comparisonValue.trim());
+
+      return ((comparator == UserComparator.semverLess &&
+              userValueVersion < comparisonVersion) ||
+          (comparator == UserComparator.semverLessEquals &&
+              userValueVersion <= comparisonVersion) ||
+          (comparator == UserComparator.semverGreater &&
+              userValueVersion > comparisonVersion) ||
+          (comparator == UserComparator.semverGreaterEquals &&
+              userValueVersion >= comparisonVersion));
+    } catch (e) {
+      return false;
+    }
+  }
+
+  bool _evaluateSemverIsOneOf(UserCondition userCondition, Version userVersion,
+      bool negateSemverIsOneOf, String comparisonAttribute) {
+    List<String> comparisonValues =
+        _ensureComparisonValue(userCondition.stringArrayValue);
+
+    var matched = false;
+    for (final value in comparisonValues) {
+      if (_ensureComparisonValue(value).isEmpty) {
+        continue;
+      }
+      try {
+        matched = _parseVersion(value.trim()) == userVersion || matched;
+      } catch (e) {
+        return false;
+      }
+    }
+    return negateSemverIsOneOf != matched;
+  }
+
+  bool _evaluateContainsAnyOf(bool negateContainsAnyOf,
+      UserCondition userCondition, String userAttributeValue) {
+    List<String> comparisonValues =
+        _ensureComparisonValue<List<String>>(userCondition.stringArrayValue);
+
+    for (String containsValue in comparisonValues) {
+      if (userAttributeValue.contains(_ensureComparisonValue(containsValue))) {
+        return !negateContainsAnyOf;
+      }
+    }
+    return negateContainsAnyOf;
+  }
+
+  bool _evaluateSegmentCondition(
+      SegmentCondition segmentCondition,
+      EvaluationContext evaluationContext,
+      String? configSalt,
+      List<Segment> segments,
+      EvaluateLogger? evaluateLogger) {
+    int segmentIndex = segmentCondition.segmentIndex;
+    Segment? segment;
+    if (segmentIndex < segments.length) {
+      segment = segments[segmentIndex];
+    }
+    evaluateLogger?.append(
+        EvaluateLogger.formatSegmentFlagCondition(segmentCondition, segment));
+
+    if (evaluationContext.user == null) {
+      if (!evaluationContext.isUserMissing) {
+        evaluationContext.isUserMissing = true;
+        _logger.warning(3001,
+            "Cannot evaluate targeting rules and % options for setting '${evaluationContext.key}' (User Object is missing). You should pass a User Object to the evaluation methods like `getValue()` in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/");
+      }
+      throw RolloutEvaluatorException(userObjectIsMissing);
+    }
+
+    if (segment == null) {
+      throw ArgumentError("Segment reference is invalid.");
+    }
+    String? segmentName = segment.name;
+    if (segmentName == null || segmentName.isEmpty) {
+      throw ArgumentError("Segment name is missing.");
+    }
+    evaluateLogger?.logSegmentEvaluationStart(segmentName);
+
+    bool result;
+    try {
+      bool segmentRulesResult = _evaluateConditions(segment.segmentRules, null,
+          evaluationContext, configSalt, segmentName, segments, evaluateLogger);
+
+      SegmentComparator segmentComparator =
+          SegmentComparator.tryFrom(segmentCondition.segmentComparator) ??
+              (() => throw ArgumentError(comparisonOperatorIsInvalid))();
+
+      switch (segmentComparator) {
+        case SegmentComparator.isInSegment:
+          result = segmentRulesResult;
+          break;
+        case SegmentComparator.isNotInSegment:
+          result = !segmentRulesResult;
+          break;
+      }
+      evaluateLogger?.logSegmentEvaluationResult(
+          segmentCondition, segment, result, segmentRulesResult);
+    } on RolloutEvaluatorException catch (evaluatorException) {
+      evaluateLogger?.logSegmentEvaluationError(
+          segmentCondition, segment, evaluatorException.message);
+      rethrow;
+    }
+
+    return result;
+  }
+
+  bool _evaluatePrerequisiteFlagCondition(
+      PrerequisiteFlagCondition prerequisiteFlagCondition,
+      EvaluationContext evaluationContext,
+      EvaluateLogger? evaluateLogger) {
+    evaluateLogger?.append(EvaluateLogger.formatPrerequisiteFlagCondition(
+        prerequisiteFlagCondition));
+
+    String prerequisiteFlagKey = prerequisiteFlagCondition.prerequisiteFlagKey;
+    Setting? prerequisiteFlagSetting =
+        evaluationContext.settings[prerequisiteFlagKey];
+    if (prerequisiteFlagKey.isEmpty || prerequisiteFlagSetting == null) {
+      throw ArgumentError("Prerequisite flag key is missing or invalid.");
+    }
+
+    int settingType = prerequisiteFlagSetting.type;
+    if ((settingType == 0 &&
+            prerequisiteFlagCondition.value?.booleanValue == null) ||
+        (settingType == 1 &&
+            prerequisiteFlagCondition.value?.stringValue == null) ||
+        (settingType == 2 &&
+            prerequisiteFlagCondition.value?.intValue == null) ||
+        (settingType == 3 &&
+            prerequisiteFlagCondition.value?.doubleValue == null)) {
+      throw ArgumentError(
+          "Type mismatch between comparison value '${prerequisiteFlagCondition.value}' and prerequisite flag '$prerequisiteFlagKey'.");
+    }
+
+    List<String>? visitedKeys = evaluationContext.visitedKeys;
+    visitedKeys ??= [];
+    visitedKeys.add(evaluationContext.key);
+    if (visitedKeys.contains(prerequisiteFlagKey)) {
+      String dependencyCycle = EvaluateLogger.formatCircularDependencyList(
+          visitedKeys, prerequisiteFlagKey);
+      throw ArgumentError(
+          "Circular dependency detected between the following depending flags: $dependencyCycle.");
+    }
+
+    evaluateLogger?.logPrerequisiteFlagEvaluationStart(prerequisiteFlagKey);
+
+    EvaluationContext prerequisiteFlagContext = EvaluationContext(
+        prerequisiteFlagKey,
+        evaluationContext.user,
+        visitedKeys,
+        evaluationContext.settings);
+
+    EvaluationResult evaluateResult = _evaluateSetting(
+        prerequisiteFlagSetting, prerequisiteFlagContext, evaluateLogger);
+
+    visitedKeys.remove(evaluationContext.key);
+
+    PrerequisiteComparator prerequisiteComparator =
+        PrerequisiteComparator.tryFrom(
+                prerequisiteFlagCondition.prerequisiteComparator) ??
+            (() => throw ArgumentError(comparisonOperatorIsInvalid))();
+
+    SettingsValue? conditionValue = prerequisiteFlagCondition.value;
+    bool result;
+
+    switch (prerequisiteComparator) {
+      case PrerequisiteComparator.equals:
+        result = conditionValue == evaluateResult.value;
+        break;
+      case PrerequisiteComparator.notEquals:
+        result = conditionValue != evaluateResult.value;
+        break;
+    }
+
+    evaluateLogger?.logPrerequisiteFlagEvaluationResult(
+        prerequisiteFlagCondition, evaluateResult.value, result);
+
+    return result;
+  }
+
+  EvaluationResult? _evaluatePercentageOptions(
+      List<PercentageOption> percentageOptions,
+      String? percentageOptionAttribute,
+      EvaluationContext evaluationContext,
+      TargetingRule? parentTargetingRule,
+      EvaluateLogger? evaluateLogger) {
+    ConfigCatUser? contextUser = evaluationContext.user;
+    if (contextUser == null) {
+      evaluateLogger?.logPercentageOptionUserMissing();
+      if (!evaluationContext.isUserMissing) {
+        evaluationContext.isUserMissing = true;
+        _logger.warning(3001,
+            "Cannot evaluate targeting rules and % options for setting '${evaluationContext.key}' (User Object is missing). You should pass a User Object to the evaluation methods like `getValue()` in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/");
+      }
+      return null;
+    }
+    String percentageOptionAttributeValue;
+    String? percentageOptionAttributeName = percentageOptionAttribute;
+    if (percentageOptionAttributeName == null) {
+      percentageOptionAttributeName = "Identifier";
+      percentageOptionAttributeValue = evaluationContext.user!.identifier;
+    } else {
+      Object? userAttribute =
+          contextUser.getAttribute(percentageOptionAttributeName);
+      if (userAttribute == null) {
+        evaluateLogger?.logPercentageOptionUserAttributeMissing(
+            percentageOptionAttributeName);
+        if (!evaluationContext.isUserAttributeMissing) {
+          evaluationContext.isUserAttributeMissing = true;
+          _logger.warning(3003,
+              "Cannot evaluate % options for setting '${evaluationContext.key}' (the User.$percentageOptionAttributeName attribute is missing). You should set the User.$percentageOptionAttributeName attribute in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/");
+        }
+        return null;
+      }
+      percentageOptionAttributeValue = _userAttributeToString(userAttribute);
+    }
+    evaluateLogger
+        ?.logPercentageOptionEvaluation(percentageOptionAttributeName);
+
+    final hashCandidate =
+        evaluationContext.key + percentageOptionAttributeValue;
+    final userValueHash = sha1.convert(utf8.encode(hashCandidate));
+    final hash = userValueHash.toString().substring(0, 7);
+    final num = int.parse(hash, radix: 16);
+    final scaled = num % 100;
+    evaluateLogger?.logPercentageOptionEvaluationHash(
+        percentageOptionAttributeName, scaled);
+
+    double bucket = 0;
+
+    if (percentageOptions.isNotEmpty) {
+      for (int i = 0; i < percentageOptions.length; i++) {
+        var percentageOption = percentageOptions[i];
+        bucket += percentageOption.percentage;
+        if (scaled < bucket) {
+          evaluateLogger?.logPercentageEvaluationReturnValue(
+              scaled,
+              i,
+              percentageOption.percentage.toInt(),
+              percentageOption.settingsValue);
+          return EvaluationResult(
+              variationId: percentageOption.variationId,
+              value: percentageOption.settingsValue,
+              matchedTargetingRule: parentTargetingRule,
+              matchedPercentageOption: percentageOption);
+        }
+      }
+    }
+    throw ArgumentError(
+        "Sum of percentage option percentages are less than 100.");
   }
 
   Version _parseVersion(String text) {
@@ -352,17 +1002,15 @@ class RolloutEvaluator {
     return Version.parse(
         buildCharPos != -1 ? text.substring(0, buildCharPos) : text);
   }
-}
 
-class _LogEntries {
-  final List<String> entries = [];
-
-  add(String entry) {
-    entries.add(entry);
+  T _ensureComparisonValue<T>(T? value) {
+    return value ??
+        (() =>
+            throw ArgumentError("Comparison value is missing or invalid."))();
   }
 
-  @override
-  String toString() {
-    return entries.join('\n');
+  String _ensureConfigSalt(String? configSalt) {
+    return configSalt ??
+        (() => throw ArgumentError("Config JSON salt is missing."))();
   }
 }

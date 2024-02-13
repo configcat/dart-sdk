@@ -82,7 +82,8 @@ class ConfigService with ContinuousFutureSynchronizer {
               fetchTime: entry.first.fetchTime)
           : SettingResult.empty;
     } else {
-      final entry = await _fetchIfOlder(distantPast, preferCached: true);
+      final entry =
+          await _fetchIfOlder(distantPast, preferCached: _initialized);
       return !entry.first.isEmpty
           ? SettingResult(
               settings: entry.first.config.entries,
@@ -123,28 +124,20 @@ class ConfigService with ContinuousFutureSynchronizer {
   Future<Pair<Entry, String?>> _fetchIfOlder(DateTime time,
       {bool preferCached = false}) async {
     // Sync up with the cache and use it when it's not expired.
-    if (_cachedEntry.isEmpty || _cachedEntry.fetchTime.isAfter(time)) {
-      final entry = await _readCache();
-      if (!entry.isEmpty && entry.eTag != _cachedEntry.eTag) {
-        _cachedEntry = entry;
-        _hooks.invokeConfigChanged(entry.config.entries);
-      }
-      // Cache isn't expired
-      if (_cachedEntry.fetchTime.isAfter(time)) {
-        _setInitialized();
-        return Pair(_cachedEntry, null);
-      }
+    final entry = await _readCache();
+    if (!entry.isEmpty && entry.eTag != _cachedEntry.eTag) {
+      _cachedEntry = entry;
+      _hooks.invokeConfigChanged(entry.config.entries);
     }
-    // Use cache anyway (get calls on auto & manual poll must not initiate fetch).
-    // The initialized check ensures that we subscribe for the ongoing fetch during the
-    // max init wait time window in case of auto poll.
-    if (preferCached && _initialized) {
+    // Cache isn't expired
+    if (_cachedEntry.fetchTime.isAfter(time)) {
+      _setInitialized();
       return Pair(_cachedEntry, null);
     }
-    // If we are in offline mode we are not allowed to initiate fetch.
-    if (_offline) {
-      return Pair(_cachedEntry,
-          'The SDK is in offline mode, it can\'t initiate HTTP calls.');
+
+    // If we are in offline mode or the caller prefers cached values, do not initiate fetch.
+    if (_offline || preferCached) {
+      return Pair(_cachedEntry, null);
     }
     // No fetch is running, initiate a new one.
     // Ensure only one fetch request is running at a time.

@@ -4,32 +4,54 @@ import 'package:configcat_client/configcat_client.dart';
 import 'package:configcat_client/src/fetch/config_fetcher.dart';
 import 'package:configcat_client/src/constants.dart';
 import 'package:configcat_client/src/entry.dart';
-import 'package:configcat_client/src/json/config.dart';
-import 'package:configcat_client/src/json/preferences.dart';
-import 'package:dio/dio.dart';
 import 'package:sprintf/sprintf.dart';
 
 const urlTemplate = '%s/configuration-files/%s/$configJsonName';
-const testSdkKey = 'test';
+const testSdkKey =
+    'configcat-sdk-1/TEST_KEY-0123456789012/1234567890123456789012';
 const etag = 'test-etag';
 
 Config createTestConfig(Map<String, Object> map) {
-  return Config(Preferences(ConfigFetcher.globalBaseUrl, 0),
-      map.map((key, value) => MapEntry(key, Setting(value, 0, [], [], ''))));
+  return Config(Preferences(ConfigFetcher.globalBaseUrl, 0, "test-salt"),
+      map.map((key, value) => MapEntry(key, value.toSetting())), List.empty());
 }
 
 Config createTestConfigWithRules() {
-  return Config(Preferences(ConfigFetcher.globalBaseUrl, 0), {
-    'key1': Setting(
-        "def",
-        0,
-        [],
-        [
-          RolloutRule("fake1", "Identifier", 2, "@test1.com", "variationId1"),
-          RolloutRule("fake2", "Identifier", 2, "@test2.com", "variationId2")
-        ],
-        ''),
-  });
+  return Config(
+      Preferences(ConfigFetcher.globalBaseUrl, 0, "test-salt"),
+      {
+        'key1': Setting(
+            SettingsValue(null, "def", null, null), //default flag value
+            1,
+            [],
+            [
+              TargetingRule(
+                  [
+                    Condition(
+                        UserCondition(
+                            "Identifier", 2, null, null, ["@test1.com"]),
+                        null,
+                        null)
+                  ],
+                  [],
+                  ServedValue(SettingsValue(null, "fake1", null, null),
+                      "variationId1")),
+              TargetingRule(
+                  [
+                    Condition(
+                        UserCondition(
+                            "Identifier", 2, null, null, ["@test2.com"]),
+                        null,
+                        null)
+                  ],
+                  [],
+                  ServedValue(SettingsValue(null, "fake2", null, null),
+                      "variationId2")),
+            ],
+            'defaultId', // flag def variationID
+            "") //percentage attribute
+      },
+      List.empty());
 }
 
 Entry createTestEntry(Map<String, Object> map) {
@@ -41,6 +63,12 @@ Entry createTestEntry(Map<String, Object> map) {
 Entry createTestEntryWithTime(Map<String, Object> map, DateTime time) {
   Config config = createTestConfig(map);
   return Entry(jsonEncode(config.toJson()), config, map[0].toString(), time);
+}
+
+Entry createTestEntryWithETag(Map<String, Object> map, String etag) {
+  Config config = createTestConfig(map);
+  return Entry(
+      jsonEncode(config.toJson()), config, etag, DateTime.now().toUtc());
 }
 
 String getPath({String sdkKey = testSdkKey}) {
@@ -75,50 +103,5 @@ class CustomCache implements ConfigCatCache {
   Future<void> write(String key, String value) {
     _value = value;
     return Future.value();
-  }
-}
-
-class RequestCounterInterceptor extends Interceptor {
-  final requests = <String, int>{};
-
-  int? requestCountForPath(String path) {
-    for (final key in requests.keys) {
-      if (key.startsWith(path)) {
-        return requests[key];
-      }
-    }
-    return null;
-  }
-
-  int allRequestCount() {
-    if (requests.values.isEmpty) return 0;
-    return requests.values.reduce((value, element) => value + element);
-  }
-
-  RequestCounterInterceptor();
-
-  @override
-  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    final count = requests[options.path + (options.headers.values.join())];
-    if (count != null) {
-      requests[options.path + (options.headers.values.join())] = count + 1;
-    } else {
-      requests[options.path + (options.headers.values.join())] = 1;
-    }
-    handler.next(options);
-  }
-
-  @override
-  void onError(DioException err, ErrorInterceptorHandler handler) {
-    handler.next(err);
-  }
-
-  @override
-  void onResponse(Response response, ResponseInterceptorHandler handler) {
-    handler.next(response);
-  }
-
-  void clear() {
-    requests.clear();
   }
 }
