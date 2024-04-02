@@ -1,3 +1,4 @@
+import 'package:configcat_client/src/json/setting_type.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'settings_value.g.dart';
@@ -24,6 +25,29 @@ class SettingsValue {
       _$SettingsValueFromJson(json);
 
   Map<String, dynamic> toJson() => _$SettingsValueToJson(this);
+
+  bool equalsBasedOnSettingType(Object? other, SettingType settingType) {
+    if( identical(this, other) ) {
+      return true;
+    }
+    if(other is SettingsValue &&
+        runtimeType == other.runtimeType) {
+        if (settingType == SettingType.boolean) {
+          return booleanValue == other.booleanValue;
+        }
+        if (settingType == SettingType.string) {
+          return stringValue == other.stringValue;
+        }
+        if (settingType == SettingType.int) {
+          return intValue == other.intValue;
+        }
+        if (settingType == SettingType.double) {
+          return doubleValue == other.doubleValue;
+        }
+        throw ArgumentError("Setting is of an unsupported type (${settingType.name}).");
+    }
+    return false;
+  }
 
   @override
   bool operator ==(Object other) =>

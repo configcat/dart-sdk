@@ -10,6 +10,7 @@ import 'json/percentage_option.dart';
 import 'json/prerequisite_comparator.dart';
 import 'json/segment.dart';
 import 'json/segment_comparator.dart';
+import 'json/setting_type.dart';
 import 'json/targeting_rule.dart';
 import 'json/setting.dart';
 import 'json/prerequisite_flag_condition.dart';
@@ -901,6 +902,11 @@ class RolloutEvaluator {
 
     visitedKeys.remove(evaluationContext.key);
 
+    SettingType prerequisiteFlagSettingTypeEnum = SettingType.tryFrom(prerequisiteFlagSetting.type) ??
+        (() => throw ArgumentError("Setting type is invalid."))();
+
+    _validateSettingValueType(evaluateResult.value, prerequisiteFlagSettingTypeEnum);
+
     PrerequisiteComparator prerequisiteComparator =
         PrerequisiteComparator.tryFrom(
                 prerequisiteFlagCondition.prerequisiteComparator) ??
@@ -911,7 +917,7 @@ class RolloutEvaluator {
 
     switch (prerequisiteComparator) {
       case PrerequisiteComparator.equals:
-        result = conditionValue == evaluateResult.value;
+        result = evaluateResult.value.equalsBasedOnSettingType(conditionValue, prerequisiteFlagSettingTypeEnum);
         break;
       case PrerequisiteComparator.notEquals:
         result = conditionValue != evaluateResult.value;
@@ -1013,4 +1019,13 @@ class RolloutEvaluator {
     return configSalt ??
         (() => throw ArgumentError("Config JSON salt is missing."))();
   }
+  void _validateSettingValueType(SettingsValue settingsValue, SettingType settingType) {
+    if ( (SettingType.string == settingType && settingsValue.stringValue == null)
+        || (SettingType.int == settingType && settingsValue.intValue == null )
+        || (SettingType.double == settingType && settingsValue.doubleValue == null)
+        || (SettingType.boolean == settingType && settingsValue.booleanValue == null)) {
+      throw ArgumentError("Setting value is not of the expected type ${settingType.name}.");
+    }
+  }
+
 }
