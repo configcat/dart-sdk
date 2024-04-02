@@ -8,14 +8,14 @@ part of 'percentage_option.dart';
 
 PercentageOption _$PercentageOptionFromJson(Map<String, dynamic> json) =>
     PercentageOption(
-      SettingsValue.fromJson(json['v'] as Map<String, dynamic>),
+      SettingValue.fromJson(json['v'] as Map<String, dynamic>),
       (json['p'] as num?)?.toDouble() ?? 0,
       json['i'] as String?,
     );
 
 Map<String, dynamic> _$PercentageOptionToJson(PercentageOption instance) =>
     <String, dynamic>{
-      'v': instance.settingsValue,
+      'v': instance.settingValue,
       'p': instance.percentage,
       'i': instance.variationId,
     };

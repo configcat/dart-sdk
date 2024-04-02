@@ -15,14 +15,14 @@ import 'json/targeting_rule.dart';
 import 'json/setting.dart';
 import 'json/prerequisite_flag_condition.dart';
 import 'json/segment_condition.dart';
-import 'json/settings_value.dart';
+import 'json/setting_value.dart';
 import 'json/user_comparator.dart';
 import 'json/user_condition.dart';
 import 'log/configcat_logger.dart';
 
 class EvaluationResult {
   final String? variationId;
-  final SettingsValue value;
+  final SettingValue value;
   final TargetingRule? matchedTargetingRule;
   final PercentageOption? matchedPercentageOption;
 
@@ -101,7 +101,7 @@ class RolloutEvaluator {
     }
     evaluationResult ??= EvaluationResult(
         variationId: setting.variationId,
-        value: setting.settingsValue,
+        value: setting.settingValue,
         matchedTargetingRule: null,
         matchedPercentageOption: null);
 
@@ -137,7 +137,7 @@ class RolloutEvaluator {
       if (rule.servedValue != null) {
         return EvaluationResult(
             variationId: rule.servedValue!.variationId,
-            value: rule.servedValue!.settingsValue,
+            value: rule.servedValue!.settingValue,
             matchedTargetingRule: rule,
             matchedPercentageOption: null);
       }
@@ -912,7 +912,7 @@ class RolloutEvaluator {
                 prerequisiteFlagCondition.prerequisiteComparator) ??
             (() => throw ArgumentError(comparisonOperatorIsInvalid))();
 
-    SettingsValue? conditionValue = prerequisiteFlagCondition.value;
+    SettingValue? conditionValue = prerequisiteFlagCondition.value;
     bool result;
 
     switch (prerequisiteComparator) {
@@ -989,10 +989,10 @@ class RolloutEvaluator {
               scaled,
               i,
               percentageOption.percentage.toInt(),
-              percentageOption.settingsValue);
+              percentageOption.settingValue);
           return EvaluationResult(
               variationId: percentageOption.variationId,
-              value: percentageOption.settingsValue,
+              value: percentageOption.settingValue,
               matchedTargetingRule: parentTargetingRule,
               matchedPercentageOption: percentageOption);
         }
@@ -1019,11 +1019,11 @@ class RolloutEvaluator {
     return configSalt ??
         (() => throw ArgumentError("Config JSON salt is missing."))();
   }
-  void _validateSettingValueType(SettingsValue settingsValue, SettingType settingType) {
-    if ( (SettingType.string == settingType && settingsValue.stringValue == null)
-        || (SettingType.int == settingType && settingsValue.intValue == null )
-        || (SettingType.double == settingType && settingsValue.doubleValue == null)
-        || (SettingType.boolean == settingType && settingsValue.booleanValue == null)) {
+  void _validateSettingValueType(SettingValue settingValue, SettingType settingType) {
+    if ( (SettingType.string == settingType && settingValue.stringValue == null)
+        || (SettingType.int == settingType && settingValue.intValue == null )
+        || (SettingType.double == settingType && settingValue.doubleValue == null)
+        || (SettingType.boolean == settingType && settingValue.booleanValue == null)) {
       throw ArgumentError("Setting value is not of the expected type ${settingType.name}.");
     }
   }

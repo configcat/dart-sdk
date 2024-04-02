@@ -108,7 +108,7 @@ class EvaluateLogger {
     increaseIndentLevel();
     String valueFormat = "% options";
     if (targetingRule.servedValue != null) {
-      valueFormat = "'${targetingRule.servedValue?.settingsValue}'";
+      valueFormat = "'${targetingRule.servedValue?.settingValue}'";
     }
     if (isNewLine) {
       newLine();
@@ -129,8 +129,8 @@ class EvaluateLogger {
   }
 
   logPercentageEvaluationReturnValue(
-      int hashValue, int i, int percentage, SettingsValue settingsValue) {
-    String percentageOptionValue = settingsValue.toString();
+      int hashValue, int i, int percentage, SettingValue settingValue) {
+    String percentageOptionValue = settingValue.toString();
     newLine();
     append(
         "- Hash value $hashValue selects % option ${i + 1} ($percentage%), '$percentageOptionValue'.");
@@ -182,7 +182,7 @@ class EvaluateLogger {
 
   logPrerequisiteFlagEvaluationResult(
       PrerequisiteFlagCondition prerequisiteFlagCondition,
-      SettingsValue prerequisiteFlagValue,
+      SettingValue prerequisiteFlagValue,
       bool result) {
     newLine();
     String prerequisiteFlagValueFormat = prerequisiteFlagValue.toString();
@@ -300,7 +300,7 @@ class EvaluateLogger {
         PrerequisiteComparator.tryFrom(
             prerequisiteFlagCondition.prerequisiteComparator);
 
-    SettingsValue? prerequisiteValue = prerequisiteFlagCondition.value;
+    SettingValue? prerequisiteValue = prerequisiteFlagCondition.value;
     String comparisonValue = prerequisiteValue == null
         ? _invalidValue
         : prerequisiteValue.toString();

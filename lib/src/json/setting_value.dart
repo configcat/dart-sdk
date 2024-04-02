@@ -1,11 +1,11 @@
 import 'package:configcat_client/src/json/setting_type.dart';
 import 'package:json_annotation/json_annotation.dart';
 
-part 'settings_value.g.dart';
+part 'setting_value.g.dart';
 
 /// Describes the setting type-specific value of a setting or feature flag.
 @JsonSerializable()
-class SettingsValue {
+class SettingValue {
   @JsonKey(name: 'b')
   final bool? booleanValue;
 
@@ -18,19 +18,19 @@ class SettingsValue {
   @JsonKey(name: 'd')
   final double? doubleValue;
 
-  SettingsValue(
+  SettingValue(
       this.booleanValue, this.stringValue, this.intValue, this.doubleValue);
 
-  factory SettingsValue.fromJson(Map<String, dynamic> json) =>
-      _$SettingsValueFromJson(json);
+  factory SettingValue.fromJson(Map<String, dynamic> json) =>
+      _$SettingValueFromJson(json);
 
-  Map<String, dynamic> toJson() => _$SettingsValueToJson(this);
+  Map<String, dynamic> toJson() => _$SettingValueToJson(this);
 
   bool equalsBasedOnSettingType(Object? other, SettingType settingType) {
     if( identical(this, other) ) {
       return true;
     }
-    if(other is SettingsValue &&
+    if(other is SettingValue &&
         runtimeType == other.runtimeType) {
         if (settingType == SettingType.boolean) {
           return booleanValue == other.booleanValue;
@@ -52,7 +52,7 @@ class SettingsValue {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is SettingsValue &&
+      other is SettingValue &&
           runtimeType == other.runtimeType &&
           booleanValue == other.booleanValue &&
           stringValue == other.stringValue &&

@@ -84,14 +84,14 @@ void main() {
       final settings1 = await service.getSettings();
 
       // Assert
-      expect(settings1.settings['key']?.settingsValue.stringValue, 'test1');
+      expect(settings1.settings['key']?.settingValue.stringValue, 'test1');
 
       // Act
       await service.refresh();
       final settings2 = await service.getSettings();
 
       // Assert
-      expect(settings2.settings['key']?.settingsValue.stringValue, 'test2');
+      expect(settings2.settings['key']?.settingValue.stringValue, 'test2');
       verify(cache.write(any, any)).called(equals(2));
       expect(testAdapter.capturedRequests.length, 2);
       expect(
@@ -119,20 +119,20 @@ void main() {
       final settings1 = await service.getSettings();
 
       // Assert
-      expect(settings1.settings['key']?.settingsValue.stringValue, 'test1');
+      expect(settings1.settings['key']?.settingValue.stringValue, 'test1');
       verify(cache.write(any, argThat(contains("tag1")))).called(1);
 
       // Act
       final settings2 = await service.getSettings();
 
       // Assert
-      expect(settings2.settings['key']?.settingsValue.stringValue, 'test1');
+      expect(settings2.settings['key']?.settingValue.stringValue, 'test1');
       verifyNever(cache.write(any, any));
 
       await until(() async {
         final settings3 = await service.getSettings();
         final value =
-            settings3.settings['key']?.settingsValue.stringValue ?? '';
+            settings3.settings['key']?.settingValue.stringValue ?? '';
         return value == 'test2';
       }, const Duration(milliseconds: 2500));
 
@@ -267,14 +267,14 @@ void main() {
       final settings1 = await service.getSettings();
 
       // Assert
-      expect(settings1.settings['key']?.settingsValue.stringValue, 'test1');
+      expect(settings1.settings['key']?.settingValue.stringValue, 'test1');
 
       // Act
       await Future.delayed(const Duration(milliseconds: 500));
       final settings2 = await service.getSettings();
 
       // Assert
-      expect(settings2.settings['key']?.settingsValue.stringValue, 'test1');
+      expect(settings2.settings['key']?.settingValue.stringValue, 'test1');
       verify(cache.write(any, any)).called(greaterThanOrEqualTo(1));
       expect(
           testAdapter.capturedRequests.last.headers['If-None-Match'], 'tag1');
@@ -368,7 +368,7 @@ void main() {
       // Assert
       expect(DateTime.now().difference(current),
           lessThan(const Duration(milliseconds: 200)));
-      expect(result.settings['key']?.settingsValue.booleanValue, isTrue);
+      expect(result.settings['key']?.settingValue.booleanValue, isTrue);
 
       // Cleanup
       service.close();
@@ -393,14 +393,14 @@ void main() {
       final settings1 = await service.getSettings();
 
       // Assert
-      expect(settings1.settings['key']?.settingsValue.stringValue, 'test1');
+      expect(settings1.settings['key']?.settingValue.stringValue, 'test1');
 
       // Act
       await service.refresh();
       final settings2 = await service.getSettings();
 
       // Assert
-      expect(settings2.settings['key']?.settingsValue.stringValue, 'test2');
+      expect(settings2.settings['key']?.settingValue.stringValue, 'test2');
       verify(cache.write(any, any)).called(2);
       expect(testAdapter.capturedRequests.length, 2);
       expect(
@@ -423,14 +423,14 @@ void main() {
           getPath(), 200, createTestConfig({'key': 'test2'}).toJson());
 
       final settings1 = await service.getSettings();
-      expect(settings1.settings['key']?.settingsValue.stringValue, 'test1');
+      expect(settings1.settings['key']?.settingValue.stringValue, 'test1');
       final settings2 = await service.getSettings();
-      expect(settings2.settings['key']?.settingsValue.stringValue, 'test1');
+      expect(settings2.settings['key']?.settingValue.stringValue, 'test1');
 
       await until(() async {
         final settings3 = await service.getSettings();
         final value =
-            settings3.settings['key']?.settingsValue.stringValue ?? '';
+            settings3.settings['key']?.settingValue.stringValue ?? '';
         return value == 'test2';
       }, const Duration(milliseconds: 150));
 
@@ -523,7 +523,7 @@ void main() {
       final settings = await service.getSettings();
 
       // Assert
-      expect(settings.settings["key"]!.settingsValue.stringValue, 'test-local');
+      expect(settings.settings["key"]!.settingValue.stringValue, 'test-local');
       expect(testAdapter.capturedRequests.length, 0);
 
       // Act
@@ -535,7 +535,7 @@ void main() {
 
       // Assert
       expect(
-          settings2.settings["key"]!.settingsValue.stringValue, 'test-local2');
+          settings2.settings["key"]!.settingValue.stringValue, 'test-local2');
       expect(testAdapter.capturedRequests.length, 0);
 
       // Cleanup
@@ -562,14 +562,14 @@ void main() {
       // Assert
       expect(result.isSuccess, isTrue);
       expect(result.error, isNull);
-      expect(settings1.settings['key']?.settingsValue.stringValue, 'test1');
+      expect(settings1.settings['key']?.settingValue.stringValue, 'test1');
 
       // Act
       await service.refresh();
       final settings2 = await service.getSettings();
 
       // Assert
-      expect(settings2.settings['key']?.settingsValue.stringValue, 'test2');
+      expect(settings2.settings['key']?.settingValue.stringValue, 'test2');
       verify(cache.write(any, any)).called(2);
       expect(testAdapter.capturedRequests.length, 2);
       expect(

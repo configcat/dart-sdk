@@ -3,33 +3,33 @@ import 'package:json_annotation/json_annotation.dart';
 import 'percentage_option.dart';
 import 'segment.dart';
 import 'targeting_rule.dart';
-import 'settings_value.dart';
+import 'setting_value.dart';
 
 part 'setting.g.dart';
 
 extension SettingConvert on Object {
   /// Creates a basic [Setting] instance from an [Object].
   Setting toSetting() {
-    SettingsValue settingsValue;
+    SettingValue settingValue;
     int settingType;
     if (this is bool) {
-      settingsValue = SettingsValue(this as bool?, null, null, null);
+      settingValue = SettingValue(this as bool?, null, null, null);
       settingType = 0;
     } else if (this is String) {
-      settingsValue = SettingsValue(null, this as String?, null, null);
+      settingValue = SettingValue(null, this as String?, null, null);
       settingType = 1;
     } else if (this is int) {
-      settingsValue = SettingsValue(null, null, this as int?, null);
+      settingValue = SettingValue(null, null, this as int?, null);
       settingType = 2;
     } else if (this is double) {
-      settingsValue = SettingsValue(null, null, null, this as double?);
+      settingValue = SettingValue(null, null, null, this as double?);
       settingType = 3;
     } else {
       throw ArgumentError(
           "Only String, Integer, Double or Boolean types are supported.");
     }
     return Setting(
-        settingsValue, settingType, List.empty(), List.empty(), "", "");
+        settingValue, settingType, List.empty(), List.empty(), "", "");
   }
 }
 
@@ -39,7 +39,7 @@ class Setting {
   /// Setting value.
   /// Can be a value of the following types: {@link Boolean}, {@link String}, {@link Integer} or {@link Double}.
   @JsonKey(name: 'v')
-  final SettingsValue settingsValue;
+  final SettingValue settingValue;
 
   /// Setting type.
   @JsonKey(name: 't')
@@ -67,7 +67,7 @@ class Setting {
   @JsonKey(includeFromJson: false, includeToJson: false)
   List<Segment> segments = List.empty();
 
-  Setting(this.settingsValue, this.type, this.percentageOptions,
+  Setting(this.settingValue, this.type, this.percentageOptions,
       this.targetingRules, this.variationId, this.percentageAttribute);
 
   factory Setting.fromJson(Map<String, dynamic> json) =>

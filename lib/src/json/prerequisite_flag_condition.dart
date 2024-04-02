@@ -1,6 +1,6 @@
 import 'package:json_annotation/json_annotation.dart';
 
-import 'settings_value.dart';
+import 'setting_value.dart';
 
 part 'prerequisite_flag_condition.g.dart';
 
@@ -18,7 +18,7 @@ class PrerequisiteFlagCondition {
   /// The value that the evaluated value of the prerequisite flag is compared to.
   /// Can be a value of the following types: {@link Boolean}, {@link String}, {@link Integer} or {@link Double}.
   @JsonKey(name: 'v')
-  final SettingsValue? value;
+  final SettingValue? value;
 
   PrerequisiteFlagCondition(
       this.prerequisiteFlagKey, this.prerequisiteComparator, this.value);

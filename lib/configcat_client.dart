@@ -38,5 +38,5 @@ export 'src/json/segment.dart';
 export 'src/json/segment_condition.dart';
 export 'src/json/prerequisite_flag_condition.dart';
 export 'src/json/user_condition.dart';
-export 'src/json/settings_value.dart';
+export 'src/json/setting_value.dart';
 export 'src/json/served_value.dart';

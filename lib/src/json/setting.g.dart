@@ -7,7 +7,7 @@ part of 'setting.dart';
 // **************************************************************************
 
 Setting _$SettingFromJson(Map<String, dynamic> json) => Setting(
-      SettingsValue.fromJson(json['v'] as Map<String, dynamic>),
+      SettingValue.fromJson(json['v'] as Map<String, dynamic>),
       json['t'] as int,
       (json['p'] as List<dynamic>?)
               ?.map((e) => PercentageOption.fromJson(e as Map<String, dynamic>))
@@ -22,7 +22,7 @@ Setting _$SettingFromJson(Map<String, dynamic> json) => Setting(
     );
 
 Map<String, dynamic> _$SettingToJson(Setting instance) => <String, dynamic>{
-      'v': instance.settingsValue,
+      'v': instance.settingValue,
       't': instance.type,
       'p': instance.percentageOptions,
       'r': instance.targetingRules,

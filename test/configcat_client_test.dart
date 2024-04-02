@@ -629,7 +629,7 @@ Config createTestConfigWithVariationId(Map<String, Pair<int, String>> map) {
       Preferences(ConfigFetcher.globalBaseUrl, 0, "test-salt"),
       map.map((key, value) => MapEntry(
           key,
-          Setting(SettingsValue(null, null, value.first, null), 2, [], [],
+          Setting(SettingValue(null, null, value.first, null), 2, [], [],
               value.second, ""))),
       List.empty());
 }
