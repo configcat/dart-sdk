@@ -320,6 +320,8 @@ class ConfigCatClient {
                           percentageOption.settingsValue, entry.value.type));
                 }
               }
+            } else {
+              throw UnsupportedError("Targeting rule THEN part is missing or invalid.");
             }
           }
         }
