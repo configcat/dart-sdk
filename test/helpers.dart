@@ -34,8 +34,8 @@ Config createTestConfigWithRules() {
                         null)
                   ],
                   [],
-                  ServedValue(SettingValue(null, "fake1", null, null),
-                      "variationId1")),
+                  ServedValue(
+                      SettingValue(null, "fake1", null, null), "variationId1")),
               TargetingRule(
                   [
                     Condition(
@@ -45,8 +45,8 @@ Config createTestConfigWithRules() {
                         null)
                   ],
                   [],
-                  ServedValue(SettingValue(null, "fake2", null, null),
-                      "variationId2")),
+                  ServedValue(
+                      SettingValue(null, "fake2", null, null), "variationId2")),
             ],
             'defaultId', // flag def variationID
             "") //percentage attribute

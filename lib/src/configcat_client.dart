@@ -305,8 +305,7 @@ class ConfigCatClient {
             if (targetingRule.servedValue?.variationId == variationId) {
               return MapEntry(
                   entry.key,
-                  _parseSettingValue<T>(
-                      targetingRule.servedValue!.settingValue,
+                  _parseSettingValue<T>(targetingRule.servedValue!.settingValue,
                       entry.value.type));
             }
           } else {
@@ -321,7 +320,8 @@ class ConfigCatClient {
                 }
               }
             } else {
-              throw UnsupportedError("Targeting rule THEN part is missing or invalid.");
+              throw UnsupportedError(
+                  "Targeting rule THEN part is missing or invalid.");
             }
           }
         }

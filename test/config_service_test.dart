@@ -131,8 +131,7 @@ void main() {
 
       await until(() async {
         final settings3 = await service.getSettings();
-        final value =
-            settings3.settings['key']?.settingValue.stringValue ?? '';
+        final value = settings3.settings['key']?.settingValue.stringValue ?? '';
         return value == 'test2';
       }, const Duration(milliseconds: 2500));
 
@@ -429,8 +428,7 @@ void main() {
 
       await until(() async {
         final settings3 = await service.getSettings();
-        final value =
-            settings3.settings['key']?.settingValue.stringValue ?? '';
+        final value = settings3.settings['key']?.settingValue.stringValue ?? '';
         return value == 'test2';
       }, const Duration(milliseconds: 150));
 

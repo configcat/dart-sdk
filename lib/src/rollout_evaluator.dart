@@ -902,10 +902,12 @@ class RolloutEvaluator {
 
     visitedKeys.remove(evaluationContext.key);
 
-    SettingType prerequisiteFlagSettingTypeEnum = SettingType.tryFrom(prerequisiteFlagSetting.type) ??
-        (() => throw ArgumentError("Setting type is invalid."))();
+    SettingType prerequisiteFlagSettingTypeEnum =
+        SettingType.tryFrom(prerequisiteFlagSetting.type) ??
+            (() => throw ArgumentError("Setting type is invalid."))();
 
-    _validateSettingValueType(evaluateResult.value, prerequisiteFlagSettingTypeEnum);
+    _validateSettingValueType(
+        evaluateResult.value, prerequisiteFlagSettingTypeEnum);
 
     PrerequisiteComparator prerequisiteComparator =
         PrerequisiteComparator.tryFrom(
@@ -917,7 +919,8 @@ class RolloutEvaluator {
 
     switch (prerequisiteComparator) {
       case PrerequisiteComparator.equals:
-        result = evaluateResult.value.equalsBasedOnSettingType(conditionValue, prerequisiteFlagSettingTypeEnum);
+        result = evaluateResult.value.equalsBasedOnSettingType(
+            conditionValue, prerequisiteFlagSettingTypeEnum);
         break;
       case PrerequisiteComparator.notEquals:
         result = conditionValue != evaluateResult.value;
@@ -1019,13 +1022,18 @@ class RolloutEvaluator {
     return configSalt ??
         (() => throw ArgumentError("Config JSON salt is missing."))();
   }
-  void _validateSettingValueType(SettingValue settingValue, SettingType settingType) {
-    if ( (SettingType.string == settingType && settingValue.stringValue == null)
-        || (SettingType.int == settingType && settingValue.intValue == null )
-        || (SettingType.double == settingType && settingValue.doubleValue == null)
-        || (SettingType.boolean == settingType && settingValue.booleanValue == null)) {
-      throw ArgumentError("Setting value is not of the expected type ${settingType.name}.");
+
+  void _validateSettingValueType(
+      SettingValue settingValue, SettingType settingType) {
+    if ((SettingType.string == settingType &&
+            settingValue.stringValue == null) ||
+        (SettingType.int == settingType && settingValue.intValue == null) ||
+        (SettingType.double == settingType &&
+            settingValue.doubleValue == null) ||
+        (SettingType.boolean == settingType &&
+            settingValue.booleanValue == null)) {
+      throw ArgumentError(
+          "Setting value is not of the expected type ${settingType.name}.");
     }
   }
-
 }

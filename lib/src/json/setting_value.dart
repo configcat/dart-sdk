@@ -27,24 +27,24 @@ class SettingValue {
   Map<String, dynamic> toJson() => _$SettingValueToJson(this);
 
   bool equalsBasedOnSettingType(Object? other, SettingType settingType) {
-    if( identical(this, other) ) {
+    if (identical(this, other)) {
       return true;
     }
-    if(other is SettingValue &&
-        runtimeType == other.runtimeType) {
-        if (settingType == SettingType.boolean) {
-          return booleanValue == other.booleanValue;
-        }
-        if (settingType == SettingType.string) {
-          return stringValue == other.stringValue;
-        }
-        if (settingType == SettingType.int) {
-          return intValue == other.intValue;
-        }
-        if (settingType == SettingType.double) {
-          return doubleValue == other.doubleValue;
-        }
-        throw ArgumentError("Setting is of an unsupported type (${settingType.name}).");
+    if (other is SettingValue && runtimeType == other.runtimeType) {
+      if (settingType == SettingType.boolean) {
+        return booleanValue == other.booleanValue;
+      }
+      if (settingType == SettingType.string) {
+        return stringValue == other.stringValue;
+      }
+      if (settingType == SettingType.int) {
+        return intValue == other.intValue;
+      }
+      if (settingType == SettingType.double) {
+        return doubleValue == other.doubleValue;
+      }
+      throw ArgumentError(
+          "Setting is of an unsupported type (${settingType.name}).");
     }
     return false;
   }
