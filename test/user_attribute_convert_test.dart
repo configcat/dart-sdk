@@ -235,7 +235,31 @@ void main() {
     [
       "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/FCWN-k1dV0iBf8QZrDgjdw",
       "numberWithPercentage",
+      " Infinity ",
+      ">5"
+    ],
+    [
+      "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/FCWN-k1dV0iBf8QZrDgjdw",
+      "numberWithPercentage",
+      "-Infinity",
+      "<2.1"
+    ],
+    [
+      "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/FCWN-k1dV0iBf8QZrDgjdw",
+      "numberWithPercentage",
+      " -Infinity ",
+      "<2.1"
+    ],
+    [
+      "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/FCWN-k1dV0iBf8QZrDgjdw",
+      "numberWithPercentage",
       "NaN",
+      "<>4.2"
+    ],
+    [
+      "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/FCWN-k1dV0iBf8QZrDgjdw",
+      "numberWithPercentage",
+      " NaN ",
       "<>4.2"
     ],
     [
@@ -295,6 +319,42 @@ void main() {
       "boolTrueIn202304",
       "1680307200.001",
       true
+    ],
+    [
+      "configcat-sdk-1/JcPbCGl_1E-K9M-fJOyKyQ/OfQqcTjfFUGBwMKqtyEOrQ",
+      "boolTrueIn202304",
+      "NaN",
+      false
+    ],
+    [
+      "configcat-sdk-1/JcPbCGl_1E-K9M-fJOyKyQ/OfQqcTjfFUGBwMKqtyEOrQ",
+      "boolTrueIn202304",
+      "+Infinity",
+      false
+    ],
+    [
+      "configcat-sdk-1/JcPbCGl_1E-K9M-fJOyKyQ/OfQqcTjfFUGBwMKqtyEOrQ",
+      "boolTrueIn202304",
+      "-Infinity",
+      false
+    ],
+    [
+      "configcat-sdk-1/JcPbCGl_1E-K9M-fJOyKyQ/OfQqcTjfFUGBwMKqtyEOrQ",
+      "boolTrueIn202304",
+      " NaN ",
+      false
+    ],
+    [
+      "configcat-sdk-1/JcPbCGl_1E-K9M-fJOyKyQ/OfQqcTjfFUGBwMKqtyEOrQ",
+      "boolTrueIn202304",
+      " +Infinity ",
+      false
+    ],
+    [
+      "configcat-sdk-1/JcPbCGl_1E-K9M-fJOyKyQ/OfQqcTjfFUGBwMKqtyEOrQ",
+      "boolTrueIn202304",
+      " -Infinity ",
+      false
     ]
   };
 
