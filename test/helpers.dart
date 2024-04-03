@@ -21,7 +21,7 @@ Config createTestConfigWithRules() {
       Preferences(ConfigFetcher.globalBaseUrl, 0, "test-salt"),
       {
         'key1': Setting(
-            SettingsValue(null, "def", null, null), //default flag value
+            SettingValue(null, "def", null, null), //default flag value
             1,
             [],
             [
@@ -34,8 +34,8 @@ Config createTestConfigWithRules() {
                         null)
                   ],
                   [],
-                  ServedValue(SettingsValue(null, "fake1", null, null),
-                      "variationId1")),
+                  ServedValue(
+                      SettingValue(null, "fake1", null, null), "variationId1")),
               TargetingRule(
                   [
                     Condition(
@@ -45,8 +45,8 @@ Config createTestConfigWithRules() {
                         null)
                   ],
                   [],
-                  ServedValue(SettingsValue(null, "fake2", null, null),
-                      "variationId2")),
+                  ServedValue(
+                      SettingValue(null, "fake2", null, null), "variationId2")),
             ],
             'defaultId', // flag def variationID
             "") //percentage attribute

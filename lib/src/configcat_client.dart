@@ -1,7 +1,7 @@
 import 'package:configcat_client/src/constants.dart';
 import 'package:configcat_client/src/fetch/refresh_result.dart';
 import 'package:configcat_client/src/json/setting_type.dart';
-import 'package:configcat_client/src/json/settings_value.dart';
+import 'package:configcat_client/src/json/setting_value.dart';
 import 'package:configcat_client/src/log/logger.dart';
 import 'package:configcat_client/src/utils.dart';
 import 'package:dio/dio.dart';
@@ -297,7 +297,7 @@ class ConfigCatClient {
           return MapEntry(
               entry.key,
               _parseSettingValue<T>(
-                  entry.value.settingsValue, entry.value.type));
+                  entry.value.settingValue, entry.value.type));
         }
 
         for (final targetingRule in entry.value.targetingRules) {
@@ -305,8 +305,7 @@ class ConfigCatClient {
             if (targetingRule.servedValue?.variationId == variationId) {
               return MapEntry(
                   entry.key,
-                  _parseSettingValue<T>(
-                      targetingRule.servedValue!.settingsValue,
+                  _parseSettingValue<T>(targetingRule.servedValue!.settingValue,
                       entry.value.type));
             }
           } else {
@@ -317,9 +316,12 @@ class ConfigCatClient {
                   return MapEntry(
                       entry.key,
                       _parseSettingValue<T>(
-                          percentageOption.settingsValue, entry.value.type));
+                          percentageOption.settingValue, entry.value.type));
                 }
               }
+            } else {
+              throw UnsupportedError(
+                  "Targeting rule THEN part is missing or invalid.");
             }
           }
         }
@@ -329,7 +331,7 @@ class ConfigCatClient {
             return MapEntry(
                 entry.key,
                 _parseSettingValue<T>(
-                    percentageOption.settingsValue, entry.value.type));
+                    percentageOption.settingValue, entry.value.type));
           }
         }
       }
@@ -466,7 +468,7 @@ class ConfigCatClient {
     return details;
   }
 
-  T _parseSettingValue<T>(SettingsValue settingsValue, int settingType) {
+  T _parseSettingValue<T>(SettingValue settingValue, int settingType) {
     SettingType settingTypeEnum = SettingType.tryFrom(settingType) ??
         (() => throw ArgumentError("Setting type is invalid."))();
 
@@ -475,27 +477,27 @@ class ConfigCatClient {
 
     if ((T == bool || Utils.typesEqual<T, bool?>() || allowsAnyType) &&
         settingTypeEnum == SettingType.boolean &&
-        settingsValue.booleanValue != null) {
-      return settingsValue.booleanValue as T;
+        settingValue.booleanValue != null) {
+      return settingValue.booleanValue as T;
     }
     if ((T == String || Utils.typesEqual<T, String?>() || allowsAnyType) &&
         settingTypeEnum == SettingType.string &&
-        settingsValue.stringValue != null) {
-      return settingsValue.stringValue as T;
+        settingValue.stringValue != null) {
+      return settingValue.stringValue as T;
     }
     if ((T == int || Utils.typesEqual<T, int?>() || allowsAnyType) &&
         settingTypeEnum == SettingType.int &&
-        settingsValue.intValue != null) {
-      return settingsValue.intValue as T;
+        settingValue.intValue != null) {
+      return settingValue.intValue as T;
     }
     if ((T == double || Utils.typesEqual<T, double?>() || allowsAnyType) &&
         settingTypeEnum == SettingType.double &&
-        settingsValue.doubleValue != null) {
-      return settingsValue.doubleValue as T;
+        settingValue.doubleValue != null) {
+      return settingValue.doubleValue as T;
     }
 
     throw ArgumentError(
-        "The type of a setting must match the type of the specified default value. Setting's type was ${settingTypeEnum.name} but the default value's type was $T. Please use a default value which corresponds to the setting type ${settingTypeEnum.name}. Learn more: https://configcat.com/docs/sdk-reference/dotnet/#setting-type-mapping");
+        "The type of a setting must match the type of the specified default value. Setting's type was ${settingTypeEnum.name} but the default value's type was $T. Please use a default value which corresponds to the setting type ${settingTypeEnum.name}. Learn more: https://configcat.com/docs/sdk-reference/dart/#setting-type-mapping");
   }
 
   void _validateReturnType<T>() {

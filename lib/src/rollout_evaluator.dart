@@ -10,18 +10,19 @@ import 'json/percentage_option.dart';
 import 'json/prerequisite_comparator.dart';
 import 'json/segment.dart';
 import 'json/segment_comparator.dart';
+import 'json/setting_type.dart';
 import 'json/targeting_rule.dart';
 import 'json/setting.dart';
 import 'json/prerequisite_flag_condition.dart';
 import 'json/segment_condition.dart';
-import 'json/settings_value.dart';
+import 'json/setting_value.dart';
 import 'json/user_comparator.dart';
 import 'json/user_condition.dart';
 import 'log/configcat_logger.dart';
 
 class EvaluationResult {
   final String? variationId;
-  final SettingsValue value;
+  final SettingValue value;
   final TargetingRule? matchedTargetingRule;
   final PercentageOption? matchedPercentageOption;
 
@@ -100,7 +101,7 @@ class RolloutEvaluator {
     }
     evaluationResult ??= EvaluationResult(
         variationId: setting.variationId,
-        value: setting.settingsValue,
+        value: setting.settingValue,
         matchedTargetingRule: null,
         matchedPercentageOption: null);
 
@@ -136,7 +137,7 @@ class RolloutEvaluator {
       if (rule.servedValue != null) {
         return EvaluationResult(
             variationId: rule.servedValue!.variationId,
-            value: rule.servedValue!.settingsValue,
+            value: rule.servedValue!.settingValue,
             matchedTargetingRule: rule,
             matchedPercentageOption: null);
       }
@@ -901,20 +902,29 @@ class RolloutEvaluator {
 
     visitedKeys.remove(evaluationContext.key);
 
+    SettingType prerequisiteFlagSettingTypeEnum =
+        SettingType.tryFrom(prerequisiteFlagSetting.type) ??
+            (() => throw ArgumentError("Setting type is invalid."))();
+
+    _validateSettingValueType(
+        evaluateResult.value, prerequisiteFlagSettingTypeEnum);
+
     PrerequisiteComparator prerequisiteComparator =
         PrerequisiteComparator.tryFrom(
                 prerequisiteFlagCondition.prerequisiteComparator) ??
             (() => throw ArgumentError(comparisonOperatorIsInvalid))();
 
-    SettingsValue? conditionValue = prerequisiteFlagCondition.value;
+    SettingValue? conditionValue = prerequisiteFlagCondition.value;
     bool result;
 
     switch (prerequisiteComparator) {
       case PrerequisiteComparator.equals:
-        result = conditionValue == evaluateResult.value;
+        result = evaluateResult.value.equalsBasedOnSettingType(
+            conditionValue, prerequisiteFlagSettingTypeEnum);
         break;
       case PrerequisiteComparator.notEquals:
-        result = conditionValue != evaluateResult.value;
+        result = !evaluateResult.value.equalsBasedOnSettingType(
+            conditionValue, prerequisiteFlagSettingTypeEnum);
         break;
     }
 
@@ -983,17 +993,17 @@ class RolloutEvaluator {
               scaled,
               i,
               percentageOption.percentage.toInt(),
-              percentageOption.settingsValue);
+              percentageOption.settingValue);
           return EvaluationResult(
               variationId: percentageOption.variationId,
-              value: percentageOption.settingsValue,
+              value: percentageOption.settingValue,
               matchedTargetingRule: parentTargetingRule,
               matchedPercentageOption: percentageOption);
         }
       }
     }
     throw ArgumentError(
-        "Sum of percentage option percentages are less than 100.");
+        "Sum of percentage option percentages is less than 100.");
   }
 
   Version _parseVersion(String text) {
@@ -1012,5 +1022,19 @@ class RolloutEvaluator {
   String _ensureConfigSalt(String? configSalt) {
     return configSalt ??
         (() => throw ArgumentError("Config JSON salt is missing."))();
+  }
+
+  void _validateSettingValueType(
+      SettingValue settingValue, SettingType settingType) {
+    if ((SettingType.string == settingType &&
+            settingValue.stringValue == null) ||
+        (SettingType.int == settingType && settingValue.intValue == null) ||
+        (SettingType.double == settingType &&
+            settingValue.doubleValue == null) ||
+        (SettingType.boolean == settingType &&
+            settingValue.booleanValue == null)) {
+      throw ArgumentError(
+          "Setting value is not of the expected type ${settingType.name}.");
+    }
   }
 }

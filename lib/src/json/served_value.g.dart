@@ -7,12 +7,12 @@ part of 'served_value.dart';
 // **************************************************************************
 
 ServedValue _$ServedValueFromJson(Map<String, dynamic> json) => ServedValue(
-      SettingsValue.fromJson(json['v'] as Map<String, dynamic>),
+      SettingValue.fromJson(json['v'] as Map<String, dynamic>),
       json['i'] as String?,
     );
 
 Map<String, dynamic> _$ServedValueToJson(ServedValue instance) =>
     <String, dynamic>{
-      'v': instance.settingsValue,
+      'v': instance.settingValue,
       'i': instance.variationId,
     };
