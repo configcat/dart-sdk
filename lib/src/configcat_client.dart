@@ -497,7 +497,7 @@ class ConfigCatClient {
     }
 
     throw ArgumentError(
-        "The type of a setting must match the type of the specified default value. Setting's type was ${settingTypeEnum.name} but the default value's type was $T. Please use a default value which corresponds to the setting type ${settingTypeEnum.name}. Learn more: https://configcat.com/docs/sdk-reference/dotnet/#setting-type-mapping");
+        "The type of a setting must match the type of the specified default value. Setting's type was ${settingTypeEnum.name} but the default value's type was $T. Please use a default value which corresponds to the setting type ${settingTypeEnum.name}. Learn more: https://configcat.com/docs/sdk-reference/dart/#setting-type-mapping");
   }
 
   void _validateReturnType<T>() {
