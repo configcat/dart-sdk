@@ -50,23 +50,6 @@ class SettingValue {
   }
 
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is SettingValue &&
-          runtimeType == other.runtimeType &&
-          booleanValue == other.booleanValue &&
-          stringValue == other.stringValue &&
-          intValue == other.intValue &&
-          doubleValue == other.doubleValue;
-
-  @override
-  int get hashCode =>
-      booleanValue.hashCode ^
-      stringValue.hashCode ^
-      intValue.hashCode ^
-      doubleValue.hashCode;
-
-  @override
   String toString() {
     if (booleanValue != null) {
       return booleanValue.toString();

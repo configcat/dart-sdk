@@ -923,7 +923,8 @@ class RolloutEvaluator {
             conditionValue, prerequisiteFlagSettingTypeEnum);
         break;
       case PrerequisiteComparator.notEquals:
-        result = conditionValue != evaluateResult.value;
+        result = !evaluateResult.value.equalsBasedOnSettingType(
+            conditionValue, prerequisiteFlagSettingTypeEnum);
         break;
     }
 
