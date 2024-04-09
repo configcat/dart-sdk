@@ -214,28 +214,45 @@ void main() {
       // Arrange
       final firstBody = _createTestConfig(ConfigFetcher.globalBaseUrl, 1);
       final firstPath =
-          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
-      final secondBody = _createTestConfig(customUrl, 0);
-      final secondPath = sprintf(urlTemplate, [customUrl, testSdkKey]);
+          sprintf(urlTemplate, [customUrl, testSdkKey]);
+      final secondBody = _createTestConfig(ConfigFetcher.globalBaseUrl, 0);
+      final secondPath = sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
       testAdapter.enqueueResponse(firstPath, 200, firstBody.toJson());
       testAdapter.enqueueResponse(secondPath, 200, secondBody.toJson());
 
       // Act
-      final response = await fetcher.fetchConfiguration('');
+      var response = await fetcher.fetchConfiguration('');
 
       // Assert
-      expect(response.entry.config.preferences.baseUrl, equals(customUrl));
-      expect(response.entry.config.preferences.redirect, equals(0));
+      expect(response.entry.config.preferences.baseUrl, equals(ConfigFetcher.globalBaseUrl));
+      expect(response.entry.config.preferences.redirect, equals(1));
       expect(
           testAdapter.capturedRequests
               .where((element) => element.path == firstPath)
               .length,
-          0);
+          1);
       expect(
           testAdapter.capturedRequests
               .where((element) => element.path == secondPath)
               .length,
-          1);
+          0);
+
+      // Act
+      response = await fetcher.fetchConfiguration('');
+
+      // Assert
+      expect(response.entry.config.preferences.baseUrl, equals(ConfigFetcher.globalBaseUrl));
+      expect(response.entry.config.preferences.redirect, equals(1));
+      expect(
+          testAdapter.capturedRequests
+              .where((element) => element.path == firstPath)
+              .length,
+          2);
+      expect(
+          testAdapter.capturedRequests
+              .where((element) => element.path == secondPath)
+              .length,
+          0);
 
       // Cleanup
       fetcher.close();
