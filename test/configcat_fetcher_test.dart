@@ -213,10 +213,10 @@ void main() {
 
       // Arrange
       final firstBody = _createTestConfig(ConfigFetcher.globalBaseUrl, 1);
-      final firstPath =
-          sprintf(urlTemplate, [customUrl, testSdkKey]);
+      final firstPath = sprintf(urlTemplate, [customUrl, testSdkKey]);
       final secondBody = _createTestConfig(ConfigFetcher.globalBaseUrl, 0);
-      final secondPath = sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
+      final secondPath =
+          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
       testAdapter.enqueueResponse(firstPath, 200, firstBody.toJson());
       testAdapter.enqueueResponse(secondPath, 200, secondBody.toJson());
 
@@ -224,7 +224,8 @@ void main() {
       var response = await fetcher.fetchConfiguration('');
 
       // Assert
-      expect(response.entry.config.preferences.baseUrl, equals(ConfigFetcher.globalBaseUrl));
+      expect(response.entry.config.preferences.baseUrl,
+          equals(ConfigFetcher.globalBaseUrl));
       expect(response.entry.config.preferences.redirect, equals(1));
       expect(
           testAdapter.capturedRequests
@@ -241,7 +242,8 @@ void main() {
       response = await fetcher.fetchConfiguration('');
 
       // Assert
-      expect(response.entry.config.preferences.baseUrl, equals(ConfigFetcher.globalBaseUrl));
+      expect(response.entry.config.preferences.baseUrl,
+          equals(ConfigFetcher.globalBaseUrl));
       expect(response.entry.config.preferences.redirect, equals(1));
       expect(
           testAdapter.capturedRequests
