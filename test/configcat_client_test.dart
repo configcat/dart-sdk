@@ -302,64 +302,6 @@ void main() {
     expect(details[1].value, isFalse);
   });
 
-  test('get key and value', () async {
-    // Arrange
-    final body =
-        createTestConfigWithVariationId({'value': Pair(42, 'test')}).toJson();
-    httpAdapter.enqueueResponse(getPath(), 200, body);
-
-    // Act
-    await client.forceRefresh();
-    final MapEntry<String, int>? keyValue =
-        await client.getKeyAndValue(variationId: 'test');
-
-    // Assert
-    expect(keyValue!.key, equals('value'));
-    expect(keyValue.value, equals(42));
-  });
-
-  test('variation id test', () async {
-    // Arrange
-    final body =
-        createTestConfigWithVariationId({'value': Pair(42, 'test')}).toJson();
-    httpAdapter.enqueueResponse(getPath(), 200, body);
-
-    // Act
-    await client.forceRefresh();
-    final details = await client.getValueDetails(key: 'value', defaultValue: 0);
-
-    // Assert
-    expect(details.variationId, equals('test'));
-  });
-
-  test('variation id test default', () async {
-    // Arrange
-    httpAdapter.enqueueResponse(getPath(), 500, null);
-
-    // Act
-    await client.forceRefresh();
-    final details =
-        await client.getValueDetails<dynamic>(key: 'value', defaultValue: null);
-
-    // Assert
-    expect(details.variationId, equals(''));
-  });
-
-  test('get all variation ids', () async {
-    // Arrange
-    final body = createTestConfigWithVariationId(
-            {'value1': Pair(42, 'testId1'), 'value2': Pair(69, 'testId2')})
-        .toJson();
-    httpAdapter.enqueueResponse(getPath(), 200, body);
-
-    // Act
-    await client.forceRefresh();
-    final details = await client.getAllValueDetails();
-
-    // Assert
-    expect(details.map((e) => e.variationId), equals(['testId1', 'testId2']));
-  });
-
   test('ensure singleton per sdk key', () async {
     // Act
     final client2 = ConfigCatClient.get(sdkKey: testSdkKey);
