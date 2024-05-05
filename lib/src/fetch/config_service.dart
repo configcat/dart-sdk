@@ -73,23 +73,20 @@ class ConfigService with ContinuousFutureSynchronizer {
 
   Future<SettingResult> getSettings() async {
     final mode = _mode;
+    var threshold = distantPast;
+    var preferCached = _initialized;
     if (mode is LazyLoadingMode) {
-      final entry = await _fetchIfOlder(
-          DateTime.now().toUtc().subtract(mode.cacheRefreshInterval));
-      return !entry.first.isEmpty
-          ? SettingResult(
-              settings: entry.first.config.entries,
-              fetchTime: entry.first.fetchTime)
-          : SettingResult.empty;
-    } else {
-      final entry =
-          await _fetchIfOlder(distantPast, preferCached: _initialized);
-      return !entry.first.isEmpty
-          ? SettingResult(
-              settings: entry.first.config.entries,
-              fetchTime: entry.first.fetchTime)
-          : SettingResult.empty;
+      threshold = DateTime.now().toUtc().subtract(mode.cacheRefreshInterval);
+      preferCached = false;
+    } else if (!_initialized && mode is AutoPollingMode) {
+      threshold = DateTime.now().toUtc().subtract(mode.autoPollInterval);
     }
+    final entry = await _fetchIfOlder(threshold, preferCached: preferCached);
+    return !entry.first.isEmpty
+        ? SettingResult(
+            settings: entry.first.config.entries,
+            fetchTime: entry.first.fetchTime)
+        : SettingResult.empty;
   }
 
   Future<RefreshResult> refresh() async {
