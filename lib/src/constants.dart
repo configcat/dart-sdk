@@ -1,4 +1,4 @@
-const version = '4.1.0';
+const version = '4.1.1';
 const configJsonCacheVersion = 'v2';
 const configJsonName = 'config_v6.json';
 final DateTime distantPast = DateTime.utc(1970, 01, 01);

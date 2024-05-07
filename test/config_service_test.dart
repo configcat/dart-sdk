@@ -372,6 +372,30 @@ void main() {
       // Cleanup
       service.close();
     });
+
+    test('polls when cache expired', () async {
+      // Arrange
+      final cached = createTestEntryWithTime({'key': true},
+              DateTime.now().toUtc().subtract(const Duration(seconds: 5)))
+          .serialize();
+      when(cache.read(any)).thenAnswer((_) => Future.value(cached));
+
+      final service = createService(
+          PollingMode.autoPoll(autoPollInterval: const Duration(seconds: 1)));
+
+      testAdapter.enqueueResponse(
+          getPath(), 200, createTestConfig({'key': false}).toJson());
+
+      // Act
+      final result = await service.getSettings();
+
+      // Assert
+      expect(result.settings['key']?.settingValue.booleanValue, isFalse);
+      expect(testAdapter.capturedRequests.length, 1);
+
+      // Cleanup
+      service.close();
+    });
   });
 
   group('Lazy Loading Tests', () {
