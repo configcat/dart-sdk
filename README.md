@@ -3,13 +3,7 @@
 [![pub package](https://img.shields.io/pub/v/configcat_client.svg)](https://pub.dev/packages/configcat_client)
 [![Dart CI](https://github.com/configcat/dart-sdk/actions/workflows/dart-ci.yml/badge.svg?branch=main)](https://github.com/configcat/dart-sdk/actions/workflows/dart-ci.yml)
 
-https://configcat.com
-
-ConfigCat SDK for Dart provides easy integration for your application to ConfigCat.
-
-ConfigCat is a feature flag and configuration management service that lets you separate feature releases from code deployments. You can turn features ON or OFF using the <a href="https://app.configcat.com" target="_blank">ConfigCat Dashboard</a> even after they are deployed. ConfigCat lets you target specific groups of users based on region, email, or any other custom user attribute.
-
-ConfigCat is a <a href="https://configcat.com" target="_blank">hosted feature flag service</a> that lets you manage feature toggles across frontend, backend, mobile, and desktop apps. <a href="https://configcat.com" target="_blank">Alternative to LaunchDarkly</a>. Management app + feature flag SDKs.
+ConfigCat SDK for Dart provides easy integration for your application to [ConfigCat](https://configcat.com).
 
 ## Getting started
 
@@ -102,6 +96,10 @@ Contributions are welcome. For more info please read the [Contribution Guideline
 Special thanks to [@augustorsouza](https://github.com/augustorsouza), [@miguelspe](https://github.com/miguelspe), and [@mugbug](https://github.com/mugbug) from [@quintoandar](https://github.com/quintoandar) who made available the initial project.
 
 ## About ConfigCat
+ConfigCat is a feature flag and configuration management service that lets you separate feature releases from code deployments. You can turn features ON/OFF using the <a href="http://app.configcat.com" target="_blank">ConfigCat Dashboard</a> even after they are deployed. ConfigCat lets you target specific groups of users based on region, email, or any other custom user attribute.
+
+ConfigCat is a <a href="https://configcat.com" target="_blank">hosted feature flag service</a> that lets you manage feature toggles across frontend, backend, mobile, and desktop apps. <a href="https://configcat.com" target="_blank">Alternative to LaunchDarkly</a>. Management app + feature flag SDKs.
+
 - [Official ConfigCat SDKs for other platforms](https://github.com/configcat)
 - [Documentation](https://configcat.com/docs)
 - [Blog](https://configcat.com/blog)
