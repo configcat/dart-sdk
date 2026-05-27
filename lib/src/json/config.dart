@@ -14,7 +14,7 @@ class Config {
   final Preferences preferences;
 
   /// The map of settings.
-  @JsonKey(name: 'f')
+  @JsonKey(name: 'f', readValue: _getEntries)
   final Map<String, Setting> entries;
 
   /// The list of segments.
@@ -22,6 +22,9 @@ class Config {
   final List<Segment> segments;
 
   Config(this.preferences, this.entries, this.segments);
+
+  static Object _getEntries(Map json, String key) =>
+      json[key] ?? <String, dynamic>{};
 
   bool get isEmpty => identical(this, empty);
 

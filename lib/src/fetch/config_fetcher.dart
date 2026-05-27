@@ -65,7 +65,6 @@ class ConfigFetcher implements Fetcher {
   static const globalBaseUrl = 'https://cdn-global.configcat.com';
   static const euOnlyBaseUrl = 'https://cdn-eu.configcat.com';
   static const _eTagHeaderName = 'Etag';
-  static const _successStatusCodes = [200, 201, 202, 203, 204];
 
   late final ConfigCatLogger _logger;
   late final ConfigCatOptions _options;
@@ -170,7 +169,7 @@ class ConfigFetcher implements Fetcher {
           '$_url/configuration-files/$_sdkKey/$configJsonName',
           queryParameters: request.queryParameters,
           options: Options(headers: request.headers));
-      if (_successStatusCodes.contains(response.statusCode)) {
+      if (response.statusCode == 200) {
         final eTag = response.headers.value(_eTagHeaderName) ?? '';
         _logger.debug('Fetch was successful: new config fetched.');
         var configJson = response.data.toString();

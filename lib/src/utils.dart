@@ -6,6 +6,9 @@ class Utils {
   Utils._();
 
   static Config deserializeConfig(String configJson) {
+    if(configJson.isEmpty) {
+        throw ArgumentError("Config JSON content is empty.");
+    }
     final decoded = jsonDecode(configJson);
     Config config = Config.fromJson(decoded);
     String? salt = config.preferences.salt;
