@@ -172,7 +172,7 @@ class ConfigFetcher implements Fetcher {
       if (response.statusCode == 200) {
         final eTag = response.headers.value(_eTagHeaderName) ?? '';
         _logger.debug('Fetch was successful: new config fetched.');
-        var configJson = response.data.toString();
+        var configJson = response.data != null ? response.data.toString() : '';
         Config config;
         try {
           config = Utils.deserializeConfig(configJson);
