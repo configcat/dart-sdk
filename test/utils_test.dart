@@ -8,7 +8,11 @@ void main() {
     test('successful deserialization', () {
       // Arrange
       final configMap = {
-        'p': {'u': 'https://cdn-global.configcat.com', 'r': 0, 's': 'test-salt'},
+        'p': {
+          'u': 'https://cdn-global.configcat.com',
+          'r': 0,
+          's': 'test-salt'
+        },
         'f': {
           'testKey': {
             'v': {'s': 'testValue', 'b': null, 'i': null, 'd': null},
@@ -41,17 +45,16 @@ void main() {
       // Act & Assert
       expect(
           () => Utils.deserializeConfig(''),
-          throwsA(isA<ArgumentError>().having((e) => e.message,
-              'message', 'Config JSON content is empty.')));
+          throwsA(isA<ArgumentError>().having(
+              (e) => e.message, 'message', 'Config JSON content is empty.')));
     });
 
     test('throws on configJson containing literal null', () {
       // Act & Assert
       expect(
           () => Utils.deserializeConfig('null'),
-          throwsA(isA<ArgumentError>().having((e) => e.message,
-              'message', contains('Invalid config JSON content'))));
+          throwsA(isA<ArgumentError>().having((e) => e.message, 'message',
+              contains('Invalid config JSON content'))));
     });
   });
 }
-
