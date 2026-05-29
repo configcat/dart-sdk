@@ -8,7 +8,7 @@ part of 'config.dart';
 
 Config _$ConfigFromJson(Map<String, dynamic> json) => Config(
       Preferences.fromJson(json['p'] as Map<String, dynamic>),
-      (json['f'] as Map<String, dynamic>).map(
+      (Config._getEntries(json, 'f') as Map<String, dynamic>).map(
         (k, e) => MapEntry(k, Setting.fromJson(e as Map<String, dynamic>)),
       ),
       (json['s'] as List<dynamic>?)

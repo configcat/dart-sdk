@@ -6,7 +6,13 @@ class Utils {
   Utils._();
 
   static Config deserializeConfig(String configJson) {
+    if (configJson.isEmpty) {
+      throw ArgumentError("Config JSON content is empty.");
+    }
     final decoded = jsonDecode(configJson);
+    if (decoded == null) {
+      throw ArgumentError("Invalid config JSON content: $configJson");
+    }
     Config config = Config.fromJson(decoded);
     String? salt = config.preferences.salt;
     List<Segment> segments = config.segments;

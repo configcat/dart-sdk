@@ -455,6 +455,72 @@ void main() {
       testAdapter.close();
     });
 
+    test('fetch with null body returns failure', () async {
+      final fetcher = _createFetcher();
+      final testAdapter = HttpTestAdapter(fetcher.httpClient);
+
+      // Arrange
+      final path =
+          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
+      testAdapter.enqueueResponse(path, 200, null);
+
+      // Act
+      final fetchedResponse = await fetcher.fetchConfiguration('');
+
+      // Assert
+      expect(fetchedResponse.isFailed, isTrue);
+      expect(fetchedResponse.isTransientError, isFalse);
+      expect(fetchedResponse.entry.config, same(Config.empty));
+
+      // Cleanup
+      fetcher.close();
+      testAdapter.close();
+    });
+
+    test('fetch with blank body returns failure', () async {
+      final fetcher = _createFetcher();
+      final testAdapter = HttpTestAdapter(fetcher.httpClient);
+
+      // Arrange
+      final path =
+          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
+      testAdapter.enqueueResponse(path, 200, '');
+
+      // Act
+      final fetchedResponse = await fetcher.fetchConfiguration('');
+
+      // Assert
+      expect(fetchedResponse.isFailed, isTrue);
+      expect(fetchedResponse.isTransientError, isFalse);
+      expect(fetchedResponse.entry.config, same(Config.empty));
+
+      // Cleanup
+      fetcher.close();
+      testAdapter.close();
+    });
+
+    test('201 status code returns transient failure', () async {
+      final fetcher = _createFetcher();
+      final testAdapter = HttpTestAdapter(fetcher.httpClient);
+
+      // Arrange
+      final path =
+          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
+      testAdapter.enqueueResponse(path, 201, null);
+
+      // Act
+      final fetchedResponse = await fetcher.fetchConfiguration('');
+
+      // Assert
+      expect(fetchedResponse.isFailed, isTrue);
+      expect(fetchedResponse.isTransientError, isTrue);
+      expect(fetchedResponse.entry.config, same(Config.empty));
+
+      // Cleanup
+      fetcher.close();
+      testAdapter.close();
+    });
+
     test('entity tests', () async {
       // Assert
       expect(Entry.empty.isEmpty, isTrue);
