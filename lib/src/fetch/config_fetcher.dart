@@ -10,6 +10,7 @@ import '../configcat_options.dart';
 import '../constants.dart';
 import '../json/config.dart';
 import '../log/configcat_logger.dart';
+import '../configcat_log_messages.dart';
 
 enum _Status { fetched, notModified, failure }
 
@@ -144,20 +145,20 @@ class ConfigFetcher implements Fetcher {
 
     if (preferences.redirect == _RedirectMode.noRedirect) {
       return response;
-    } else {
-      if (preferences.redirect == _RedirectMode.shouldRedirect) {
-        _logger.warning(3002,
-            'The `dataGovernance` parameter specified at the client initialization is not in sync with the preferences on the ConfigCat Dashboard. Read more: https://configcat.com/docs/advanced/data-governance/');
-      }
+     } else {
+       if (preferences.redirect == _RedirectMode.shouldRedirect) {
+         _logger.warning(3002,
+             ConfigCatLogMessages.dataGovernanceIsOutOfSyncWarn);
+       }
 
-      if (executionCount > 0) {
-        return await _executeFetch(executionCount - 1, eTag);
-      }
-    }
+       if (executionCount > 0) {
+         return await _executeFetch(executionCount - 1, eTag);
+       }
+     }
 
-    _logger.error(1104,
-        'Redirection loop encountered while trying to fetch config JSON. Please contact us at https://configcat.com/support/');
-    return response;
+     _logger.error(1104,
+         ConfigCatLogMessages.getFetchFailedDueToRedirectLoop(null));
+     return response;
   }
 
   Future<FetchResponse> _doFetch(String eTag) async {
@@ -178,7 +179,7 @@ class ConfigFetcher implements Fetcher {
           config = Utils.deserializeConfig(configJson);
         } catch (e) {
           String error =
-              "Fetching config JSON was successful but the HTTP response content was invalid.";
+              ConfigCatLogMessages.getFetchReceived200WithInvalidBodyError(null);
           _errorReporter.error(1105, error);
           return FetchResponse.failure(error, false);
         }
@@ -189,12 +190,12 @@ class ConfigFetcher implements Fetcher {
         return FetchResponse.notModified();
       } else if (response.statusCode == 404 || response.statusCode == 403) {
         final error =
-            'Your SDK Key seems to be wrong. You can find the valid SDK Key at https://app.configcat.com/sdkkey. Received unexpected response: ${response.statusCode} ${response.statusMessage}';
+            '${ConfigCatLogMessages.getFetchFailedDueToInvalidSDKKey(null)}. Received unexpected response: ${response.statusCode} ${response.statusMessage}';
         _errorReporter.error(1100, error);
         return FetchResponse.failure(error, false);
       } else {
         final error =
-            'Unexpected HTTP response was received while trying to fetch config JSON: ${response.statusCode} ${response.statusMessage}';
+            ConfigCatLogMessages.getFetchFailedDueToUnexpectedHttpResponse(response.statusCode ?? 0, response.statusMessage.toString(), null);
         _errorReporter.error(1101, error);
         return FetchResponse.failure(error, true);
       }
@@ -203,23 +204,28 @@ class ConfigFetcher implements Fetcher {
           e.type == DioExceptionType.receiveTimeout ||
           e.type == DioExceptionType.sendTimeout) {
         final error =
-            'Request timed out while trying to fetch config JSON. Timeout values: [connect: ${_options.connectTimeout.inSeconds}s, receive: ${_options.receiveTimeout.inSeconds}s, send: ${_options.sendTimeout.inSeconds}s]';
+            ConfigCatLogMessages.getFetchFailedDueToRequestTimeout(
+                _options.connectTimeout.inMilliseconds,
+                _options.receiveTimeout.inMilliseconds,
+                _options.sendTimeout.inMilliseconds,
+                null);
         _errorReporter.error(1102, error, e, s);
         return FetchResponse.failure(error, true);
       }
       _errorReporter.error(
           1103,
-          'Unexpected error occurred while trying to fetch config JSON. It is most likely due to a local network issue. Please make sure your application can reach the ConfigCat CDN servers (or your proxy server) over HTTP.',
+          ConfigCatLogMessages.getFetchFailedDueToUnexpectedError(null),
           e,
           s);
       return FetchResponse.failure(e.toString(), true);
     } catch (e, s) {
       _errorReporter.error(
           1103,
-          'Unexpected error occurred while trying to fetch config JSON. It is most likely due to a local network issue. Please make sure your application can reach the ConfigCat CDN servers (or your proxy server) over HTTP.',
+          ConfigCatLogMessages.getFetchFailedDueToUnexpectedError(null),
           e,
           s);
       return FetchResponse.failure(e.toString(), true);
     }
   }
 }
+

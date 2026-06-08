@@ -7,6 +7,7 @@ import 'package:configcat_client/src/utils.dart';
 import 'package:dio/dio.dart';
 
 import 'configcat_cache.dart';
+import 'configcat_log_messages.dart';
 import 'configcat_options.dart';
 import 'configcat_user.dart';
 import 'error_reporter.dart';
@@ -48,7 +49,7 @@ class ConfigCatClient {
     var client = _instanceRepository[sdkKey];
     if (client != null && options != ConfigCatOptions.defaultOptions) {
       client._logger.warning(3000,
-          "There is an existing client instance for the specified SDK Key. No new client instance will be created and the specified options are ignored. Returning the existing client instance. SDK Key: '$sdkKey'.");
+          ConfigCatLogMessages.getClientIsAlreadyCreated(sdkKey));
     }
     client ??= _instanceRepository[sdkKey] = ConfigCatClient._(sdkKey, options);
     return client;
