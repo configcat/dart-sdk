@@ -159,7 +159,7 @@ class ConfigCatLogMessages {
 
   /// Log message for User Object is missing warning. The log eventId 3001.
   static String getUserObjectMissing(String key) {
-    return "Cannot evaluate targeting rules and %% options for setting '$key' (User Object is missing). You should pass a User Object to the evaluation methods like `getValue()`/`getValueAsync()` in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/";
+    return "Cannot evaluate targeting rules and % options for setting '$key' (User Object is missing). You should pass a User Object to the evaluation methods like `getValue()` in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/";
   }
 
   /// Log message for User Attribute is missing warning. The log eventId 3003.
@@ -170,7 +170,7 @@ class ConfigCatLogMessages {
 
   /// Log message for User Attribute is missing warning. The log eventId 3003.
   static String getUserAttributeMissing(String key, String attributeName) {
-    return "Cannot evaluate %% options for setting '$key' (the User.$attributeName attribute is missing). You should set the User.$attributeName attribute in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/";
+    return "Cannot evaluate % options for setting '$key' (the User.$attributeName attribute is missing). You should set the User.$attributeName attribute in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/";
   }
 
   /// Log message for User Attribute is invalid warning. The log eventId 3004.
