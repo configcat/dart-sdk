@@ -2,7 +2,6 @@ import 'package:configcat_client/configcat_client.dart';
 import 'package:configcat_client/src/error_reporter.dart';
 import 'package:configcat_client/src/fetch/config_fetcher.dart';
 import 'package:configcat_client/src/entry.dart';
-import 'package:configcat_client/src/log/configcat_logger.dart';
 import 'package:dio/dio.dart';
 import 'package:sprintf/sprintf.dart';
 import 'package:test/test.dart';

@@ -7,8 +7,8 @@ abstract class PollingMode {
   /// [autoPollInterval] sets at least how often this policy should fetch the latest configuration and refresh the cache.
   /// [maxInitWaitTime] sets the maximum waiting time between initialization and the first config acquisition in seconds.
   factory PollingMode.autoPoll(
-      {autoPollInterval = const Duration(seconds: 60),
-      maxInitWaitTime = const Duration(seconds: 5)}) {
+      {Duration autoPollInterval = const Duration(seconds: 60),
+      Duration maxInitWaitTime = const Duration(seconds: 5)}) {
     return AutoPollingMode._(autoPollInterval, maxInitWaitTime);
   }
 
@@ -16,7 +16,7 @@ abstract class PollingMode {
   ///
   /// [cacheRefreshInterval] sets how long the cache will store its value before fetching the latest from the network again.
   factory PollingMode.lazyLoad(
-      {cacheRefreshInterval = const Duration(seconds: 60)}) {
+      {Duration cacheRefreshInterval = const Duration(seconds: 60)}) {
     return LazyLoadingMode._(cacheRefreshInterval);
   }
 

@@ -56,7 +56,7 @@ class ConfigCatClient {
   }
 
   /// Closes all [ConfigCatClient] instances.
-  static closeAll() {
+  static void closeAll() {
     for (final client in _instanceRepository.entries) {
       client.value._closeResources();
     }
