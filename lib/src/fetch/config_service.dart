@@ -95,22 +95,24 @@ class ConfigService with ContinuousFutureSynchronizer {
     return RefreshResult(fetch.second == null, fetch.second);
   }
 
-   void online() {
-     if (!_offline) return;
-     _offline = false;
-     final mode = _mode;
-     if (mode is AutoPollingMode) {
-       _startPoll(mode);
-     }
-     _logger.info(5200, ConfigCatLogMessages.getConfigServiceStatusChanged('ONLINE'));
-   }
+  void online() {
+    if (!_offline) return;
+    _offline = false;
+    final mode = _mode;
+    if (mode is AutoPollingMode) {
+      _startPoll(mode);
+    }
+    _logger.info(
+        5200, ConfigCatLogMessages.getConfigServiceStatusChanged('ONLINE'));
+  }
 
-   void offline() {
-     if (_offline) return;
-     _offline = true;
-     _periodicExecutor?.cancel();
-     _logger.info(5200, ConfigCatLogMessages.getConfigServiceStatusChanged('OFFLINE'));
-   }
+  void offline() {
+    if (_offline) return;
+    _offline = true;
+    _periodicExecutor?.cancel();
+    _logger.info(
+        5200, ConfigCatLogMessages.getConfigServiceStatusChanged('OFFLINE'));
+  }
 
   bool isOffline() => _offline;
 
@@ -142,22 +144,24 @@ class ConfigService with ContinuousFutureSynchronizer {
     return await syncFuture(_fetch);
   }
 
-   Future<Pair<Entry, String?>> _fetch() async {
-     final mode = _mode;
-     if (mode is AutoPollingMode && !_initialized) {
-       // Waiting for the client initialization.
-       // After the maxInitWaitTime timeout the client will be initialized and while
-       // the config is not ready the default value will be returned.
-       return await _fetchConfig().timeout(mode.maxInitWaitTime, onTimeout: () {
-         _logger.warning(4200,
-             ConfigCatLogMessages.getAutoPollMaxInitWaitTimeReached(mode.maxInitWaitTime.inSeconds));
-         _setInitialized();
-         return Pair(_cachedEntry, null);
-       });
-     }
-     // The service is initialized, start fetch without timeout.
-     return await _fetchConfig();
-   }
+  Future<Pair<Entry, String?>> _fetch() async {
+    final mode = _mode;
+    if (mode is AutoPollingMode && !_initialized) {
+      // Waiting for the client initialization.
+      // After the maxInitWaitTime timeout the client will be initialized and while
+      // the config is not ready the default value will be returned.
+      return await _fetchConfig().timeout(mode.maxInitWaitTime, onTimeout: () {
+        _logger.warning(
+            4200,
+            ConfigCatLogMessages.getAutoPollMaxInitWaitTimeReached(
+                mode.maxInitWaitTime.inSeconds));
+        _setInitialized();
+        return Pair(_cachedEntry, null);
+      });
+    }
+    // The service is initialized, start fetch without timeout.
+    return await _fetchConfig();
+  }
 
   Future<Pair<Entry, String?>> _fetchConfig() async {
     final response = await _fetcher.fetchConfiguration(_cachedEntry.eTag);
@@ -188,28 +192,28 @@ class ConfigService with ContinuousFutureSynchronizer {
     }
   }
 
-   Future<Entry> _readCache() async {
-     try {
-       final entry = await _cache.read(_cacheKey);
-       if (entry.isEmpty) return Entry.empty;
-       if (entry == _cachedEntryString) return Entry.empty;
-       _cachedEntryString = entry;
-       return Entry.fromCached(entry);
-     } catch (e, s) {
-       _errorReporter.error(
-           2200, ConfigCatLogMessages.configServiceCacheReadError, e, s);
-       return Entry.empty;
-     }
-   }
+  Future<Entry> _readCache() async {
+    try {
+      final entry = await _cache.read(_cacheKey);
+      if (entry.isEmpty) return Entry.empty;
+      if (entry == _cachedEntryString) return Entry.empty;
+      _cachedEntryString = entry;
+      return Entry.fromCached(entry);
+    } catch (e, s) {
+      _errorReporter.error(
+          2200, ConfigCatLogMessages.configServiceCacheReadError, e, s);
+      return Entry.empty;
+    }
+  }
 
-   Future<void> _writeCache(Entry value) async {
-     try {
-       final entry = value.serialize();
-       _cachedEntryString = entry;
-       await _cache.write(_cacheKey, entry);
-     } catch (e, s) {
-       _errorReporter.error(
-           2201, ConfigCatLogMessages.configServiceCacheWriteError, e, s);
-     }
-   }
+  Future<void> _writeCache(Entry value) async {
+    try {
+      final entry = value.serialize();
+      _cachedEntryString = entry;
+      await _cache.write(_cacheKey, entry);
+    } catch (e, s) {
+      _errorReporter.error(
+          2201, ConfigCatLogMessages.configServiceCacheWriteError, e, s);
+    }
+  }
 }

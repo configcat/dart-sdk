@@ -258,7 +258,8 @@ class RolloutEvaluator {
     if (configCatUser == null) {
       if (!evaluationContext.isUserMissing) {
         evaluationContext.isUserMissing = true;
-        _logger.warning(3001, ConfigCatLogMessages.getUserObjectMissing(evaluationContext.key));
+        _logger.warning(3001,
+            ConfigCatLogMessages.getUserObjectMissing(evaluationContext.key));
       }
       throw RolloutEvaluatorException(userObjectIsMissing);
     }
@@ -273,7 +274,12 @@ class RolloutEvaluator {
 
     if (userAttributeValue == null ||
         (userAttributeValue is String && userAttributeValue.isEmpty)) {
-      _logger.warning(3003, ConfigCatLogMessages.getUserAttributeMissingWithCondition(evaluationContext.key, EvaluateLogger.formatUserCondition(userCondition), comparisonAttribute));
+      _logger.warning(
+          3003,
+          ConfigCatLogMessages.getUserAttributeMissingWithCondition(
+              evaluationContext.key,
+              EvaluateLogger.formatUserCondition(userCondition),
+              comparisonAttribute));
       throw RolloutEvaluatorException(cannotEvaluateTheUserPrefix +
           comparisonAttribute +
           cannotEvaluateTheUserAttributeMissing);
@@ -429,7 +435,13 @@ class RolloutEvaluator {
       return userAttributeValue;
     }
     String? convertedUserAttribute = _userAttributeToString(userAttributeValue);
-    _logger.warning(3005, ConfigCatLogMessages.getUserObjectAttributeIsAutoConverted(key, EvaluateLogger.formatUserCondition(userCondition), userAttributeName, convertedUserAttribute));
+    _logger.warning(
+        3005,
+        ConfigCatLogMessages.getUserObjectAttributeIsAutoConverted(
+            key,
+            EvaluateLogger.formatUserCondition(userCondition),
+            userAttributeName,
+            convertedUserAttribute));
     return convertedUserAttribute;
   }
 
@@ -443,7 +455,13 @@ class RolloutEvaluator {
       }
     }
     String reason = "'$userValue' is not a valid semantic version";
-    _logger.warning(3004, ConfigCatLogMessages.getUserAttributeInvalid(key, EvaluateLogger.formatUserCondition(userCondition), reason, comparisonAttribute));
+    _logger.warning(
+        3004,
+        ConfigCatLogMessages.getUserAttributeInvalid(
+            key,
+            EvaluateLogger.formatUserCondition(userCondition),
+            reason,
+            comparisonAttribute));
     throw RolloutEvaluatorException(
         "$cannotEvaluateTheUserPrefix$comparisonAttribute$cannotEvaluateTheUserAttributeInvalid$reason)");
   }
@@ -459,7 +477,13 @@ class RolloutEvaluator {
     } catch (e) {
       //If cannot convert to double, continue with the error
       String reason = "'$userAttributeValue' is not a valid decimal number";
-      _logger.warning(3004, ConfigCatLogMessages.getUserAttributeInvalid(key, EvaluateLogger.formatUserCondition(userCondition), reason, comparisonAttribute));
+      _logger.warning(
+          3004,
+          ConfigCatLogMessages.getUserAttributeInvalid(
+              key,
+              EvaluateLogger.formatUserCondition(userCondition),
+              reason,
+              comparisonAttribute));
       throw RolloutEvaluatorException(
           "$cannotEvaluateTheUserPrefix$comparisonAttribute$cannotEvaluateTheUserAttributeInvalid$reason)");
     }
@@ -478,7 +502,13 @@ class RolloutEvaluator {
     } catch (e) {
       String reason =
           "'$userAttributeValue' is not a valid Unix timestamp (number of seconds elapsed since Unix epoch)";
-      _logger.warning(3004, ConfigCatLogMessages.getUserAttributeInvalid(context.key, EvaluateLogger.formatUserCondition(userCondition), reason, comparisonAttribute));
+      _logger.warning(
+          3004,
+          ConfigCatLogMessages.getUserAttributeInvalid(
+              context.key,
+              EvaluateLogger.formatUserCondition(userCondition),
+              reason,
+              comparisonAttribute));
       throw RolloutEvaluatorException(
           "$cannotEvaluateTheUserPrefix$comparisonAttribute$cannotEvaluateTheUserAttributeInvalid$reason)");
     }
@@ -508,7 +538,13 @@ class RolloutEvaluator {
       // String array parse failed continue with the RolloutEvaluatorException
     }
     String reason = "'$userAttributeValue' is not a valid JSON string array";
-    _logger.warning(3004, ConfigCatLogMessages.getUserAttributeInvalid(context.key, EvaluateLogger.formatUserCondition(userCondition), reason, comparisonAttribute));
+    _logger.warning(
+        3004,
+        ConfigCatLogMessages.getUserAttributeInvalid(
+            context.key,
+            EvaluateLogger.formatUserCondition(userCondition),
+            reason,
+            comparisonAttribute));
     throw RolloutEvaluatorException(
         "$cannotEvaluateTheUserPrefix$comparisonAttribute$cannotEvaluateTheUserAttributeInvalid$reason)");
   }
@@ -803,7 +839,8 @@ class RolloutEvaluator {
     if (evaluationContext.user == null) {
       if (!evaluationContext.isUserMissing) {
         evaluationContext.isUserMissing = true;
-        _logger.warning(3001, ConfigCatLogMessages.getUserObjectMissing(evaluationContext.key));
+        _logger.warning(3001,
+            ConfigCatLogMessages.getUserObjectMissing(evaluationContext.key));
       }
       throw RolloutEvaluatorException(userObjectIsMissing);
     }
@@ -938,7 +975,8 @@ class RolloutEvaluator {
       evaluateLogger?.logPercentageOptionUserMissing();
       if (!evaluationContext.isUserMissing) {
         evaluationContext.isUserMissing = true;
-        _logger.warning(3001, ConfigCatLogMessages.getUserObjectMissing(evaluationContext.key));
+        _logger.warning(3001,
+            ConfigCatLogMessages.getUserObjectMissing(evaluationContext.key));
       }
       return null;
     }
@@ -955,7 +993,10 @@ class RolloutEvaluator {
             percentageOptionAttributeName);
         if (!evaluationContext.isUserAttributeMissing) {
           evaluationContext.isUserAttributeMissing = true;
-          _logger.warning(3003, ConfigCatLogMessages.getUserAttributeMissing(evaluationContext.key, percentageOptionAttributeName));
+          _logger.warning(
+              3003,
+              ConfigCatLogMessages.getUserAttributeMissing(
+                  evaluationContext.key, percentageOptionAttributeName));
         }
         return null;
       }

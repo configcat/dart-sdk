@@ -48,8 +48,8 @@ class ConfigCatClient {
 
     var client = _instanceRepository[sdkKey];
     if (client != null && options != ConfigCatOptions.defaultOptions) {
-      client._logger.warning(3000,
-          ConfigCatLogMessages.getClientIsAlreadyCreated(sdkKey));
+      client._logger.warning(
+          3000, ConfigCatLogMessages.getClientIsAlreadyCreated(sdkKey));
     }
     client ??= _instanceRepository[sdkKey] = ConfigCatClient._(sdkKey, options);
     return client;

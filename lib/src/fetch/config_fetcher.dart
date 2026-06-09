@@ -27,7 +27,8 @@ class FetchResponse {
   final bool isTransientError;
   final String? cfRayId;
 
-  FetchResponse._(this._status, this.entry, this.error, this.isTransientError, this.cfRayId);
+  FetchResponse._(this._status, this.entry, this.error, this.isTransientError,
+      this.cfRayId);
 
   bool get isFetched {
     return _status == _Status.fetched;
@@ -45,13 +46,15 @@ class FetchResponse {
     return FetchResponse._(_Status.fetched, entry, null, false, cfRayId);
   }
 
-  factory FetchResponse.failure(String error, bool isTransientError, String? cfRayId) {
+  factory FetchResponse.failure(
+      String error, bool isTransientError, String? cfRayId) {
     return FetchResponse._(
         _Status.failure, Entry.empty, error, isTransientError, cfRayId);
   }
 
   factory FetchResponse.notModified(String? cfRayId) {
-    return FetchResponse._(_Status.notModified, Entry.empty, null, false, cfRayId);
+    return FetchResponse._(
+        _Status.notModified, Entry.empty, null, false, cfRayId);
   }
 }
 
@@ -146,20 +149,20 @@ class ConfigFetcher implements Fetcher {
 
     if (preferences.redirect == _RedirectMode.noRedirect) {
       return response;
-     } else {
-       if (preferences.redirect == _RedirectMode.shouldRedirect) {
-         _logger.warning(3002,
-             ConfigCatLogMessages.dataGovernanceIsOutOfSyncWarn);
-       }
+    } else {
+      if (preferences.redirect == _RedirectMode.shouldRedirect) {
+        _logger.warning(
+            3002, ConfigCatLogMessages.dataGovernanceIsOutOfSyncWarn);
+      }
 
-       if (executionCount > 0) {
-         return await _executeFetch(executionCount - 1, eTag);
-       }
-     }
+      if (executionCount > 0) {
+        return await _executeFetch(executionCount - 1, eTag);
+      }
+    }
 
-     _logger.error(1104,
-         ConfigCatLogMessages.getFetchFailedDueToRedirectLoop(response.cfRayId));
-     return response;
+    _logger.error(1104,
+        ConfigCatLogMessages.getFetchFailedDueToRedirectLoop(response.cfRayId));
+    return response;
   }
 
   Future<FetchResponse> _doFetch(String eTag) async {
@@ -183,7 +186,8 @@ class ConfigFetcher implements Fetcher {
           config = Utils.deserializeConfig(configJson);
         } catch (e) {
           String error =
-              ConfigCatLogMessages.getFetchReceived200WithInvalidBodyError(cfRayId);
+              ConfigCatLogMessages.getFetchReceived200WithInvalidBodyError(
+                  cfRayId);
           _errorReporter.error(1105, error);
           return FetchResponse.failure(error, false, cfRayId);
         }
@@ -193,12 +197,16 @@ class ConfigFetcher implements Fetcher {
         _logger.debug('Fetch was successful: config not modified.');
         return FetchResponse.notModified(cfRayId);
       } else if (response.statusCode == 404 || response.statusCode == 403) {
-        final error = ConfigCatLogMessages.getFetchFailedDueToInvalidSDKKey(cfRayId);
+        final error =
+            ConfigCatLogMessages.getFetchFailedDueToInvalidSDKKey(cfRayId);
         _errorReporter.error(1100, error);
         return FetchResponse.failure(error, false, cfRayId);
       } else {
         final error =
-            ConfigCatLogMessages.getFetchFailedDueToUnexpectedHttpResponse(response.statusCode ?? 0, response.statusMessage.toString(), cfRayId);
+            ConfigCatLogMessages.getFetchFailedDueToUnexpectedHttpResponse(
+                response.statusCode ?? 0,
+                response.statusMessage.toString(),
+                cfRayId);
         _errorReporter.error(1101, error);
         return FetchResponse.failure(error, true, cfRayId);
       }
@@ -206,12 +214,11 @@ class ConfigFetcher implements Fetcher {
       if (e.type == DioExceptionType.connectionTimeout ||
           e.type == DioExceptionType.receiveTimeout ||
           e.type == DioExceptionType.sendTimeout) {
-        final error =
-            ConfigCatLogMessages.getFetchFailedDueToRequestTimeout(
-                _options.connectTimeout.inMilliseconds,
-                _options.receiveTimeout.inMilliseconds,
-                _options.sendTimeout.inMilliseconds,
-                cfRayId);
+        final error = ConfigCatLogMessages.getFetchFailedDueToRequestTimeout(
+            _options.connectTimeout.inMilliseconds,
+            _options.receiveTimeout.inMilliseconds,
+            _options.sendTimeout.inMilliseconds,
+            cfRayId);
         _errorReporter.error(1102, error, e, s);
         return FetchResponse.failure(error, true, cfRayId);
       }
@@ -231,4 +238,3 @@ class ConfigFetcher implements Fetcher {
     }
   }
 }
-

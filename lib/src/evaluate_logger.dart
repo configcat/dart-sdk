@@ -144,8 +144,8 @@ class EvaluateLogger {
     append("Evaluating segment '$segmentName':");
   }
 
-  void logSegmentEvaluationResult(SegmentCondition segmentCondition, Segment segment,
-      bool result, bool segmentResult) {
+  void logSegmentEvaluationResult(SegmentCondition segmentCondition,
+      Segment segment, bool result, bool segmentResult) {
     newLine();
     String segmentResultComparator = segmentResult
         ? SegmentComparator.isInSegment.name

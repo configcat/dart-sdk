@@ -58,11 +58,8 @@ class ConfigCatLogMessages {
 
   /// Log message for Setting Evaluation errors when the method returns with default value.
   /// The log eventId is 1002.
-  static String getSettingEvaluationErrorWithDefaultValue(
-      String methodName,
-      String key,
-      String defaultParamName,
-      Object defaultParamValue) {
+  static String getSettingEvaluationErrorWithDefaultValue(String methodName,
+      String key, String defaultParamName, Object defaultParamValue) {
     return "Error occurred in the `$methodName` method while evaluating setting '$key'. Returning the `$defaultParamName` parameter that you specified in your application: '$defaultParamValue'.";
   }
 
@@ -107,11 +104,8 @@ class ConfigCatLogMessages {
   }
 
   /// Log message for Fetch Failed Due To Request Timeout error. The log eventId is 1102.
-  static String getFetchFailedDueToRequestTimeout(
-      int connectTimeoutMillis,
-      int readTimeoutMillis,
-      int writeTimeoutMillis,
-      String? cfRayId) {
+  static String getFetchFailedDueToRequestTimeout(int connectTimeoutMillis,
+      int readTimeoutMillis, int writeTimeoutMillis, String? cfRayId) {
     if (cfRayId != null) {
       return "Request timed out while trying to fetch config JSON. Timeout values: [connect: ${connectTimeoutMillis}ms, read: ${readTimeoutMillis}ms, write: ${writeTimeoutMillis}ms] ${_getCFRayIdPostFix(cfRayId)}";
     }
@@ -174,8 +168,8 @@ class ConfigCatLogMessages {
   }
 
   /// Log message for User Attribute is invalid warning. The log eventId 3004.
-  static String getUserAttributeInvalid(String key, String userCondition,
-      String reason, String attributeName) {
+  static String getUserAttributeInvalid(
+      String key, String userCondition, String reason, String attributeName) {
     return "Cannot evaluate condition ($userCondition) for setting '$key' ($reason). Please check the User.$attributeName attribute and make sure that its value corresponds to the comparison operator.";
   }
 
@@ -219,8 +213,8 @@ class ConfigCatLogMessages {
   }
 
   /// Extra log message for Config Fetcher if LogLevel.Debug enabled. Sending Request via proxy.
-  static String getDebugEnabledRequestWillBeSentViaProxy(
-      String requestId, String proxyAddress, String requestUrl, String ifNoneMatch) {
+  static String getDebugEnabledRequestWillBeSentViaProxy(String requestId,
+      String proxyAddress, String requestUrl, String ifNoneMatch) {
     return "[$requestId] Sending request via proxy '$proxyAddress' ... (Url: '$requestUrl', If-None-Match: '$ifNoneMatch')";
   }
 

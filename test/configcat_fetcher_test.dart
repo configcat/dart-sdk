@@ -405,8 +405,8 @@ void main() {
       const rayId = 'forbidden-ray-id';
       final testLogger = EvaluationTestLogger();
       final fetcher = _createFetcher(
-          logger:
-              ConfigCatLogger(internalLogger: testLogger, level: LogLevel.debug));
+          logger: ConfigCatLogger(
+              internalLogger: testLogger, level: LogLevel.debug));
       final testAdapter = HttpTestAdapter(fetcher.httpClient);
 
       // Arrange
@@ -437,8 +437,8 @@ void main() {
       const rayId = 'not-modified-ray-id';
       final testLogger = EvaluationTestLogger();
       final fetcher = _createFetcher(
-          logger:
-              ConfigCatLogger(internalLogger: testLogger, level: LogLevel.debug));
+          logger: ConfigCatLogger(
+              internalLogger: testLogger, level: LogLevel.debug));
       final testAdapter = HttpTestAdapter(fetcher.httpClient);
 
       // Arrange
@@ -561,8 +561,8 @@ void main() {
       const rayId = 'invalid-body-ray-id';
       final testLogger = EvaluationTestLogger();
       final fetcher = _createFetcher(
-          logger:
-              ConfigCatLogger(internalLogger: testLogger, level: LogLevel.debug));
+          logger: ConfigCatLogger(
+              internalLogger: testLogger, level: LogLevel.debug));
       final testAdapter = HttpTestAdapter(fetcher.httpClient);
 
       // Arrange
