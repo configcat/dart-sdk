@@ -2,9 +2,11 @@ import 'package:configcat_client/configcat_client.dart';
 import 'package:configcat_client/src/error_reporter.dart';
 import 'package:configcat_client/src/fetch/config_fetcher.dart';
 import 'package:configcat_client/src/entry.dart';
+import 'package:configcat_client/src/log/configcat_logger.dart';
 import 'package:dio/dio.dart';
 import 'package:sprintf/sprintf.dart';
 import 'package:test/test.dart';
+import 'evaluation/evaluation_test_logger.dart';
 import 'helpers.dart';
 import 'http_adapter.dart';
 
@@ -400,6 +402,63 @@ void main() {
       testAdapter.close();
     });
 
+    test('testFetchForbiddenLogContainsCfRayId', () async {
+      const rayId = 'forbidden-ray-id';
+      final testLogger = EvaluationTestLogger();
+      final fetcher = _createFetcher(
+          logger:
+              ConfigCatLogger(internalLogger: testLogger, level: LogLevel.debug));
+      final testAdapter = HttpTestAdapter(fetcher.httpClient);
+
+      // Arrange
+      final path =
+          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
+      testAdapter.enqueueResponse(path, 403, null, headers: {'CF-RAY': rayId});
+
+      // Act
+      final fetchedResponse = await fetcher.fetchConfiguration('');
+
+      // Assert
+      expect(fetchedResponse.isFailed, isTrue);
+      expect(fetchedResponse.cfRayId, rayId);
+      expect(
+          testLogger
+              .getLogList()
+              .where((e) =>
+                  e.logLevel == LogLevel.error && e.message.contains(rayId))
+              .length,
+          1);
+
+      // Cleanup
+      fetcher.close();
+      testAdapter.close();
+    });
+
+    test('testFetchNotModifiedLogContainsCfRayId', () async {
+      const rayId = 'not-modified-ray-id';
+      final testLogger = EvaluationTestLogger();
+      final fetcher = _createFetcher(
+          logger:
+              ConfigCatLogger(internalLogger: testLogger, level: LogLevel.debug));
+      final testAdapter = HttpTestAdapter(fetcher.httpClient);
+
+      // Arrange
+      final path =
+          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
+      testAdapter.enqueueResponse(path, 304, null, headers: {'CF-RAY': rayId});
+
+      // Act
+      final fetchedResponse = await fetcher.fetchConfiguration(etag);
+
+      // Assert
+      expect(fetchedResponse.isNotModified, isTrue);
+      expect(fetchedResponse.cfRayId, rayId);
+
+      // Cleanup
+      fetcher.close();
+      testAdapter.close();
+    });
+
     test('exception on fetch', () async {
       final fetcher = _createFetcher();
       final testAdapter = HttpTestAdapter(fetcher.httpClient);
@@ -499,6 +558,39 @@ void main() {
       testAdapter.close();
     });
 
+    test('testFetchOkInvalidBodyLogContainsCfRayId', () async {
+      const rayId = 'invalid-body-ray-id';
+      final testLogger = EvaluationTestLogger();
+      final fetcher = _createFetcher(
+          logger:
+              ConfigCatLogger(internalLogger: testLogger, level: LogLevel.debug));
+      final testAdapter = HttpTestAdapter(fetcher.httpClient);
+
+      // Arrange
+      final path =
+          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
+      testAdapter.enqueueResponse(path, 200, 'invalid-json',
+          headers: {'CF-RAY': rayId});
+
+      // Act
+      final fetchedResponse = await fetcher.fetchConfiguration('');
+
+      // Assert
+      expect(fetchedResponse.isFailed, isTrue);
+      expect(fetchedResponse.cfRayId, rayId);
+      expect(
+          testLogger
+              .getLogList()
+              .where((e) =>
+                  e.logLevel == LogLevel.error && e.message.contains(rayId))
+              .length,
+          1);
+
+      // Cleanup
+      fetcher.close();
+      testAdapter.close();
+    });
+
     test('201 status code returns transient failure', () async {
       final fetcher = _createFetcher();
       final testAdapter = HttpTestAdapter(fetcher.httpClient);
@@ -553,13 +645,16 @@ void main() {
 
 ConfigFetcher _createFetcher(
     {ConfigCatOptions options = const ConfigCatOptions(),
-    String sdkKey = testSdkKey}) {
-  final logger = ConfigCatLogger();
+    String sdkKey = testSdkKey,
+    ConfigCatLogger? logger,
+    Hooks? hooks}) {
+  final resolvedLogger = logger ?? ConfigCatLogger();
+  final resolvedHooks = hooks ?? Hooks();
   return ConfigFetcher(
-      logger: logger,
+      logger: resolvedLogger,
       sdkKey: sdkKey,
       options: options,
-      errorReporter: ErrorReporter(logger, Hooks()));
+      errorReporter: ErrorReporter(resolvedLogger, resolvedHooks));
 }
 
 Config _createTestConfig(String url, int redirectMode) {

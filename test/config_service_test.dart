@@ -643,7 +643,7 @@ void main() {
       expect(
           result.error,
           equals(
-              "Your SDK Key seems to be wrong. You can find the valid SDK Key at https://app.configcat.com/sdkkey. Received unexpected response: 404 null"));
+              "Your SDK Key seems to be wrong. You can find the valid SDK Key at https://app.configcat.com/sdkkey"));
       expect(settings1.settings, isEmpty);
 
       verifyNever(cache.write(any, any));
