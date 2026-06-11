@@ -1,6 +1,5 @@
 /// ConfigCat Log Messages.
 class ConfigCatLogMessages {
-  // Constants for public log messages
   /// Log message for Config Service Cannot Initiate Http Calls warning. The log eventId 3200.
   static const String configServiceCannotInitiateHttpCallsWarn =
       "Client is in offline mode, it cannot initiate HTTP calls.";
@@ -36,7 +35,7 @@ class ConfigCatLogMessages {
   /// Log message for Config Json Is Not Presented errors when the method returns with default value.
   /// The log eventId is 1000.
   static String getConfigJsonIsNotPresentedWithDefaultValue(
-      String key, String defaultParamName, Object defaultParamValue) {
+      String key, String defaultParamName, Object? defaultParamValue) {
     return "Config JSON is not present when evaluating setting '$key'. Returning the `$defaultParamName` parameter that you specified in your application: '$defaultParamValue'.";
   }
 
@@ -50,7 +49,7 @@ class ConfigCatLogMessages {
   static String getSettingEvaluationFailedDueToMissingKey(
       String key,
       String defaultParamName,
-      Object defaultParamValue,
+      Object? defaultParamValue,
       Set<String> availableKeysSet) {
     final keysString = availableKeysSet.join(", ");
     return "Failed to evaluate setting '$key' (the key was not found in config JSON). Returning the `$defaultParamName` parameter that you specified in your application: '$defaultParamValue'. Available keys: [$keysString].";
@@ -59,7 +58,7 @@ class ConfigCatLogMessages {
   /// Log message for Setting Evaluation errors when the method returns with default value.
   /// The log eventId is 1002.
   static String getSettingEvaluationErrorWithDefaultValue(String methodName,
-      String key, String defaultParamName, Object defaultParamValue) {
+      String key, String defaultParamName, Object? defaultParamValue) {
     return "Error occurred in the `$methodName` method while evaluating setting '$key'. Returning the `$defaultParamName` parameter that you specified in your application: '$defaultParamValue'.";
   }
 
@@ -68,17 +67,6 @@ class ConfigCatLogMessages {
   static String getSettingEvaluationErrorWithEmptyValue(
       String methodName, String emptyResult) {
     return "Error occurred in the `$methodName` method. Returning $emptyResult.";
-  }
-
-  /// Log message for Force Refresh errors. The log eventId is 1003.
-  static String getForceRefreshError(String methodName) {
-    return "Error occurred in the `$methodName` method.";
-  }
-
-  /// Log message for Setting Evaluation Failed For Other Reason errors. The log eventId is 2001.
-  static String getSettingEvaluationFailedForOtherReason(
-      String key, String defaultParamName, Object defaultParamValue) {
-    return "Failed to evaluate setting '$key'. Returning the `$defaultParamName` parameter that you specified in your application: '$defaultParamValue'.";
   }
 
   /// Log message for Setting For Variation Id Is Not Present error. The log eventId is 2011.
@@ -136,16 +124,6 @@ class ConfigCatLogMessages {
     return _fetchReceived200WithInvalidBodyError;
   }
 
-  /// Log message for Local File Data Source Does Not Exist error. The log eventId is 1300.
-  static String getLocalFileDataSourceDoesNotExist(String filePath) {
-    return "Cannot find the local config file '$filePath'. This is a path that your application provided to the ConfigCat SDK by passing it to the `OverrideDataSourceBuilder.localFile()` method. Read more: https://configcat.com/docs/sdk-reference/dart/#json-file";
-  }
-
-  /// Log message for Local File Data Source Failed To Read File error. The log eventId is 1302.
-  static String getLocalFileDataSourceFailedToReadFile(String filePath) {
-    return "Failed to read the local config file '$filePath'.";
-  }
-
   /// Log message for Client Is Already Created warning. The log eventId 3000.
   static String getClientIsAlreadyCreated(String sdkKey) {
     return "There is an existing client instance for the specified SDK Key. No new client instance will be created and the specified options callback is ignored. Returning the existing client instance. SDK Key: '$sdkKey'.";
@@ -199,58 +177,5 @@ class ConfigCatLogMessages {
   /// Get CF-RAY ID header post fix log message.
   static String _getCFRayIdPostFix(String rayId) {
     return "(Ray ID: $rayId)";
-  }
-
-  /// Extra log message for Config Fetcher if LogLevel.Debug enabled. Preparing request.
-  static String getDebugEnabledPreparingRequest(String requestId) {
-    return "[$requestId] Preparing request...";
-  }
-
-  /// Extra log message for Config Fetcher if LogLevel.Debug enabled. Sending Request.
-  static String getDebugEnabledRequestWillBeSent(
-      String requestId, String requestUrl, String ifNoneMatch) {
-    return "[$requestId] Sending request... (Url: '$requestUrl', If-None-Match: '$ifNoneMatch')";
-  }
-
-  /// Extra log message for Config Fetcher if LogLevel.Debug enabled. Sending Request via proxy.
-  static String getDebugEnabledRequestWillBeSentViaProxy(String requestId,
-      String proxyAddress, String requestUrl, String ifNoneMatch) {
-    return "[$requestId] Sending request via proxy '$proxyAddress' ... (Url: '$requestUrl', If-None-Match: '$ifNoneMatch')";
-  }
-
-  /// Extra log message for Config Fetcher if LogLevel.Debug enabled. Received Headers.
-  static String getDebugEnabledReceivedHeaders(
-      String requestId, String statusCode, String message, String eTag) {
-    return "[$requestId] Received headers. (StatusCode: $statusCode, ReasonPhrase: '$message', ETag: '$eTag')";
-  }
-
-  /// Extra log message for Config Fetcher if LogLevel.Debug enabled. Received Body.
-  static String getDebugEnabledReceivedBody(String requestId, int bodyLength) {
-    return "[$requestId] Received body. (Length: $bodyLength)";
-  }
-
-  /// Extra log message for Config Fetcher if LogLevel.Debug enabled. Received unexpected status code.
-  static String getDebugEnabledReceivedUnexpectedStatusCode(String requestId) {
-    return "[$requestId] Received unexpected status code.";
-  }
-
-  /// Extra log message for Config Fetcher if LogLevel.Debug enabled. Request timed out.
-  static String getDebugEnabledRequestTimedOut(String requestId) {
-    return "[$requestId] Request timed out.";
-  }
-
-  /// Extra log message for Config Fetcher if LogLevel.Debug enabled. Request failed.
-  static String getDebugEnabledRequestFailed(String requestId) {
-    return "[$requestId] Request failed.";
-  }
-
-  /// Extra log message for Config Fetcher if LogLevel.Debug enabled. Reset connection pool.
-  static String getDebugEnabledResetConnectionPool(String requestId) {
-    return "[$requestId] Reset connection pool.";
-  }
-
-  /// Extra log message for Config Fetcher if LogLevel.Debug enabled. Trying request again.
-  static String getDebugEnabledReTryRequest(String requestId) {
-    return "[$requestId] Trying request again...";
   }
 }

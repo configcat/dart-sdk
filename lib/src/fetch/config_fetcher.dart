@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:configcat_client/src/platform_spec/request_builder.dart';
 import 'package:dio/dio.dart';
 
@@ -101,7 +102,7 @@ class ConfigFetcher implements Fetcher {
         connectTimeout: options.connectTimeout,
         receiveTimeout: options.receiveTimeout,
         sendTimeout: options.sendTimeout,
-        responseType: ResponseType.plain,
+        responseType: ResponseType.stream,
         validateStatus: (status) =>
             status != null && (status >= 200 && status < 600)));
 
@@ -180,7 +181,11 @@ class ConfigFetcher implements Fetcher {
       if (response.statusCode == 200) {
         final eTag = response.headers.value(_eTagHeaderName) ?? '';
         _logger.debug('Fetch was successful: new config fetched.');
-        var configJson = response.data != null ? response.data.toString() : '';
+        final responseData = response.data;
+        var configJson = '';
+        if (responseData is ResponseBody) {
+          configJson = await utf8.decoder.bind(responseData.stream).join();
+        }
         Config config;
         try {
           config = Utils.deserializeConfig(configJson);

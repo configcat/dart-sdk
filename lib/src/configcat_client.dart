@@ -32,6 +32,7 @@ class ConfigCatClient {
   late final Hooks _hooks;
   late ConfigCatUser? _defaultUser;
   static final Map<String, ConfigCatClient> _instanceRepository = {};
+  bool _isClosed = false;
 
   /// Creates a new or gets an already existing [ConfigCatClient] for the given [sdkKey].
   factory ConfigCatClient.get(
@@ -114,7 +115,8 @@ class ConfigCatClient {
       final result = await _getSettings();
       if (result.isEmpty) {
         final err =
-            'Config JSON is not present when evaluating setting \'$key\'. Returning the `defaultValue` parameter that you specified in your application: \'$defaultValue\'.';
+            ConfigCatLogMessages.getConfigJsonIsNotPresentedWithDefaultValue(
+                key, "defaultValue", defaultValue);
         _errorReporter.error(1000, err);
         hooks.invokeFlagEvaluated(
             EvaluationDetails.makeError(key, defaultValue, err, evalUser));
@@ -123,7 +125,8 @@ class ConfigCatClient {
       final setting = result.settings[key];
       if (setting == null) {
         final err =
-            'Failed to evaluate setting \'$key\' (the key was not found in config JSON). Returning the `defaultValue` parameter that you specified in your application: \'$defaultValue\'. Available keys: [${result.settings.keys.map((e) => '\'$e\'').join(', ')}].';
+            ConfigCatLogMessages.getSettingEvaluationFailedDueToMissingKey(key,
+                "defaultValue", defaultValue, result.settings.keys.toSet());
         _errorReporter.error(1001, err);
         hooks.invokeFlagEvaluated(
             EvaluationDetails.makeError(key, defaultValue, err, evalUser));
@@ -135,7 +138,8 @@ class ConfigCatClient {
           .value;
     } catch (e, s) {
       final err =
-          'Error occurred in the `getValue` method while evaluating setting \'$key\'. Returning the `defaultValue` parameter that you specified in your application: \'$defaultValue\'.';
+          ConfigCatLogMessages.getSettingEvaluationErrorWithDefaultValue(
+              "getValue", key, "defaultValue", defaultValue);
       _errorReporter.error(1002, err, e, s);
       hooks.invokeFlagEvaluated(
           EvaluationDetails.makeError(key, defaultValue, err, evalUser));
@@ -164,7 +168,8 @@ class ConfigCatClient {
       final result = await _getSettings();
       if (result.isEmpty) {
         final err =
-            'Config JSON is not present when evaluating setting \'$key\'. Returning the `defaultValue` parameter that you specified in your application: \'$defaultValue\'.';
+            ConfigCatLogMessages.getConfigJsonIsNotPresentedWithDefaultValue(
+                key, "defaultValue", defaultValue);
         _errorReporter.error(1000, err);
         final details =
             EvaluationDetails.makeError(key, defaultValue, err, evalUser);
@@ -174,7 +179,8 @@ class ConfigCatClient {
       final setting = result.settings[key];
       if (setting == null) {
         final err =
-            'Failed to evaluate setting \'$key\' (the key was not found in config JSON). Returning the `defaultValue` parameter that you specified in your application: \'$defaultValue\'. Available keys: [${result.settings.keys.map((e) => '\'$e\'').join(', ')}].';
+            ConfigCatLogMessages.getSettingEvaluationFailedDueToMissingKey(key,
+                "defaultValue", defaultValue, result.settings.keys.toSet());
         _errorReporter.error(1001, err);
         final details =
             EvaluationDetails.makeError(key, defaultValue, err, evalUser);
@@ -186,7 +192,8 @@ class ConfigCatClient {
           key, setting, evalUser, result.fetchTime, result.settings);
     } catch (e, s) {
       final err =
-          'Error occurred in the `getValueDetails` method while evaluating setting \'$key\'. Returning the `defaultValue` parameter that you specified in your application: \'$defaultValue\'.';
+          ConfigCatLogMessages.getSettingEvaluationErrorWithDefaultValue(
+              "getValueDetails", key, "defaultValue", defaultValue);
       _errorReporter.error(1002, err, e, s);
       final details = EvaluationDetails.makeError(
           key, defaultValue, e.toString(), evalUser);
@@ -207,7 +214,9 @@ class ConfigCatClient {
       final result = await _getSettings();
       if (result.isEmpty) {
         _errorReporter.error(
-            1000, 'Config JSON is not present. Returning empty list.');
+            1000,
+            ConfigCatLogMessages.getConfigJsonIsNotPresentedWithEmptyResult(
+                "empty list"));
         return [];
       }
       final detailsResult = List<EvaluationDetails>.empty(growable: true);
@@ -220,7 +229,8 @@ class ConfigCatClient {
     } catch (e, s) {
       _errorReporter.error(
           1002,
-          'Error occurred in the `getAllValueDetails` method. Returning empty list.',
+          ConfigCatLogMessages.getSettingEvaluationErrorWithEmptyValue(
+              "getAllValueDetails", "empty list"),
           e,
           s);
       return [];
@@ -233,7 +243,9 @@ class ConfigCatClient {
       final result = await _getSettings();
       if (result.isEmpty) {
         _errorReporter.error(
-            1000, 'Config JSON is not present. Returning empty list.');
+            1000,
+            ConfigCatLogMessages.getConfigJsonIsNotPresentedWithEmptyResult(
+                "empty list"));
         return [];
       }
 
@@ -241,7 +253,8 @@ class ConfigCatClient {
     } catch (e, s) {
       _errorReporter.error(
           1002,
-          'Error occurred in the `getAllKeys` method. Returning empty list.',
+          ConfigCatLogMessages.getSettingEvaluationErrorWithEmptyValue(
+              "getAllKeys", "empty list"),
           e,
           s);
       return [];
@@ -256,7 +269,9 @@ class ConfigCatClient {
       final settingsResult = await _getSettings();
       if (settingsResult.isEmpty) {
         _errorReporter.error(
-            1000, 'Config JSON is not present. Returning empty map.');
+            1000,
+            ConfigCatLogMessages.getConfigJsonIsNotPresentedWithEmptyResult(
+                "empty map"));
         return {};
       }
 
@@ -271,7 +286,8 @@ class ConfigCatClient {
     } catch (e, s) {
       _errorReporter.error(
           1002,
-          'Error occurred in the `getAllValues` method. Returning empty map.',
+          ConfigCatLogMessages.getSettingEvaluationErrorWithEmptyValue(
+              "getAllValues", "empty map"),
           e,
           s);
       return {};
@@ -289,7 +305,9 @@ class ConfigCatClient {
       final result = await _getSettings();
       if (result.isEmpty) {
         _errorReporter.error(
-            1000, 'Config JSON is not present. Returning null.');
+            1000,
+            ConfigCatLogMessages.getConfigJsonIsNotPresentedWithEmptyResult(
+                "null"));
         return null;
       }
 
@@ -337,13 +355,16 @@ class ConfigCatClient {
         }
       }
 
-      _errorReporter.error(2011,
-          'Could not find the setting for the specified variation ID: \'$variationId\'.');
+      _errorReporter.error(
+          2011,
+          ConfigCatLogMessages.getSettingForVariationIdIsNotPresent(
+              variationId));
       return null;
     } catch (e, s) {
       _errorReporter.error(
           1002,
-          'Error occurred in the `getKeyAndValue` method. Returning null.',
+          ConfigCatLogMessages.getSettingEvaluationErrorWithEmptyValue(
+              "getKeyAndValue", "empty list"),
           e,
           s);
       return null;
@@ -372,24 +393,69 @@ class ConfigCatClient {
   /// the default user value will be used.
   ///
   /// [user] The new default user.
-  void setDefaultUser(ConfigCatUser? user) => _defaultUser = user;
+  void setDefaultUser(ConfigCatUser? user) {
+    if (_isClosed) {
+      _logger.warning(
+          3201,
+          ConfigCatLogMessages
+              .getConfigServiceMethodHasNoEffectDueToClosedClient(
+                  "setDefaultUser"));
+      return;
+    }
+    _defaultUser = user;
+  }
 
   /// Sets the default user to null.
-  void clearDefaultUser() => _defaultUser = null;
+  void clearDefaultUser() {
+    if (_isClosed) {
+      _logger.warning(
+          3201,
+          ConfigCatLogMessages
+              .getConfigServiceMethodHasNoEffectDueToClosedClient(
+                  "clearDefaultUser"));
+      return;
+    }
+    _defaultUser = null;
+  }
 
   /// Set the client to offline mode. HTTP calls are not allowed.
-  void setOffline() => _configService?.offline();
+  void setOffline() {
+    if (_configService != null && !_isClosed) {
+      _configService!.offline();
+    } else {
+      _logger.warning(
+          3201,
+          ConfigCatLogMessages
+              .getConfigServiceMethodHasNoEffectDueToClosedClient(
+                  "setOffline"));
+    }
+  }
 
   /// Set the client to online mode. HTTP calls are allowed.
-  void setOnline() => _configService?.online();
+  void setOnline() {
+    if (_configService != null && !_isClosed) {
+      _configService?.online();
+    } else {
+      _logger.warning(
+          3201,
+          ConfigCatLogMessages
+              .getConfigServiceMethodHasNoEffectDueToClosedClient("setOnline"));
+    }
+  }
 
   /// Get the client offline mode status.
   ///
   /// Return true if the client is in offline mode, otherwise false.
   bool isOffline() => _configService?.isOffline() ?? true;
 
+  /// Get the client closed status.
+  ///
+  /// Return true if the client is closed, otherwise false.
+  bool isClosed() => _isClosed;
+
   /// Closes the underlying resources.
   void close() {
+    _isClosed = true;
     _closeResources();
     _instanceRepository.removeWhere((key, value) => value == this);
   }

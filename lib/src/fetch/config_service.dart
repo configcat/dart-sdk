@@ -91,6 +91,12 @@ class ConfigService with ContinuousFutureSynchronizer {
   }
 
   Future<RefreshResult> refresh() async {
+    if (_offline) {
+      String offlineWarning =
+          ConfigCatLogMessages.configServiceCannotInitiateHttpCallsWarn;
+      _logger.warning(3200, offlineWarning);
+      return RefreshResult(false, offlineWarning);
+    }
     final fetch = await _fetchIfOlder(distantFuture);
     return RefreshResult(fetch.second == null, fetch.second);
   }
