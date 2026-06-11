@@ -378,10 +378,11 @@ void main() {
     final logger = _KeepAliveConfigCatLogger(
         internalLogger: internalLogger, level: LogLevel.warning);
     final localClient = ConfigCatClient.get(
-        sdkKey:
-            'configcat-sdk-1/TEST_KEY-04-0123456789/1234567890123456789012',
+        sdkKey: 'configcat-sdk-1/TEST_KEY-04-0123456789/1234567890123456789012',
         options: ConfigCatOptions(
-            pollingMode: PollingMode.manualPoll(), cache: cache, logger: logger));
+            pollingMode: PollingMode.manualPoll(),
+            cache: cache,
+            logger: logger));
 
     // Act
     localClient.close();
@@ -628,12 +629,11 @@ Config createTestConfigWithVariationId(Map<String, Pair<int, String>> map) {
 }
 
 class _KeepAliveConfigCatLogger extends ConfigCatLogger {
-  _KeepAliveConfigCatLogger({required Logger internalLogger, LogLevel? level})
-      : super(internalLogger: internalLogger, level: level);
+  _KeepAliveConfigCatLogger(
+      {required Logger super.internalLogger, super.level});
 
   @override
   void close() {
     // Keep the logger active so closed-client warning paths remain observable.
   }
 }
-
