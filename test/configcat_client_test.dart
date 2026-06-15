@@ -370,9 +370,7 @@ void main() {
     expect(client.isClosed(), isTrue);
   });
 
-  test(
-      'closed client setDefaultUser clearDefaultUser setOnline setOffline have no effect',
-      () async {
+  test('closed client setOnline setOffline have no effect', () async {
     // Arrange
     final internalLogger = MockLogger();
     final logger = _KeepAliveConfigCatLogger(
@@ -386,8 +384,6 @@ void main() {
 
     // Act
     localClient.close();
-    localClient.setDefaultUser(ConfigCatUser(identifier: 'test@test2.com'));
-    localClient.clearDefaultUser();
     localClient.setOnline();
     localClient.setOffline();
 

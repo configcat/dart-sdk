@@ -394,27 +394,11 @@ class ConfigCatClient {
   ///
   /// [user] The new default user.
   void setDefaultUser(ConfigCatUser? user) {
-    if (_isClosed) {
-      _logger.warning(
-          3201,
-          ConfigCatLogMessages
-              .getConfigServiceMethodHasNoEffectDueToClosedClient(
-                  "setDefaultUser"));
-      return;
-    }
     _defaultUser = user;
   }
 
   /// Sets the default user to null.
   void clearDefaultUser() {
-    if (_isClosed) {
-      _logger.warning(
-          3201,
-          ConfigCatLogMessages
-              .getConfigServiceMethodHasNoEffectDueToClosedClient(
-                  "clearDefaultUser"));
-      return;
-    }
     _defaultUser = null;
   }
 
