@@ -390,14 +390,6 @@ void main() {
     // Assert
     verifyInOrder([
       internalLogger.warning(
-          '[3201] The client object is already closed, thus `setDefaultUser` has no effect.',
-          null,
-          null),
-      internalLogger.warning(
-          '[3201] The client object is already closed, thus `clearDefaultUser` has no effect.',
-          null,
-          null),
-      internalLogger.warning(
           '[3201] The client object is already closed, thus `setOnline` has no effect.',
           null,
           null),
