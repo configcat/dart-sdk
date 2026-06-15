@@ -6,7 +6,7 @@ class ConfigCatLogMessages {
 
   /// Log message for Data Governance Is Out Of Sync warning. The log eventId 3002.
   static const String dataGovernanceIsOutOfSyncWarn =
-      "The `builder.dataGovernance()` parameter specified at the client initialization is not in sync with the preferences on the ConfigCat Dashboard. Read more: https://configcat.com/docs/advanced/data-governance/";
+      "The `dataGovernance` parameter specified at the client initialization is not in sync with the preferences on the ConfigCat Dashboard. Read more: https://configcat.com/docs/advanced/data-governance/";
 
   /// Log message for Config Service Cache Write error. The log eventId is 2201.
   static const String configServiceCacheWriteError =

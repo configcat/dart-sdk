@@ -180,7 +180,6 @@ class ConfigFetcher implements Fetcher {
 
       if (response.statusCode == 200) {
         final eTag = response.headers.value(_eTagHeaderName) ?? '';
-        _logger.debug('Fetch was successful: new config fetched.');
         final responseData = response.data;
         var configJson = '';
         if (responseData is ResponseBody) {
@@ -196,6 +195,7 @@ class ConfigFetcher implements Fetcher {
           _errorReporter.error(1105, error);
           return FetchResponse.failure(error, false, cfRayId);
         }
+        _logger.debug('Fetch was successful: new config fetched.');
         return FetchResponse.success(
             Entry(configJson, config, eTag, DateTime.now().toUtc()), cfRayId);
       } else if (response.statusCode == 304) {

@@ -364,7 +364,7 @@ class ConfigCatClient {
       _errorReporter.error(
           1002,
           ConfigCatLogMessages.getSettingEvaluationErrorWithEmptyValue(
-              "getKeyAndValue", "empty list"),
+              "getKeyAndValue", "null"),
           e,
           s);
       return null;
