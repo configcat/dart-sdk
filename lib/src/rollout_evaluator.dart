@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:configcat_client/src/configcat_log_messages.dart';
 import 'package:crypto/crypto.dart';
 import 'package:pub_semver/pub_semver.dart';
 
@@ -258,7 +259,7 @@ class RolloutEvaluator {
       if (!evaluationContext.isUserMissing) {
         evaluationContext.isUserMissing = true;
         _logger.warning(3001,
-            "Cannot evaluate targeting rules and % options for setting '${evaluationContext.key}' (User Object is missing). You should pass a User Object to the evaluation methods like `getValue()` in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/");
+            ConfigCatLogMessages.getUserObjectMissing(evaluationContext.key));
       }
       throw RolloutEvaluatorException(userObjectIsMissing);
     }
@@ -273,8 +274,12 @@ class RolloutEvaluator {
 
     if (userAttributeValue == null ||
         (userAttributeValue is String && userAttributeValue.isEmpty)) {
-      _logger.warning(3003,
-          "Cannot evaluate condition (${EvaluateLogger.formatUserCondition(userCondition)}) for setting '${evaluationContext.key}' (the User.$comparisonAttribute attribute is missing). You should set the User.$comparisonAttribute attribute in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/");
+      _logger.warning(
+          3003,
+          ConfigCatLogMessages.getUserAttributeMissingWithCondition(
+              evaluationContext.key,
+              EvaluateLogger.formatUserCondition(userCondition),
+              comparisonAttribute));
       throw RolloutEvaluatorException(cannotEvaluateTheUserPrefix +
           comparisonAttribute +
           cannotEvaluateTheUserAttributeMissing);
@@ -430,8 +435,13 @@ class RolloutEvaluator {
       return userAttributeValue;
     }
     String? convertedUserAttribute = _userAttributeToString(userAttributeValue);
-    _logger.warning(3005,
-        "Evaluation of condition (${EvaluateLogger.formatUserCondition(userCondition)}) for setting '$key' may not produce the expected result (the User.$userAttributeName attribute is not a string value, thus it was automatically converted to the string value '$convertedUserAttribute'). Please make sure that using a non-string value was intended.");
+    _logger.warning(
+        3005,
+        ConfigCatLogMessages.getUserObjectAttributeIsAutoConverted(
+            key,
+            EvaluateLogger.formatUserCondition(userCondition),
+            userAttributeName,
+            convertedUserAttribute));
     return convertedUserAttribute;
   }
 
@@ -445,8 +455,13 @@ class RolloutEvaluator {
       }
     }
     String reason = "'$userValue' is not a valid semantic version";
-    _logger.warning(3004,
-        "Cannot evaluate condition (${EvaluateLogger.formatUserCondition(userCondition)}) for setting '$key' ($reason). Please check the User.$comparisonAttribute attribute and make sure that its value corresponds to the comparison operator.");
+    _logger.warning(
+        3004,
+        ConfigCatLogMessages.getUserAttributeInvalid(
+            key,
+            EvaluateLogger.formatUserCondition(userCondition),
+            reason,
+            comparisonAttribute));
     throw RolloutEvaluatorException(
         "$cannotEvaluateTheUserPrefix$comparisonAttribute$cannotEvaluateTheUserAttributeInvalid$reason)");
   }
@@ -462,8 +477,13 @@ class RolloutEvaluator {
     } catch (e) {
       //If cannot convert to double, continue with the error
       String reason = "'$userAttributeValue' is not a valid decimal number";
-      _logger.warning(3004,
-          "Cannot evaluate condition (${EvaluateLogger.formatUserCondition(userCondition)}) for setting '$key' ($reason). Please check the User.$comparisonAttribute attribute and make sure that its value corresponds to the comparison operator.");
+      _logger.warning(
+          3004,
+          ConfigCatLogMessages.getUserAttributeInvalid(
+              key,
+              EvaluateLogger.formatUserCondition(userCondition),
+              reason,
+              comparisonAttribute));
       throw RolloutEvaluatorException(
           "$cannotEvaluateTheUserPrefix$comparisonAttribute$cannotEvaluateTheUserAttributeInvalid$reason)");
     }
@@ -482,8 +502,13 @@ class RolloutEvaluator {
     } catch (e) {
       String reason =
           "'$userAttributeValue' is not a valid Unix timestamp (number of seconds elapsed since Unix epoch)";
-      _logger.warning(3004,
-          "Cannot evaluate condition (${EvaluateLogger.formatUserCondition(userCondition)}) for setting '${context.key}' ($reason). Please check the User.$comparisonAttribute attribute and make sure that its value corresponds to the comparison operator.");
+      _logger.warning(
+          3004,
+          ConfigCatLogMessages.getUserAttributeInvalid(
+              context.key,
+              EvaluateLogger.formatUserCondition(userCondition),
+              reason,
+              comparisonAttribute));
       throw RolloutEvaluatorException(
           "$cannotEvaluateTheUserPrefix$comparisonAttribute$cannotEvaluateTheUserAttributeInvalid$reason)");
     }
@@ -513,8 +538,13 @@ class RolloutEvaluator {
       // String array parse failed continue with the RolloutEvaluatorException
     }
     String reason = "'$userAttributeValue' is not a valid JSON string array";
-    _logger.warning(3004,
-        "Cannot evaluate condition (${EvaluateLogger.formatUserCondition(userCondition)}) for setting '${context.key}' ($reason). Please check the User.$comparisonAttribute attribute and make sure that its value corresponds to the comparison operator.");
+    _logger.warning(
+        3004,
+        ConfigCatLogMessages.getUserAttributeInvalid(
+            context.key,
+            EvaluateLogger.formatUserCondition(userCondition),
+            reason,
+            comparisonAttribute));
     throw RolloutEvaluatorException(
         "$cannotEvaluateTheUserPrefix$comparisonAttribute$cannotEvaluateTheUserAttributeInvalid$reason)");
   }
@@ -810,7 +840,7 @@ class RolloutEvaluator {
       if (!evaluationContext.isUserMissing) {
         evaluationContext.isUserMissing = true;
         _logger.warning(3001,
-            "Cannot evaluate targeting rules and % options for setting '${evaluationContext.key}' (User Object is missing). You should pass a User Object to the evaluation methods like `getValue()` in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/");
+            ConfigCatLogMessages.getUserObjectMissing(evaluationContext.key));
       }
       throw RolloutEvaluatorException(userObjectIsMissing);
     }
@@ -946,7 +976,7 @@ class RolloutEvaluator {
       if (!evaluationContext.isUserMissing) {
         evaluationContext.isUserMissing = true;
         _logger.warning(3001,
-            "Cannot evaluate targeting rules and % options for setting '${evaluationContext.key}' (User Object is missing). You should pass a User Object to the evaluation methods like `getValue()` in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/");
+            ConfigCatLogMessages.getUserObjectMissing(evaluationContext.key));
       }
       return null;
     }
@@ -963,8 +993,10 @@ class RolloutEvaluator {
             percentageOptionAttributeName);
         if (!evaluationContext.isUserAttributeMissing) {
           evaluationContext.isUserAttributeMissing = true;
-          _logger.warning(3003,
-              "Cannot evaluate % options for setting '${evaluationContext.key}' (the User.$percentageOptionAttributeName attribute is missing). You should set the User.$percentageOptionAttributeName attribute in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/");
+          _logger.warning(
+              3003,
+              ConfigCatLogMessages.getUserAttributeMissing(
+                  evaluationContext.key, percentageOptionAttributeName));
         }
         return null;
       }

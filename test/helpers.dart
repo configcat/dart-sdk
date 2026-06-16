@@ -56,13 +56,14 @@ Config createTestConfigWithRules() {
 
 Entry createTestEntry(Map<String, Object> map) {
   Config config = createTestConfig(map);
-  return Entry(jsonEncode(config.toJson()), config, map[0].toString(),
+  return Entry(jsonEncode(config.toJson()), config, map.values.first.toString(),
       DateTime.now().toUtc());
 }
 
 Entry createTestEntryWithTime(Map<String, Object> map, DateTime time) {
   Config config = createTestConfig(map);
-  return Entry(jsonEncode(config.toJson()), config, map[0].toString(), time);
+  return Entry(
+      jsonEncode(config.toJson()), config, map.values.first.toString(), time);
 }
 
 Entry createTestEntryWithETag(Map<String, Object> map, String etag) {

@@ -7,6 +7,7 @@ import 'package:test/test.dart';
 import 'cache_test.mocks.dart';
 import 'helpers.dart';
 import 'http_adapter.dart';
+import 'logger_test.mocks.dart';
 
 void main() {
   late ConfigCatClient client;
@@ -361,6 +362,45 @@ void main() {
     expect(client2, same(client3));
   });
 
+  test('isClosed reflects close state', () async {
+    expect(client.isClosed(), isFalse);
+
+    client.close();
+
+    expect(client.isClosed(), isTrue);
+  });
+
+  test('closed client setOnline setOffline have no effect', () async {
+    // Arrange
+    final internalLogger = MockLogger();
+    final logger = _KeepAliveConfigCatLogger(
+        internalLogger: internalLogger, level: LogLevel.warning);
+    final localClient = ConfigCatClient.get(
+        sdkKey: 'configcat-sdk-1/TEST_KEY-04-0123456789/1234567890123456789012',
+        options: ConfigCatOptions(
+            pollingMode: PollingMode.manualPoll(),
+            cache: cache,
+            logger: logger));
+
+    // Act
+    localClient.close();
+    localClient.setOnline();
+    localClient.setOffline();
+
+    // Assert
+    verifyInOrder([
+      internalLogger.warning(
+          '[3201] The client object is already closed, thus `setOnline` has no effect.',
+          null,
+          null),
+      internalLogger.warning(
+          '[3201] The client object is already closed, thus `setOffline` has no effect.',
+          null,
+          null),
+    ]);
+    verifyNoMoreInteractions(internalLogger);
+  });
+
   test('online/offline', () async {
     // Arrange
     final body = createTestConfig({'stringValue': 'testValue'}).toJson();
@@ -574,4 +614,14 @@ Config createTestConfigWithVariationId(Map<String, Pair<int, String>> map) {
           Setting(SettingValue(null, null, value.first, null), 2, [], [],
               value.second, ""))),
       List.empty());
+}
+
+class _KeepAliveConfigCatLogger extends ConfigCatLogger {
+  _KeepAliveConfigCatLogger(
+      {required Logger super.internalLogger, super.level});
+
+  @override
+  void close() {
+    // Keep the logger active so closed-client warning paths remain observable.
+  }
 }

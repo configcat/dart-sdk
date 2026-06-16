@@ -17,7 +17,7 @@ class ConfigCatLogger {
     _internal = internalLogger ?? DefaultLogger();
   }
 
-  void debug(message, [dynamic error, StackTrace? stackTrace]) {
+  void debug(dynamic message, [dynamic error, StackTrace? stackTrace]) {
     if (LogLevel.debug.index >= _globalLevel.index && !_isClosed) {
       _internal.debug("[0] $message", error, stackTrace);
     }

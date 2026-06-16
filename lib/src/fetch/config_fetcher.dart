@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:configcat_client/src/platform_spec/request_builder.dart';
 import 'package:dio/dio.dart';
 
@@ -10,6 +11,7 @@ import '../configcat_options.dart';
 import '../constants.dart';
 import '../json/config.dart';
 import '../log/configcat_logger.dart';
+import '../configcat_log_messages.dart';
 
 enum _Status { fetched, notModified, failure }
 
@@ -24,8 +26,10 @@ class FetchResponse {
   final Entry entry;
   final String? error;
   final bool isTransientError;
+  final String? cfRayId;
 
-  FetchResponse._(this._status, this.entry, this.error, this.isTransientError);
+  FetchResponse._(this._status, this.entry, this.error, this.isTransientError,
+      this.cfRayId);
 
   bool get isFetched {
     return _status == _Status.fetched;
@@ -39,17 +43,19 @@ class FetchResponse {
     return _status == _Status.failure;
   }
 
-  factory FetchResponse.success(Entry entry) {
-    return FetchResponse._(_Status.fetched, entry, null, false);
+  factory FetchResponse.success(Entry entry, String? cfRayId) {
+    return FetchResponse._(_Status.fetched, entry, null, false, cfRayId);
   }
 
-  factory FetchResponse.failure(String error, bool isTransientError) {
+  factory FetchResponse.failure(
+      String error, bool isTransientError, String? cfRayId) {
     return FetchResponse._(
-        _Status.failure, Entry.empty, error, isTransientError);
+        _Status.failure, Entry.empty, error, isTransientError, cfRayId);
   }
 
-  factory FetchResponse.notModified() {
-    return FetchResponse._(_Status.notModified, Entry.empty, null, false);
+  factory FetchResponse.notModified(String? cfRayId) {
+    return FetchResponse._(
+        _Status.notModified, Entry.empty, null, false, cfRayId);
   }
 }
 
@@ -96,7 +102,7 @@ class ConfigFetcher implements Fetcher {
         connectTimeout: options.connectTimeout,
         receiveTimeout: options.receiveTimeout,
         sendTimeout: options.sendTimeout,
-        responseType: ResponseType.plain,
+        responseType: ResponseType.stream,
         validateStatus: (status) =>
             status != null && (status >= 200 && status < 600)));
 
@@ -146,8 +152,8 @@ class ConfigFetcher implements Fetcher {
       return response;
     } else {
       if (preferences.redirect == _RedirectMode.shouldRedirect) {
-        _logger.warning(3002,
-            'The `dataGovernance` parameter specified at the client initialization is not in sync with the preferences on the ConfigCat Dashboard. Read more: https://configcat.com/docs/advanced/data-governance/');
+        _logger.warning(
+            3002, ConfigCatLogMessages.dataGovernanceIsOutOfSyncWarn);
       }
 
       if (executionCount > 0) {
@@ -156,11 +162,12 @@ class ConfigFetcher implements Fetcher {
     }
 
     _logger.error(1104,
-        'Redirection loop encountered while trying to fetch config JSON. Please contact us at https://configcat.com/support/');
+        ConfigCatLogMessages.getFetchFailedDueToRedirectLoop(response.cfRayId));
     return response;
   }
 
   Future<FetchResponse> _doFetch(String eTag) async {
+    String? cfRayId;
     try {
       final request = RequestBuilder.build(
           'ConfigCat-Dart/${_options.pollingMode.getPollingIdentifier()}-$version',
@@ -169,57 +176,70 @@ class ConfigFetcher implements Fetcher {
           '$_url/configuration-files/$_sdkKey/$configJsonName',
           queryParameters: request.queryParameters,
           options: Options(headers: request.headers));
+      cfRayId = response.headers.value("CF-RAY");
+
       if (response.statusCode == 200) {
         final eTag = response.headers.value(_eTagHeaderName) ?? '';
-        _logger.debug('Fetch was successful: new config fetched.');
-        var configJson = response.data != null ? response.data.toString() : '';
+        final responseData = response.data;
+        var configJson = '';
+        if (responseData is ResponseBody) {
+          configJson = await utf8.decoder.bind(responseData.stream).join();
+        }
         Config config;
         try {
           config = Utils.deserializeConfig(configJson);
         } catch (e) {
           String error =
-              "Fetching config JSON was successful but the HTTP response content was invalid.";
+              ConfigCatLogMessages.getFetchReceived200WithInvalidBodyError(
+                  cfRayId);
           _errorReporter.error(1105, error);
-          return FetchResponse.failure(error, false);
+          return FetchResponse.failure(error, false, cfRayId);
         }
+        _logger.debug('Fetch was successful: new config fetched.');
         return FetchResponse.success(
-            Entry(configJson, config, eTag, DateTime.now().toUtc()));
+            Entry(configJson, config, eTag, DateTime.now().toUtc()), cfRayId);
       } else if (response.statusCode == 304) {
         _logger.debug('Fetch was successful: config not modified.');
-        return FetchResponse.notModified();
+        return FetchResponse.notModified(cfRayId);
       } else if (response.statusCode == 404 || response.statusCode == 403) {
         final error =
-            'Your SDK Key seems to be wrong. You can find the valid SDK Key at https://app.configcat.com/sdkkey. Received unexpected response: ${response.statusCode} ${response.statusMessage}';
+            ConfigCatLogMessages.getFetchFailedDueToInvalidSDKKey(cfRayId);
         _errorReporter.error(1100, error);
-        return FetchResponse.failure(error, false);
+        return FetchResponse.failure(error, false, cfRayId);
       } else {
         final error =
-            'Unexpected HTTP response was received while trying to fetch config JSON: ${response.statusCode} ${response.statusMessage}';
+            ConfigCatLogMessages.getFetchFailedDueToUnexpectedHttpResponse(
+                response.statusCode ?? 0,
+                response.statusMessage.toString(),
+                cfRayId);
         _errorReporter.error(1101, error);
-        return FetchResponse.failure(error, true);
+        return FetchResponse.failure(error, true, cfRayId);
       }
     } on DioException catch (e, s) {
       if (e.type == DioExceptionType.connectionTimeout ||
           e.type == DioExceptionType.receiveTimeout ||
           e.type == DioExceptionType.sendTimeout) {
-        final error =
-            'Request timed out while trying to fetch config JSON. Timeout values: [connect: ${_options.connectTimeout.inSeconds}s, receive: ${_options.receiveTimeout.inSeconds}s, send: ${_options.sendTimeout.inSeconds}s]';
+        final error = ConfigCatLogMessages.getFetchFailedDueToRequestTimeout(
+            _options.connectTimeout.inMilliseconds,
+            _options.receiveTimeout.inMilliseconds,
+            _options.sendTimeout.inMilliseconds,
+            cfRayId);
         _errorReporter.error(1102, error, e, s);
-        return FetchResponse.failure(error, true);
+        return FetchResponse.failure(error, true, cfRayId);
       }
       _errorReporter.error(
           1103,
-          'Unexpected error occurred while trying to fetch config JSON. It is most likely due to a local network issue. Please make sure your application can reach the ConfigCat CDN servers (or your proxy server) over HTTP.',
+          ConfigCatLogMessages.getFetchFailedDueToUnexpectedError(cfRayId),
           e,
           s);
-      return FetchResponse.failure(e.toString(), true);
+      return FetchResponse.failure(e.toString(), true, cfRayId);
     } catch (e, s) {
       _errorReporter.error(
           1103,
-          'Unexpected error occurred while trying to fetch config JSON. It is most likely due to a local network issue. Please make sure your application can reach the ConfigCat CDN servers (or your proxy server) over HTTP.',
+          ConfigCatLogMessages.getFetchFailedDueToUnexpectedError(cfRayId),
           e,
           s);
-      return FetchResponse.failure(e.toString(), true);
+      return FetchResponse.failure(e.toString(), true, cfRayId);
     }
   }
 }

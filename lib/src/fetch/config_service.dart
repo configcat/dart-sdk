@@ -5,6 +5,7 @@ import 'package:crypto/crypto.dart';
 
 import '../configcat_cache.dart';
 import '../configcat_options.dart';
+import '../configcat_log_messages.dart';
 import '../pair.dart';
 import '../polling_mode.dart';
 import '../mixins.dart';
@@ -90,6 +91,12 @@ class ConfigService with ContinuousFutureSynchronizer {
   }
 
   Future<RefreshResult> refresh() async {
+    if (_offline) {
+      String offlineWarning =
+          ConfigCatLogMessages.configServiceCannotInitiateHttpCallsWarn;
+      _logger.warning(3200, offlineWarning);
+      return RefreshResult(false, offlineWarning);
+    }
     final fetch = await _fetchIfOlder(distantFuture);
     return RefreshResult(fetch.second == null, fetch.second);
   }
@@ -101,14 +108,16 @@ class ConfigService with ContinuousFutureSynchronizer {
     if (mode is AutoPollingMode) {
       _startPoll(mode);
     }
-    _logger.info(5200, 'Switched to ONLINE mode.');
+    _logger.info(
+        5200, ConfigCatLogMessages.getConfigServiceStatusChanged('ONLINE'));
   }
 
   void offline() {
     if (_offline) return;
     _offline = true;
     _periodicExecutor?.cancel();
-    _logger.info(5200, 'Switched to OFFLINE mode.');
+    _logger.info(
+        5200, ConfigCatLogMessages.getConfigServiceStatusChanged('OFFLINE'));
   }
 
   bool isOffline() => _offline;
@@ -148,8 +157,10 @@ class ConfigService with ContinuousFutureSynchronizer {
       // After the maxInitWaitTime timeout the client will be initialized and while
       // the config is not ready the default value will be returned.
       return await _fetchConfig().timeout(mode.maxInitWaitTime, onTimeout: () {
-        _logger.warning(4200,
-            '`maxInitWaitTime` for the very first fetch reached (${mode.maxInitWaitTime.inMilliseconds}ms). Returning cached config.');
+        _logger.warning(
+            4200,
+            ConfigCatLogMessages.getAutoPollMaxInitWaitTimeReached(
+                mode.maxInitWaitTime.inSeconds));
         _setInitialized();
         return Pair(_cachedEntry, null);
       });
@@ -196,7 +207,7 @@ class ConfigService with ContinuousFutureSynchronizer {
       return Entry.fromCached(entry);
     } catch (e, s) {
       _errorReporter.error(
-          2200, 'Error occurred while reading the cache.', e, s);
+          2200, ConfigCatLogMessages.configServiceCacheReadError, e, s);
       return Entry.empty;
     }
   }
@@ -208,7 +219,7 @@ class ConfigService with ContinuousFutureSynchronizer {
       await _cache.write(_cacheKey, entry);
     } catch (e, s) {
       _errorReporter.error(
-          2201, 'Error occurred while writing the cache.', e, s);
+          2201, ConfigCatLogMessages.configServiceCacheWriteError, e, s);
     }
   }
 }
