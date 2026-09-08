@@ -583,10 +583,12 @@ class RolloutEvaluator {
       String? configSalt,
       String contextSalt,
       bool negateArrayContains) {
+
     List<String> comparisonValues =
         _ensureComparisonValue(userCondition.stringArrayValue);
+
     if (userContainsValues.isEmpty) {
-      return false;
+      return negateArrayContains;
     }
 
     for (String userContainsValue in userContainsValues) {
