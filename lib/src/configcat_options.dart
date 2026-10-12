@@ -104,8 +104,9 @@ class Hooks {
     if (onConfigChanged != null) _onConfigChanged.add(onConfigChanged);
     if (onFlagEvaluated != null) _onFlagEvaluated.add(onFlagEvaluated);
     if (onClientReady != null) _onClientReady.add(onClientReady);
-    if (onClientReadyWithSnapshot != null)
+    if (onClientReadyWithSnapshot != null) {
       _onClientReadyWithSnapshot.add(onClientReadyWithSnapshot);
+    }
   }
 
   void addOnError(

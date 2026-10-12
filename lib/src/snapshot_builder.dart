@@ -3,9 +3,12 @@ import 'package:configcat_client/src/fetch/config_service.dart';
 import 'package:configcat_client/src/flag_evaluator.dart';
 import 'package:configcat_client/src/snapshot.dart';
 
-import '../configcat_client.dart';
+import 'configcat_user.dart';
 import 'constants.dart';
 import 'error_reporter.dart';
+import 'json/setting.dart';
+import 'override/behaviour.dart';
+import 'override/flag_overrides.dart';
 
 class SnapshotBuilder {
   ConfigCatUser? user;

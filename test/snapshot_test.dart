@@ -208,4 +208,77 @@ void main() {
     expect(sn2, isNotNull);
     expect(sn2!.cacheState, equals(ClientCacheState.hasCachedFlagDataOnly));
   });
+
+  test('override local only', () async {
+    final client = ConfigCatClient.get(
+        sdkKey: testSdkKey,
+        options: ConfigCatOptions(
+            override: FlagOverrides(
+                dataSource: OverrideDataSource.map(
+                    {'enabled': true, 'local-only': true}),
+                behaviour: OverrideBehaviour.localOnly)));
+    final testAdapter = HttpTestAdapter(client.httpClient);
+    final body = createTestConfig({'enabled': false, 'remote': 'rem'}).toJson();
+    testAdapter.enqueueResponse(getPath(), 200, body);
+
+    await client.waitForReady();
+    final snapshot = client.snapshot();
+
+    final found = snapshot.getValue(key: 'enabled', defaultValue: false);
+    final localOnly = snapshot.getValue(key: 'local-only', defaultValue: false);
+    final notFound =
+        snapshot.getValue<dynamic>(key: 'remote', defaultValue: null);
+
+    expect(found, isTrue);
+    expect(localOnly, isTrue);
+    expect(notFound, isNull);
+  });
+
+  test('override local over remote', () async {
+    final client = ConfigCatClient.get(
+        sdkKey: testSdkKey,
+        options: ConfigCatOptions(
+            override: FlagOverrides(
+                dataSource: OverrideDataSource.map(
+                    {'enabled': true, 'local-only': true}),
+                behaviour: OverrideBehaviour.localOverRemote)));
+    final testAdapter = HttpTestAdapter(client.httpClient);
+    final body = createTestConfig({'enabled': false, 'remote': 'rem'}).toJson();
+    testAdapter.enqueueResponse(getPath(), 200, body);
+
+    await client.waitForReady();
+    final snapshot = client.snapshot();
+
+    final enabled = snapshot.getValue(key: 'enabled', defaultValue: false);
+    final localOnly = snapshot.getValue(key: 'local-only', defaultValue: false);
+    final remote = snapshot.getValue(key: 'remote', defaultValue: '');
+
+    expect(enabled, isTrue);
+    expect(localOnly, isTrue);
+    expect(remote, equals('rem'));
+  });
+
+  test('override remote over local', () async {
+    final client = ConfigCatClient.get(
+        sdkKey: testSdkKey,
+        options: ConfigCatOptions(
+            override: FlagOverrides(
+                dataSource: OverrideDataSource.map(
+                    {'enabled': true, 'local-only': true}),
+                behaviour: OverrideBehaviour.remoteOverLocal)));
+    final testAdapter = HttpTestAdapter(client.httpClient);
+    final body = createTestConfig({'enabled': false, 'remote': 'rem'}).toJson();
+    testAdapter.enqueueResponse(getPath(), 200, body);
+
+    await client.waitForReady();
+    final snapshot = client.snapshot();
+
+    final enabled = snapshot.getValue(key: 'enabled', defaultValue: true);
+    final localOnly = snapshot.getValue(key: 'local-only', defaultValue: false);
+    final remote = snapshot.getValue(key: 'remote', defaultValue: '');
+
+    expect(enabled, isFalse);
+    expect(localOnly, isTrue);
+    expect(remote, equals('rem'));
+  });
 }

@@ -413,8 +413,7 @@ class ConfigCatClient {
   /// update by invoking [ConfigCatClient.forceRefresh].
   ConfigCatClientSnapshot snapshot() {
     final inMemory = _configService?.inMemory ?? InMemoryResult.empty;
-    return ConfigCatClientSnapshot(_flagEvaluator, inMemory.settingResult,
-        _snapshotBuilder.user, inMemory.cacheState, _errorReporter);
+    return _snapshotBuilder.buildSnapshot(inMemory);
   }
 
   /// Closes the underlying resources.
