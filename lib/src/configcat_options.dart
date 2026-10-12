@@ -3,6 +3,7 @@ import 'package:configcat_client/src/json/percentage_option.dart';
 import 'package:configcat_client/src/json/targeting_rule.dart';
 import 'package:dio/dio.dart';
 
+import 'client_cache_state.dart';
 import 'configcat_cache.dart';
 import 'data_governance.dart';
 import 'json/setting.dart';
@@ -56,13 +57,14 @@ class Hooks {
       _onError = [];
   final List<Function(Map<String, Setting>)> _onConfigChanged = [];
   final List<Function(EvaluationDetails)> _onFlagEvaluated = [];
-  final List<Function()> _onClientReady = [];
+  final List<Function(ClientCacheState)> _onClientReady = [];
+  ClientCacheState? _clientCacheState;
 
   Hooks(
       {Function(String, [dynamic error, StackTrace? stackTrace])? onError,
       Function(Map<String, Setting>)? onConfigChanged,
       Function(EvaluationDetails)? onFlagEvaluated,
-      Function()? onClientReady}) {
+      Function(ClientCacheState)? onClientReady}) {
     if (onError != null) _onError.add(onError);
     if (onConfigChanged != null) _onConfigChanged.add(onConfigChanged);
     if (onFlagEvaluated != null) _onFlagEvaluated.add(onFlagEvaluated);
@@ -82,8 +84,13 @@ class Hooks {
     _onFlagEvaluated.add(onFlagEvaluated);
   }
 
-  void addOnClientReady(Function() onClientReady) {
-    _onClientReady.add(onClientReady);
+  void addOnClientReady(Function(ClientCacheState) onClientReady) {
+    final clientCacheState = _clientCacheState;
+    if (clientCacheState != null) {
+      onClientReady(clientCacheState);
+    } else {
+      _onClientReady.add(onClientReady);
+    }
   }
 
   void invokeError(String message, [dynamic error, StackTrace? stackTrace]) {
@@ -104,9 +111,10 @@ class Hooks {
     }
   }
 
-  void invokeOnReady() {
+  void invokeOnReady(ClientCacheState clientCacheState) {
+    _clientCacheState = clientCacheState;
     for (final hook in _onClientReady) {
-      hook();
+      hook(clientCacheState);
     }
   }
 

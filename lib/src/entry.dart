@@ -15,6 +15,9 @@ class Entry {
 
   Entry withTime(DateTime time) => Entry(configJsonString, config, eTag, time);
 
+  bool isExpired(Duration duration) =>
+      fetchTime.isBefore(DateTime.now().toUtc().subtract(duration));
+
   static Entry empty = Entry('', Config.empty, '', distantPast);
 
   String serialize() {

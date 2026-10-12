@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:configcat_client/src/client_cache_state.dart';
 import 'package:crypto/crypto.dart';
 
 import '../configcat_cache.dart';
@@ -42,6 +43,7 @@ class ConfigService with ContinuousFutureSynchronizer {
   String _cachedEntryString = '';
   bool _offline = false;
   bool _initialized = false;
+  bool _cacheStateReported = false;
   PeriodicExecutor? _periodicExecutor;
 
   ConfigService(
@@ -68,8 +70,20 @@ class ConfigService with ContinuousFutureSynchronizer {
     if (mode is AutoPollingMode && !offline) {
       _startPoll(mode);
     } else {
-      _setInitialized();
+      _setInitializedState();
     }
+  }
+
+  void _setInitializedState() {
+    _initialized = true;
+    _readCache().then((cached) => {
+          if (!cached.isEmpty && cached.eTag != _cachedEntry.eTag)
+            {
+              _cachedEntry = cached,
+              _hooks.invokeConfigChanged(cached.config.entries)
+            },
+          _initializeAndReportCacheState()
+        });
   }
 
   Future<SettingResult> getSettings() async {
@@ -137,7 +151,7 @@ class ConfigService with ContinuousFutureSynchronizer {
     }
     // Cache isn't expired
     if (_cachedEntry.fetchTime.isAfter(time)) {
-      _setInitialized();
+      _initializeAndReportCacheState();
       return Pair(_cachedEntry, null);
     }
 
@@ -161,7 +175,7 @@ class ConfigService with ContinuousFutureSynchronizer {
             4200,
             ConfigCatLogMessages.getAutoPollMaxInitWaitTimeReached(
                 mode.maxInitWaitTime.inSeconds));
-        _setInitialized();
+        _initializeAndReportCacheState();
         return Pair(_cachedEntry, null);
       });
     }
@@ -180,7 +194,7 @@ class ConfigService with ContinuousFutureSynchronizer {
       _cachedEntry = _cachedEntry.withTime(DateTime.now().toUtc());
       await _writeCache(_cachedEntry);
     }
-    _setInitialized();
+    _initializeAndReportCacheState();
     return Pair(_cachedEntry, response.error);
   }
 
@@ -191,10 +205,11 @@ class ConfigService with ContinuousFutureSynchronizer {
         mode.autoPollInterval);
   }
 
-  void _setInitialized() {
-    if (!_initialized) {
-      _initialized = true;
-      _hooks.invokeOnReady();
+  void _initializeAndReportCacheState() {
+    _initialized = true;
+    if (!_cacheStateReported) {
+      _cacheStateReported = true;
+      _hooks.invokeOnReady(_determineReadyState());
     }
   }
 
@@ -221,5 +236,27 @@ class ConfigService with ContinuousFutureSynchronizer {
       _errorReporter.error(
           2201, ConfigCatLogMessages.configServiceCacheWriteError, e, s);
     }
+  }
+
+  ClientCacheState _determineReadyState() {
+    if (_cachedEntry.isEmpty) {
+      return ClientCacheState.noFlagData;
+    }
+
+    if (_mode is AutoPollingMode) {
+      final autoPollMode = _mode as AutoPollingMode;
+      if (_cachedEntry.isExpired(autoPollMode.autoPollInterval)) {
+        return ClientCacheState.hasCachedFlagDataOnly;
+      }
+    } else if (_mode is LazyLoadingMode) {
+      final lazyLoadingMode = _mode as LazyLoadingMode;
+      if (_cachedEntry.isExpired(lazyLoadingMode.cacheRefreshInterval)) {
+        return ClientCacheState.hasCachedFlagDataOnly;
+      }
+    } else {
+      return ClientCacheState.hasCachedFlagDataOnly;
+    }
+
+    return ClientCacheState.hasUpToDateFlagData;
   }
 }
