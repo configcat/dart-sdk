@@ -214,5 +214,18 @@ void main() {
 
       client.close();
     });
+
+    test("overrides", () async {
+      final client = ConfigCatClient.get(
+          sdkKey: testSdkKey,
+          options: ConfigCatOptions(
+              override: FlagOverrides(
+                  dataSource: OverrideDataSource.map(
+                      {'enabled': true, 'local-only': true}),
+                  behaviour: OverrideBehaviour.localOnly)));
+
+      final state = await client.waitForReady();
+      expect(state, ClientCacheState.hasLocalOverrideFlagDataOnly);
+    });
   });
 }
