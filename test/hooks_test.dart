@@ -1,6 +1,9 @@
 import 'package:configcat_client/configcat_client.dart';
+import 'package:configcat_client/src/client_cache_state.dart';
+import 'package:mockito/mockito.dart';
 import 'package:test/test.dart';
 
+import 'cache_test.mocks.dart';
 import 'helpers.dart';
 import 'http_adapter.dart';
 
@@ -17,7 +20,7 @@ void main() {
               pollingMode: PollingMode.manualPoll(),
               hooks: Hooks(
                   onConfigChanged: (map) => configChanged = true,
-                  onClientReady: () => ready = true,
+                  onClientReady: (_) => ready = true,
                   onFlagEvaluated: (ctx) => eval = true)));
       final testAdapter = HttpTestAdapter(client.httpClient);
 
@@ -112,6 +115,104 @@ void main() {
       // Cleanup
       client.close();
       testAdapter.close();
+    });
+  });
+
+  group("wait for ready", () {
+    test("auto poll", () async {
+      final client = ConfigCatClient.get(sdkKey: testSdkKey);
+      final testAdapter = HttpTestAdapter(client.httpClient);
+
+      final body = createTestConfig({'a': true}).toJson();
+      testAdapter.enqueueResponse(getPath(), 200, body);
+
+      final state = await client.waitForReady();
+      expect(state, ClientCacheState.hasUpToDateFlagData);
+
+      final a = await client.getValue(key: "a", defaultValue: false);
+      expect(a, isTrue);
+
+      client.close();
+      testAdapter.close();
+    });
+
+    test("auto poll error", () async {
+      final client = ConfigCatClient.get(sdkKey: testSdkKey);
+      final testAdapter = HttpTestAdapter(client.httpClient);
+
+      final body = createTestConfig({'a': true}).toJson();
+      testAdapter.enqueueResponse(getPath(), 400, body);
+
+      final state = await client.waitForReady();
+      expect(state, ClientCacheState.noFlagData);
+
+      client.close();
+      testAdapter.close();
+    });
+
+    test("lazy poll", () async {
+      final cache = MockConfigCatCache();
+      when(cache.read(any)).thenAnswer(
+          (_) => Future.value(createTestEntry({'a': true}).serialize()));
+
+      final client = ConfigCatClient.get(
+          sdkKey: testSdkKey,
+          options: ConfigCatOptions(
+              pollingMode: PollingMode.lazyLoad(), cache: cache));
+
+      final state = await client.waitForReady();
+      expect(state, ClientCacheState.hasUpToDateFlagData);
+
+      final a = await client.getValue(key: "a", defaultValue: false);
+      expect(a, isTrue);
+
+      client.close();
+    });
+
+    test("lazy poll error", () async {
+      final client = ConfigCatClient.get(
+          sdkKey: testSdkKey,
+          options: ConfigCatOptions(pollingMode: PollingMode.lazyLoad()));
+      final testAdapter = HttpTestAdapter(client.httpClient);
+
+      final body = createTestConfig({'a': true}).toJson();
+      testAdapter.enqueueResponse(getPath(), 400, body);
+
+      final state = await client.waitForReady();
+      expect(state, ClientCacheState.noFlagData);
+
+      client.close();
+      testAdapter.close();
+    });
+
+    test("manual poll with cache", () async {
+      final cache = MockConfigCatCache();
+      when(cache.read(any)).thenAnswer(
+          (_) => Future.value(createTestEntry({'a': true}).serialize()));
+
+      final client = ConfigCatClient.get(
+          sdkKey: testSdkKey,
+          options: ConfigCatOptions(
+              pollingMode: PollingMode.manualPoll(), cache: cache));
+
+      final state = await client.waitForReady();
+      expect(state, ClientCacheState.hasCachedFlagDataOnly);
+
+      final a = await client.getValue(key: "a", defaultValue: false);
+      expect(a, isTrue);
+
+      client.close();
+    });
+
+    test("manual poll without cache", () async {
+      final client = ConfigCatClient.get(
+          sdkKey: testSdkKey,
+          options: ConfigCatOptions(pollingMode: PollingMode.manualPoll()));
+
+      final state = await client.waitForReady();
+      expect(state, ClientCacheState.noFlagData);
+
+      client.close();
     });
   });
 }

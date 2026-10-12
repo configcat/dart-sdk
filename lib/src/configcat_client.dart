@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:configcat_client/src/client_cache_state.dart';
 import 'package:configcat_client/src/constants.dart';
 import 'package:configcat_client/src/fetch/refresh_result.dart';
 import 'package:configcat_client/src/json/setting_type.dart';
@@ -436,6 +439,22 @@ class ConfigCatClient {
   ///
   /// Return true if the client is closed, otherwise false.
   bool isClosed() => _isClosed;
+
+  /// Waits for the client to reach the ready state, i.e. to complete initialization.
+  ///
+  /// Ready state is reached as soon as the initial sync with the external cache (if any) completes.
+  /// If this does not produce up-to-date config data, and the client is online (i.e. HTTP requests are allowed),
+  /// the first config fetch operation is also awaited in Auto Polling mode before ready state is reported.
+  ///
+  /// That is, reaching the ready state usually means the client is ready to evaluate feature flags and settings.
+  /// However, please note that this is not guaranteed. In case of initialization failure or timeout,
+  /// the internal cache may be empty or expired even after the ready state is reported. You can verify this by
+  /// checking the return value.
+  Future<ClientCacheState> waitForReady() async {
+    final completer = Completer<ClientCacheState>();
+    hooks.addOnClientReady((state) => completer.complete(state));
+    return await completer.future;
+  }
 
   /// Closes the underlying resources.
   void close() {
