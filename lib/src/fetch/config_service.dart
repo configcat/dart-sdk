@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:configcat_client/src/client_cache_state.dart';
+import 'package:configcat_client/src/snapshot_builder.dart';
 import 'package:crypto/crypto.dart';
 
 import '../configcat_cache.dart';
@@ -31,6 +32,16 @@ class SettingResult {
       SettingResult(settings: {}, fetchTime: distantPast);
 }
 
+class InMemoryResult {
+  final SettingResult settingResult;
+  final ClientCacheState cacheState;
+
+  InMemoryResult(this.settingResult, this.cacheState);
+
+  static InMemoryResult empty =
+      InMemoryResult(SettingResult.empty, ClientCacheState.noFlagData);
+}
+
 class ConfigService with ContinuousFutureSynchronizer {
   late final String _cacheKey;
   late final PollingMode _mode;
@@ -39,6 +50,7 @@ class ConfigService with ContinuousFutureSynchronizer {
   late final ConfigCatLogger _logger;
   late final ConfigCatCache _cache;
   late final ErrorReporter _errorReporter;
+  late final SnapshotBuilder _snapshotBuilder;
   Entry _cachedEntry = Entry.empty;
   String _cachedEntryString = '';
   bool _offline = false;
@@ -54,6 +66,7 @@ class ConfigService with ContinuousFutureSynchronizer {
       required ConfigCatLogger logger,
       required ConfigCatCache cache,
       required ErrorReporter errorReporter,
+      required SnapshotBuilder snapshotBuilder,
       required bool offline}) {
     _cacheKey = sha1
         .convert(
@@ -66,6 +79,7 @@ class ConfigService with ContinuousFutureSynchronizer {
     _cache = cache;
     _errorReporter = errorReporter;
     _offline = offline;
+    _snapshotBuilder = snapshotBuilder;
 
     if (mode is AutoPollingMode && !offline) {
       _startPoll(mode);
@@ -80,10 +94,19 @@ class ConfigService with ContinuousFutureSynchronizer {
           if (!cached.isEmpty && cached.eTag != _cachedEntry.eTag)
             {
               _cachedEntry = cached,
-              _hooks.invokeConfigChanged(cached.config.entries)
+              _hooks.invokeConfigChanged(
+                  cached.config.entries, _snapshotBuilder, inMemory)
             },
           _initializeAndReportCacheState()
         });
+  }
+
+  InMemoryResult get inMemory {
+    return InMemoryResult(
+        SettingResult(
+            settings: _cachedEntry.config.entries,
+            fetchTime: _cachedEntry.fetchTime),
+        _determineReadyState());
   }
 
   Future<SettingResult> getSettings() async {
@@ -147,7 +170,8 @@ class ConfigService with ContinuousFutureSynchronizer {
     final entry = await _readCache();
     if (!entry.isEmpty && entry.eTag != _cachedEntry.eTag) {
       _cachedEntry = entry;
-      _hooks.invokeConfigChanged(entry.config.entries);
+      _hooks.invokeConfigChanged(
+          entry.config.entries, _snapshotBuilder, inMemory);
     }
     // Cache isn't expired
     if (_cachedEntry.fetchTime.isAfter(time)) {
@@ -188,7 +212,8 @@ class ConfigService with ContinuousFutureSynchronizer {
     if (response.isFetched) {
       _cachedEntry = response.entry;
       await _writeCache(response.entry);
-      _hooks.invokeConfigChanged(response.entry.config.entries);
+      _hooks.invokeConfigChanged(
+          response.entry.config.entries, _snapshotBuilder, inMemory);
     } else if ((response.isNotModified || !response.isTransientError) &&
         !_cachedEntry.isEmpty) {
       _cachedEntry = _cachedEntry.withTime(DateTime.now().toUtc());
@@ -209,7 +234,7 @@ class ConfigService with ContinuousFutureSynchronizer {
     _initialized = true;
     if (!_cacheStateReported) {
       _cacheStateReported = true;
-      _hooks.invokeOnReady(_determineReadyState());
+      _hooks.invokeOnReady(_determineReadyState(), _snapshotBuilder, inMemory);
     }
   }
 

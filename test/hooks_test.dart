@@ -19,7 +19,7 @@ void main() {
           options: ConfigCatOptions(
               pollingMode: PollingMode.manualPoll(),
               hooks: Hooks(
-                  onConfigChanged: (map) => configChanged = true,
+                  onConfigChanged: (map, _) => configChanged = true,
                   onClientReady: (_) => ready = true,
                   onFlagEvaluated: (ctx) => eval = true)));
       final testAdapter = HttpTestAdapter(client.httpClient);
@@ -55,7 +55,7 @@ void main() {
       testAdapter.enqueueResponse(getPath(), 200, body);
 
       // Act
-      client.hooks.addOnConfigChanged((p0) => configChanged = true);
+      client.hooks.addOnConfigChanged((p0, _) => configChanged = true);
       client.hooks.addOnFlagEvaluated((p0) => eval = true);
 
       await client.forceRefresh();

@@ -193,7 +193,7 @@ class ConfigFetcher implements Fetcher {
               ConfigCatLogMessages.getFetchReceived200WithInvalidBodyError(
                   cfRayId);
           _errorReporter.error(1105, error);
-          return FetchResponse.failure(error, false, cfRayId);
+          return FetchResponse.failure(error, true, cfRayId);
         }
         _logger.debug('Fetch was successful: new config fetched.');
         return FetchResponse.success(

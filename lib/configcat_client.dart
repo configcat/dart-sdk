@@ -18,6 +18,7 @@ export 'src/configcat_client.dart';
 export 'src/configcat_options.dart';
 export 'src/configcat_user.dart';
 export 'src/data_governance.dart';
+export 'src/snapshot.dart';
 
 // overrides
 export 'src/override/behaviour.dart';

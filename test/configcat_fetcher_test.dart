@@ -527,7 +527,7 @@ void main() {
 
       // Assert
       expect(fetchedResponse.isFailed, isTrue);
-      expect(fetchedResponse.isTransientError, isFalse);
+      expect(fetchedResponse.isTransientError, isTrue);
       expect(fetchedResponse.entry.config, same(Config.empty));
 
       // Cleanup
@@ -549,7 +549,7 @@ void main() {
 
       // Assert
       expect(fetchedResponse.isFailed, isTrue);
-      expect(fetchedResponse.isTransientError, isFalse);
+      expect(fetchedResponse.isTransientError, isTrue);
       expect(fetchedResponse.entry.config, same(Config.empty));
 
       // Cleanup
