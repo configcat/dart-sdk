@@ -83,18 +83,22 @@ class ConfigCatClient {
         sdkKey: sdkKey,
         options: options,
         errorReporter: _errorReporter);
-    _configService =
-        _override != null && _override!.behaviour == OverrideBehaviour.localOnly
-            ? null
-            : ConfigService(
-                sdkKey: sdkKey,
-                mode: options.pollingMode,
-                hooks: _hooks,
-                fetcher: _fetcher,
-                logger: _logger,
-                cache: cache,
-                errorReporter: _errorReporter,
-                offline: options.offline);
+
+    if (_override != null &&
+        _override!.behaviour == OverrideBehaviour.localOnly) {
+      _configService = null;
+      _hooks.invokeOnReady(ClientCacheState.hasLocalOverrideFlagDataOnly);
+    } else {
+      _configService = ConfigService(
+          sdkKey: sdkKey,
+          mode: options.pollingMode,
+          hooks: _hooks,
+          fetcher: _fetcher,
+          logger: _logger,
+          cache: cache,
+          errorReporter: _errorReporter,
+          offline: options.offline);
+    }
   }
 
   /// Gets the value of a feature flag or setting as [T] identified by the given [key].
