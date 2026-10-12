@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Missing ready hook invocation in case of local only overrides.
 
+### Added
+- Automatic SonarCloud analysis.
+
 ## 4.2.0 - 2026-10-12
 ### Added
 - Add `.waitForReady()` to wait asynchronously for the SDK to reach ready state.
