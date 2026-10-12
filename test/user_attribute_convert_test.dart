@@ -93,6 +93,12 @@ void main() {
       "x, read",
       "Cat"
     ],
+    [
+      "configcat-sdk-1/JcPbCGl_1E-K9M-fJOyKyQ/OfQqcTjfFUGBwMKqtyEOrQ",
+      "stringArrayContainsAnyOfDogDefaultCat",
+      "[\"x\", \"Read\", null]",
+      "Cat"
+    ],
     //Number date
     [
       "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/FCWN-k1dV0iBf8QZrDgjdw",

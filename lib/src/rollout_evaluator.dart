@@ -531,7 +531,7 @@ class RolloutEvaluator {
         var decoded = jsonDecode(userAttributeValue);
         result = List<String>.from(decoded);
       }
-      if (result != null && !result.contains(null)) {
+      if (result != null) {
         return result;
       }
     } catch (e) {
