@@ -468,11 +468,13 @@ void main() {
         options: ConfigCatOptions(
             pollingMode: PollingMode.autoPoll(),
             cache: cache,
-            hooks: Hooks(onClientReady: () => ready = true),
+            hooks: Hooks(onClientReady: (_) => ready = true),
             offline: true));
     final localAdapter = HttpTestAdapter(localClient.httpClient);
 
     localAdapter.enqueueResponse(getPath(), 200, body);
+
+    await client.waitForReady();
 
     // Assert
     expect(localAdapter.capturedRequests.length, equals(0));
