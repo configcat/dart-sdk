@@ -42,26 +42,11 @@ class FlagEvaluator {
         return details;
       }
 
-      EvaluateLogger? evaluateLogger;
-      if (_logLevel.index <= LogLevel.info.index) {
-        evaluateLogger = EvaluateLogger();
-      }
-      final eval = _rolloutEvaluator.evaluate(
-          setting, key, user, result.settings, evaluateLogger);
+      final eval = _eval(setting, key, user, result);
       final parsed = _parseSettingValue<T>(eval.value, setting.type);
       if (parsed.value != null) {
-        final details = EvaluationDetails<T>(
-            key: key,
-            variationId: eval.variationId,
-            user: user,
-            isDefaultValue: false,
-            error: null,
-            errorCode: EvaluationErrorCode.none,
-            value: parsed.value as T,
-            fetchTime: result.fetchTime,
-            matchedTargetingRule: eval.matchedTargetingRule,
-            matchedPercentageOption: eval.matchedPercentageOption);
-
+        final details =
+            _produceEvalDetails(eval, parsed.value as T, key, user, result);
         _hooks.invokeFlagEvaluated(details);
         return details;
       } else {
@@ -86,27 +71,11 @@ class FlagEvaluator {
 
   EvaluationDetails<T> evaluateSetting<T>(
       String key, Setting setting, ConfigCatUser? user, SettingResult result) {
-    EvaluateLogger? evaluateLogger;
-    if (_logLevel.index <= LogLevel.info.index) {
-      evaluateLogger = EvaluateLogger();
-    }
-    final eval = _rolloutEvaluator.evaluate(
-        setting, key, user, result.settings, evaluateLogger);
-
+    final eval = _eval(setting, key, user, result);
     final parsed = _parseSettingValue<T>(eval.value, setting.type);
     if (parsed.value != null) {
-      final details = EvaluationDetails<T>(
-          key: key,
-          variationId: eval.variationId,
-          user: user,
-          isDefaultValue: false,
-          error: null,
-          errorCode: EvaluationErrorCode.none,
-          value: parsed.value as T,
-          fetchTime: result.fetchTime,
-          matchedTargetingRule: eval.matchedTargetingRule,
-          matchedPercentageOption: eval.matchedPercentageOption);
-
+      final details =
+          _produceEvalDetails(eval, parsed.value as T, key, user, result);
       _hooks.invokeFlagEvaluated(details);
       return details;
     } else {
@@ -139,6 +108,30 @@ class FlagEvaluator {
       throw ArgumentError(result.error);
     }
   }
+
+  EvaluationResult _eval(
+      Setting setting, String key, ConfigCatUser? user, SettingResult result) {
+    EvaluateLogger? evaluateLogger;
+    if (_logLevel.index <= LogLevel.info.index) {
+      evaluateLogger = EvaluateLogger();
+    }
+    return _rolloutEvaluator.evaluate(
+        setting, key, user, result.settings, evaluateLogger);
+  }
+
+  EvaluationDetails<T> _produceEvalDetails<T>(EvaluationResult eval, T value,
+          String key, ConfigCatUser? user, SettingResult result) =>
+      EvaluationDetails<T>(
+          key: key,
+          variationId: eval.variationId,
+          user: user,
+          isDefaultValue: false,
+          error: null,
+          errorCode: EvaluationErrorCode.none,
+          value: value,
+          fetchTime: result.fetchTime,
+          matchedTargetingRule: eval.matchedTargetingRule,
+          matchedPercentageOption: eval.matchedPercentageOption);
 
   ParseResult<T> _parseSettingValue<T>(
       SettingValue settingValue, int settingType) {
