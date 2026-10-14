@@ -75,7 +75,7 @@ class ConfigCatClientSnapshot {
               defaultValue);
       _errorReporter.error(1002, err, e, s);
       _hooks.invokeFlagEvaluated(EvaluationDetails.makeError(key, defaultValue,
-          e.toString(), EvaluationErrorCode.unexpectedError, e, evalUser));
+          err, EvaluationErrorCode.unexpectedError, e, evalUser));
       return defaultValue;
     }
   }
@@ -124,7 +124,7 @@ class ConfigCatClientSnapshot {
               defaultValue);
       _errorReporter.error(1002, err, e, s);
       final details = EvaluationDetails.makeError(key, defaultValue,
-          e.toString(), EvaluationErrorCode.unexpectedError, e, evalUser);
+          err, EvaluationErrorCode.unexpectedError, e, evalUser);
       _hooks.invokeFlagEvaluated(details);
       return details;
     }
