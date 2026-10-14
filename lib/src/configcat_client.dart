@@ -188,8 +188,8 @@ class ConfigCatClient {
           ConfigCatLogMessages.getSettingEvaluationErrorWithDefaultValue(
               "getValueDetails", key, "defaultValue", defaultValue);
       _errorReporter.error(1002, err, e, s);
-      final details = EvaluationDetails.makeError(key, defaultValue,
-          err, EvaluationErrorCode.unexpectedError, e, evalUser);
+      final details = EvaluationDetails.makeError(key, defaultValue, err,
+          EvaluationErrorCode.unexpectedError, e, evalUser);
       _hooks.invokeFlagEvaluated(details);
       return details;
     }
