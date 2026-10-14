@@ -201,36 +201,5 @@ class ConfigCatOptions {
     return baseUrl.isNotEmpty;
   }
 
-  ConfigCatOptions copyWith({
-    String? baseUrl,
-    DataGovernance? dataGovernance,
-    PollingMode? pollingMode,
-    ConfigCatCache? cache,
-    ConfigCatLogger? logger,
-    Duration? connectTimeout,
-    Duration? receiveTimeout,
-    Duration? sendTimeout,
-    HttpClientAdapter? httpClientAdapter,
-    FlagOverrides? override,
-    ConfigCatUser? defaultUser,
-    Hooks? hooks,
-    bool? offline,
-  }) =>
-      ConfigCatOptions(
-        baseUrl: baseUrl ?? this.baseUrl,
-        dataGovernance: dataGovernance ?? this.dataGovernance,
-        pollingMode: pollingMode ?? this.pollingMode,
-        cache: cache ?? this.cache,
-        logger: logger ?? this.logger,
-        connectTimeout: connectTimeout ?? this.connectTimeout,
-        sendTimeout: sendTimeout ?? this.sendTimeout,
-        receiveTimeout: receiveTimeout ?? this.receiveTimeout,
-        httpClientAdapter: httpClientAdapter ?? this.httpClientAdapter,
-        override: override ?? this.override,
-        defaultUser: defaultUser ?? this.defaultUser,
-        hooks: hooks ?? this.hooks,
-        offline: offline ?? this.offline,
-      );
-
   static const ConfigCatOptions defaultOptions = ConfigCatOptions();
 }
