@@ -9,38 +9,13 @@ import 'package:dio/dio.dart';
 import 'client_cache_state.dart';
 import 'configcat_cache.dart';
 import 'data_governance.dart';
+import 'errors.dart';
 import 'json/setting.dart';
 import 'log/configcat_logger.dart';
 import 'polling_mode.dart';
 import 'configcat_client.dart';
 import 'override/flag_overrides.dart';
 import 'configcat_user.dart';
-
-/// Specifies the possible evaluation error codes.
-enum EvaluationErrorCode {
-  /// An unexpected error occurred during the evaluation.
-  unexpectedError(-1),
-
-  /// No error occurred (the evaluation was successful).
-  none(0),
-
-  /// The evaluation failed because of an error in the config model.
-  invalidConfigModel(1),
-
-  /// The evaluation failed because of a type mismatch between the evaluated
-  /// setting value and the specified default value.
-  settingValueTypeMismatch(2),
-
-  /// The evaluation failed because the config JSON was not available locally.
-  configJsonNotAvailable(1000),
-
-  /// The evaluation failed because the key of the evaluated setting was not found in
-  /// the config JSON.
-  settingKeyMissing(1001);
-
-  const EvaluationErrorCode(this.value);
-  final int value;
-}
 
 /// Additional information about flag evaluation.
 class EvaluationDetails<T> {
@@ -50,6 +25,7 @@ class EvaluationDetails<T> {
   final bool isDefaultValue;
   final String? error;
   final EvaluationErrorCode errorCode;
+  final Object? errorObject;
   final T value;
   final DateTime fetchTime;
   final TargetingRule? matchedTargetingRule;
@@ -62,13 +38,19 @@ class EvaluationDetails<T> {
       required this.isDefaultValue,
       required this.error,
       required this.errorCode,
+      required this.errorObject,
       required this.value,
       required this.fetchTime,
       required this.matchedTargetingRule,
       required this.matchedPercentageOption});
 
-  static EvaluationDetails<T> makeError<T>(String key, T defaultValue,
-      String error, EvaluationErrorCode errorCode, ConfigCatUser? user) {
+  static EvaluationDetails<T> makeError<T>(
+      String key,
+      T defaultValue,
+      String error,
+      EvaluationErrorCode errorCode,
+      Object? errorObject,
+      ConfigCatUser? user) {
     return EvaluationDetails<T>(
         key: key,
         variationId: "",
@@ -76,6 +58,7 @@ class EvaluationDetails<T> {
         isDefaultValue: true,
         error: error,
         errorCode: errorCode,
+        errorObject: errorObject,
         value: defaultValue,
         fetchTime: distantPast,
         matchedTargetingRule: null,
@@ -178,6 +161,7 @@ class Hooks {
     _onConfigChanged.clear();
     _onFlagEvaluated.clear();
     _onClientReady.clear();
+    _onClientReadyWithSnapshot.clear();
   }
 }
 

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:configcat_client/src/configcat_log_messages.dart';
+import 'package:configcat_client/src/errors.dart';
 import 'package:crypto/crypto.dart';
 import 'package:pub_semver/pub_semver.dart';
 
@@ -144,7 +145,8 @@ class RolloutEvaluator {
       }
 
       if (rule.percentageOptions?.isEmpty ?? true) {
-        throw ArgumentError("Targeting rule THEN part is missing or invalid.");
+        throw InvalidConfigModelError(
+            "Targeting rule THEN part is missing or invalid.");
       }
 
       evaluateLogger?.increaseIndentLevel();
@@ -267,7 +269,8 @@ class RolloutEvaluator {
     String comparisonAttribute = userCondition.comparisonAttribute;
     UserComparator comparator =
         UserComparator.tryFrom(userCondition.comparator) ??
-            (() => throw ArgumentError(comparisonOperatorIsInvalid))();
+            (() =>
+                throw InvalidConfigModelError(comparisonOperatorIsInvalid))();
 
     Object? userAttributeValue =
         configCatUser.getAttribute(comparisonAttribute);
@@ -647,7 +650,7 @@ class RolloutEvaluator {
       int indexOf =
           _ensureComparisonValue(comparisonValueHashedStartsEnds).indexOf("_");
       if (indexOf <= 0) {
-        throw ArgumentError(comparisonValueIsMissingOrInvalid);
+        throw InvalidConfigModelError(comparisonValueIsMissingOrInvalid);
       }
       String comparedTextLength =
           comparisonValueHashedStartsEnds.substring(0, indexOf);
@@ -655,7 +658,7 @@ class RolloutEvaluator {
       try {
         comparedTextLengthInt = int.parse(comparedTextLength);
       } catch (e) {
-        throw ArgumentError(comparisonValueIsMissingOrInvalid);
+        throw InvalidConfigModelError(comparisonValueIsMissingOrInvalid);
       }
       if (userAttributeValueUTF8.length < comparedTextLengthInt) {
         continue;
@@ -663,7 +666,7 @@ class RolloutEvaluator {
       String comparisonHashValue =
           comparisonValueHashedStartsEnds.substring(indexOf + 1);
       if (comparisonHashValue.isEmpty) {
-        throw ArgumentError(comparisonValueIsMissingOrInvalid);
+        throw InvalidConfigModelError(comparisonValueIsMissingOrInvalid);
       }
       List<int> userValueSubStringByteArray;
       if (UserComparator.hashedStartsWith == comparator ||
@@ -847,11 +850,11 @@ class RolloutEvaluator {
     }
 
     if (segment == null) {
-      throw ArgumentError("Segment reference is invalid.");
+      throw InvalidConfigModelError("Segment reference is invalid.");
     }
     String? segmentName = segment.name;
     if (segmentName == null || segmentName.isEmpty) {
-      throw ArgumentError("Segment name is missing.");
+      throw InvalidConfigModelError("Segment name is missing.");
     }
     evaluateLogger?.logSegmentEvaluationStart(segmentName);
 
@@ -862,7 +865,8 @@ class RolloutEvaluator {
 
       SegmentComparator segmentComparator =
           SegmentComparator.tryFrom(segmentCondition.segmentComparator) ??
-              (() => throw ArgumentError(comparisonOperatorIsInvalid))();
+              (() =>
+                  throw InvalidConfigModelError(comparisonOperatorIsInvalid))();
 
       switch (segmentComparator) {
         case SegmentComparator.isInSegment:
@@ -894,7 +898,8 @@ class RolloutEvaluator {
     Setting? prerequisiteFlagSetting =
         evaluationContext.settings[prerequisiteFlagKey];
     if (prerequisiteFlagKey.isEmpty || prerequisiteFlagSetting == null) {
-      throw ArgumentError("Prerequisite flag key is missing or invalid.");
+      throw InvalidConfigModelError(
+          "Prerequisite flag key is missing or invalid.");
     }
 
     int settingType = prerequisiteFlagSetting.type;
@@ -906,7 +911,7 @@ class RolloutEvaluator {
             prerequisiteFlagCondition.value?.intValue == null) ||
         (settingType == 3 &&
             prerequisiteFlagCondition.value?.doubleValue == null)) {
-      throw ArgumentError(
+      throw InvalidConfigModelError(
           "Type mismatch between comparison value '${prerequisiteFlagCondition.value}' and prerequisite flag '$prerequisiteFlagKey'.");
     }
 
@@ -916,7 +921,7 @@ class RolloutEvaluator {
     if (visitedKeys.contains(prerequisiteFlagKey)) {
       String dependencyCycle = EvaluateLogger.formatCircularDependencyList(
           visitedKeys, prerequisiteFlagKey);
-      throw ArgumentError(
+      throw InvalidConfigModelError(
           "Circular dependency detected between the following depending flags: $dependencyCycle.");
     }
 
@@ -935,15 +940,14 @@ class RolloutEvaluator {
 
     SettingType prerequisiteFlagSettingTypeEnum =
         SettingType.tryFrom(prerequisiteFlagSetting.type) ??
-            (() => throw ArgumentError("Setting type is invalid."))();
+            (() => throw InvalidConfigModelError("Setting type is invalid."))();
 
     _validateSettingValueType(
         evaluateResult.value, prerequisiteFlagSettingTypeEnum);
 
-    PrerequisiteComparator prerequisiteComparator =
-        PrerequisiteComparator.tryFrom(
-                prerequisiteFlagCondition.prerequisiteComparator) ??
-            (() => throw ArgumentError(comparisonOperatorIsInvalid))();
+    PrerequisiteComparator prerequisiteComparator = PrerequisiteComparator
+            .tryFrom(prerequisiteFlagCondition.prerequisiteComparator) ??
+        (() => throw InvalidConfigModelError(comparisonOperatorIsInvalid))();
 
     SettingValue? conditionValue = prerequisiteFlagCondition.value;
     bool result;
@@ -1035,7 +1039,7 @@ class RolloutEvaluator {
         }
       }
     }
-    throw ArgumentError(
+    throw InvalidConfigModelError(
         "Sum of percentage option percentages is less than 100.");
   }
 
@@ -1048,13 +1052,13 @@ class RolloutEvaluator {
 
   T _ensureComparisonValue<T>(T? value) {
     return value ??
-        (() =>
-            throw ArgumentError("Comparison value is missing or invalid."))();
+        (() => throw InvalidConfigModelError(
+            "Comparison value is missing or invalid."))();
   }
 
   String _ensureConfigSalt(String? configSalt) {
     return configSalt ??
-        (() => throw ArgumentError("Config JSON salt is missing."))();
+        (() => throw InvalidConfigModelError("Config JSON salt is missing."))();
   }
 
   void _validateSettingValueType(
@@ -1066,7 +1070,7 @@ class RolloutEvaluator {
             settingValue.doubleValue == null) ||
         (SettingType.boolean == settingType &&
             settingValue.booleanValue == null)) {
-      throw ArgumentError(
+      throw InvalidConfigModelError(
           "Setting value is not of the expected type ${settingType.name}.");
     }
   }

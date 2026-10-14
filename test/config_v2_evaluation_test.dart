@@ -275,8 +275,8 @@ Future<void> _prerequisiteFlagCircularDependencyTest(
   final result = await client.getValueDetails(key: key, defaultValue: "");
 
   expect(result.error,
-      "Invalid argument(s): Circular dependency detected between the following depending flags: $dependencyCycle.");
-
+      "Circular dependency detected between the following depending flags: $dependencyCycle.");
+  expect(result.errorCode, EvaluationErrorCode.invalidConfigModel);
   testAdapter.close();
 }
 

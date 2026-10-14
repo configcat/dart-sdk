@@ -16,6 +16,9 @@ class ConfigCatLogMessages {
   static const String configServiceCacheReadError =
       "Error occurred while reading the cache.";
 
+  static const String forceRefreshError =
+      "Error occurred in the `forceRefresh` method.";
+
   // Constants for private log messages (used with method helpers)
   static const String _fetchFailedDueToInvalidSdkKeyError =
       "Your SDK Key seems to be wrong. You can find the valid SDK Key at https://app.configcat.com/sdkkey";

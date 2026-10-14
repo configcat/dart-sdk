@@ -2,13 +2,13 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:configcat_client/src/client_cache_state.dart';
+import 'package:configcat_client/src/errors.dart';
 import 'package:configcat_client/src/snapshot_builder.dart';
 import 'package:crypto/crypto.dart';
 
 import '../configcat_cache.dart';
 import '../configcat_options.dart';
 import '../configcat_log_messages.dart';
-import '../pair.dart';
 import '../polling_mode.dart';
 import '../mixins.dart';
 import '../constants.dart';
@@ -40,6 +40,16 @@ class InMemoryResult {
 
   static InMemoryResult empty =
       InMemoryResult(SettingResult.empty, ClientCacheState.noFlagData);
+}
+
+class FetchResult {
+  final Entry entry;
+  final String? error;
+  final RefreshErrorCode errorCode;
+  final Object? errorObject;
+
+  FetchResult(this.entry,
+      [this.error, this.errorCode = RefreshErrorCode.none, this.errorObject]);
 }
 
 class ConfigService with ContinuousFutureSynchronizer {
@@ -81,7 +91,7 @@ class ConfigService with ContinuousFutureSynchronizer {
     _offline = offline;
     _snapshotBuilder = snapshotBuilder;
 
-    if (mode is AutoPollingMode && !offline) {
+    if (mode is AutoPollingMode) {
       _startPoll(mode);
     } else {
       _setInitializedState();
@@ -119,29 +129,32 @@ class ConfigService with ContinuousFutureSynchronizer {
     } else if (!_initialized && mode is AutoPollingMode) {
       threshold = DateTime.now().toUtc().subtract(mode.autoPollInterval);
     }
-    final entry = await _fetchIfOlder(threshold, preferCached: preferCached);
-    return !entry.first.isEmpty
+    final result = await _fetchIfOlder(threshold, preferCached: preferCached);
+    return !result.entry.isEmpty
         ? SettingResult(
-            settings: entry.first.config.entries,
-            fetchTime: entry.first.fetchTime)
+            settings: result.entry.config.entries,
+            fetchTime: result.entry.fetchTime)
         : SettingResult.empty;
   }
 
   Future<RefreshResult> refresh() async {
-    if (_offline) {
+    if (_offline && _cache is NullConfigCatCache) {
       String offlineWarning =
           ConfigCatLogMessages.configServiceCannotInitiateHttpCallsWarn;
       _logger.warning(3200, offlineWarning);
-      return RefreshResult(false, offlineWarning);
+      return RefreshResult(
+          false, offlineWarning, RefreshErrorCode.offlineClient);
     }
-    final fetch = await _fetchIfOlder(distantFuture);
-    return RefreshResult(fetch.second == null, fetch.second);
+    final result = await _fetchIfOlder(distantFuture);
+    return RefreshResult(result.error == null, result.error, result.errorCode,
+        result.errorObject);
   }
 
   void online() {
     if (!_offline) return;
     _offline = false;
     final mode = _mode;
+    _periodicExecutor?.cancel();
     if (mode is AutoPollingMode) {
       _startPoll(mode);
     }
@@ -152,7 +165,6 @@ class ConfigService with ContinuousFutureSynchronizer {
   void offline() {
     if (_offline) return;
     _offline = true;
-    _periodicExecutor?.cancel();
     _logger.info(
         5200, ConfigCatLogMessages.getConfigServiceStatusChanged('OFFLINE'));
   }
@@ -164,7 +176,7 @@ class ConfigService with ContinuousFutureSynchronizer {
     _fetcher.close();
   }
 
-  Future<Pair<Entry, String?>> _fetchIfOlder(DateTime time,
+  Future<FetchResult> _fetchIfOlder(DateTime time,
       {bool preferCached = false}) async {
     // Sync up with the cache and use it when it's not expired.
     final entry = await _readCache();
@@ -176,19 +188,20 @@ class ConfigService with ContinuousFutureSynchronizer {
     // Cache isn't expired
     if (_cachedEntry.fetchTime.isAfter(time)) {
       _initializeAndReportCacheState();
-      return Pair(_cachedEntry, null);
+      return FetchResult(_cachedEntry);
     }
 
     // If we are in offline mode or the caller prefers cached values, do not initiate fetch.
     if (_offline || preferCached) {
-      return Pair(_cachedEntry, null);
+      _initializeAndReportCacheState();
+      return FetchResult(_cachedEntry);
     }
     // No fetch is running, initiate a new one.
     // Ensure only one fetch request is running at a time.
     return await syncFuture(_fetch);
   }
 
-  Future<Pair<Entry, String?>> _fetch() async {
+  Future<FetchResult> _fetch() async {
     final mode = _mode;
     if (mode is AutoPollingMode && !_initialized) {
       // Waiting for the client initialization.
@@ -200,14 +213,14 @@ class ConfigService with ContinuousFutureSynchronizer {
             ConfigCatLogMessages.getAutoPollMaxInitWaitTimeReached(
                 mode.maxInitWaitTime.inSeconds));
         _initializeAndReportCacheState();
-        return Pair(_cachedEntry, null);
+        return FetchResult(_cachedEntry);
       });
     }
     // The service is initialized, start fetch without timeout.
     return await _fetchConfig();
   }
 
-  Future<Pair<Entry, String?>> _fetchConfig() async {
+  Future<FetchResult> _fetchConfig() async {
     final response = await _fetcher.fetchConfiguration(_cachedEntry.eTag);
     if (response.isFetched) {
       _cachedEntry = response.entry;
@@ -220,7 +233,8 @@ class ConfigService with ContinuousFutureSynchronizer {
       await _writeCache(_cachedEntry);
     }
     _initializeAndReportCacheState();
-    return Pair(_cachedEntry, response.error);
+    return FetchResult(
+        _cachedEntry, response.error, response.errorCode, response.errorObject);
   }
 
   void _startPoll(AutoPollingMode mode) {

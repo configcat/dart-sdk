@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:configcat_client/src/client_cache_state.dart';
 import 'package:configcat_client/src/constants.dart';
+import 'package:configcat_client/src/errors.dart';
 import 'package:configcat_client/src/fetch/refresh_result.dart';
 import 'package:configcat_client/src/flag_evaluator.dart';
 import 'package:configcat_client/src/log/logger.dart';
@@ -83,10 +84,9 @@ class ConfigCatClient {
         options: options,
         errorReporter: _errorReporter);
 
-    _flagEvaluator =
-        FlagEvaluator(_hooks, _errorReporter, _rolloutEvaluator, _logLevel);
+    _flagEvaluator = FlagEvaluator(_hooks, _rolloutEvaluator, _logLevel);
     _snapshotBuilder = SnapshotBuilder(
-        _flagEvaluator, _override, _errorReporter, options.defaultUser);
+        _flagEvaluator, _override, _errorReporter, options.defaultUser, _hooks);
 
     if (_override != null &&
         _override!.behaviour == OverrideBehaviour.localOnly) {
@@ -121,11 +121,34 @@ class ConfigCatClient {
     if (key.isEmpty) {
       throw ArgumentError("'key' cannot be empty.");
     }
-    _flagEvaluator.validateReturnType<T>();
+    FlagEvaluator.validateReturnType<T>();
 
-    final evalUser = user ?? _snapshotBuilder.user;
-    final result = await _getSettings();
-    return _flagEvaluator.evaluate(key, evalUser, defaultValue, result).value;
+    final evalUser = user ?? _snapshotBuilder.defaultUser;
+
+    try {
+      final result = await _getSettings();
+      return _flagEvaluator.evaluate(key, evalUser, defaultValue, result).value;
+    } on EvaluationError catch (e, s) {
+      _errorReporter.error(
+          e.eventId,
+          e.messageToLog ??
+              ConfigCatLogMessages.getSettingEvaluationErrorWithDefaultValue(
+                  "getValue", key, "defaultValue", defaultValue),
+          e,
+          s);
+      final details = EvaluationDetails.makeError(
+          key, defaultValue, e.message, e.errorCode, e, user);
+      _hooks.invokeFlagEvaluated(details);
+      return defaultValue;
+    } catch (e, s) {
+      final err =
+          ConfigCatLogMessages.getSettingEvaluationErrorWithDefaultValue(
+              "getValue", key, "defaultValue", defaultValue);
+      _errorReporter.error(1002, err, e, s);
+      _hooks.invokeFlagEvaluated(EvaluationDetails.makeError(key, defaultValue,
+          e.toString(), EvaluationErrorCode.unexpectedError, e, evalUser));
+      return defaultValue;
+    }
   }
 
   /// Gets the value and evaluation details of a feature flag or setting identified by the given [key].
@@ -142,11 +165,34 @@ class ConfigCatClient {
     if (key.isEmpty) {
       throw ArgumentError("'key' cannot be empty.");
     }
-    _flagEvaluator.validateReturnType<T>();
+    FlagEvaluator.validateReturnType<T>();
 
-    final evalUser = user ?? _snapshotBuilder.user;
-    final result = await _getSettings();
-    return _flagEvaluator.evaluate(key, evalUser, defaultValue, result);
+    final evalUser = user ?? _snapshotBuilder.defaultUser;
+    try {
+      final result = await _getSettings();
+      return _flagEvaluator.evaluate(key, evalUser, defaultValue, result);
+    } on EvaluationError catch (e, s) {
+      _errorReporter.error(
+          e.eventId,
+          e.messageToLog ??
+              ConfigCatLogMessages.getSettingEvaluationErrorWithDefaultValue(
+                  "getValueDetails", key, "defaultValue", defaultValue),
+          e,
+          s);
+      final details = EvaluationDetails.makeError(
+          key, defaultValue, e.message, e.errorCode, e, user);
+      _hooks.invokeFlagEvaluated(details);
+      return details;
+    } catch (e, s) {
+      final err =
+          ConfigCatLogMessages.getSettingEvaluationErrorWithDefaultValue(
+              "getValueDetails", key, "defaultValue", defaultValue);
+      _errorReporter.error(1002, err, e, s);
+      final details = EvaluationDetails.makeError(key, defaultValue,
+          e.toString(), EvaluationErrorCode.unexpectedError, e, evalUser);
+      _hooks.invokeFlagEvaluated(details);
+      return details;
+    }
   }
 
   /// Gets the detailed values of all feature flags or settings.
@@ -156,7 +202,7 @@ class ConfigCatClient {
   Future<List<EvaluationDetails>> getAllValueDetails({
     ConfigCatUser? user,
   }) async {
-    final evalUser = user ?? _snapshotBuilder.user;
+    final evalUser = user ?? _snapshotBuilder.defaultUser;
     try {
       final result = await _getSettings();
       if (result.isEmpty) {
@@ -225,8 +271,8 @@ class ConfigCatClient {
       final result = <String, dynamic>{};
       settingsResult.settings.forEach((key, value) {
         result[key] = _flagEvaluator
-            .evaluateSetting(
-                key, value, user ?? _snapshotBuilder.user, settingsResult)
+            .evaluateSetting(key, value, user ?? _snapshotBuilder.defaultUser,
+                settingsResult)
             .value;
       });
 
@@ -247,7 +293,7 @@ class ConfigCatClient {
   /// [T] the type of the desired feature flag or setting. Only the following types are allowed: [String], [bool], [int], [double], [Object] (both nullable and non-nullable) and [dynamic].
   Future<MapEntry<String, T>?> getKeyAndValue<T>(
       {required String variationId}) async {
-    _flagEvaluator.validateReturnType<T>();
+    FlagEvaluator.validateReturnType<T>();
 
     try {
       final result = await _getSettings();
@@ -332,9 +378,20 @@ class ConfigCatClient {
 
   /// Initiates a force refresh on the cached configuration.
   Future<RefreshResult> forceRefresh() {
-    return _configService?.refresh() ??
-        Future.value(RefreshResult(false,
-            'The SDK uses the LOCAL_ONLY flag override behavior which prevents making HTTP requests.'));
+    try {
+      return _configService?.refresh() ??
+          Future.value(RefreshResult(
+              false,
+              'The SDK uses the `localOnly` flag override behavior which prevents making HTTP requests.',
+              RefreshErrorCode.localOnlyClient));
+    } catch (e, s) {
+      _errorReporter.error(1003, ConfigCatLogMessages.forceRefreshError, e, s);
+      return Future.value(RefreshResult(
+          false,
+          "An error occurred during the refresh.",
+          RefreshErrorCode.unexpectedError,
+          e));
+    }
   }
 
   /// Sets defaultUser value.
@@ -343,12 +400,12 @@ class ConfigCatClient {
   ///
   /// [user] The new default user.
   void setDefaultUser(ConfigCatUser? user) {
-    _snapshotBuilder.user = user;
+    _snapshotBuilder.defaultUser = user;
   }
 
   /// Sets the default user to null.
   void clearDefaultUser() {
-    _snapshotBuilder.user = null;
+    _snapshotBuilder.defaultUser = null;
   }
 
   /// Set the client to offline mode. HTTP calls are not allowed.

@@ -309,10 +309,9 @@ void main() {
 
       // Arrange
       final body = _createTestConfig(ConfigFetcher.globalBaseUrl, 0).toJson();
-      final path =
-          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
-      testAdapter.enqueueResponse(path, 200, body, headers: {'Etag': etag});
-      testAdapter.enqueueResponse(path, 304, null);
+      testAdapter
+          .enqueueResponse(getPath(), 200, body, headers: {'Etag': etag});
+      testAdapter.enqueueResponse(getPath(), 304, null);
 
       // Act
       final fetchedResponse = await fetcher.fetchConfiguration('');
@@ -321,6 +320,7 @@ void main() {
       expect(fetchedResponse.isFetched, isTrue);
       expect(fetchedResponse.entry.config, isNot(same(Config.empty)));
       expect(fetchedResponse.entry.eTag, equals(etag));
+      expect(fetchedResponse.errorCode, RefreshErrorCode.none);
 
       // Act
       final notModifiedResponse = await fetcher.fetchConfiguration(etag);
@@ -328,6 +328,7 @@ void main() {
       // Assert
       expect(notModifiedResponse.isNotModified, isTrue);
       expect(notModifiedResponse.entry.config, same(Config.empty));
+      expect(notModifiedResponse.errorCode, RefreshErrorCode.none);
       expect(testAdapter.capturedRequests.last.headers['If-None-Match'], etag);
 
       // Cleanup
@@ -340,9 +341,7 @@ void main() {
       final testAdapter = HttpTestAdapter(fetcher.httpClient);
 
       // Arrange
-      final path =
-          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
-      testAdapter.enqueueResponse(path, 500, null);
+      testAdapter.enqueueResponse(getPath(), 500, null);
 
       // Act
       final fetchedResponse = await fetcher.fetchConfiguration('');
@@ -351,6 +350,8 @@ void main() {
       expect(fetchedResponse.isFailed, isTrue);
       expect(fetchedResponse.isTransientError, isTrue);
       expect(fetchedResponse.entry.config, same(Config.empty));
+      expect(
+          fetchedResponse.errorCode, RefreshErrorCode.unexpectedHttpResponse);
 
       // Cleanup
       fetcher.close();
@@ -384,9 +385,7 @@ void main() {
       final testAdapter = HttpTestAdapter(fetcher.httpClient);
 
       // Arrange
-      final path =
-          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
-      testAdapter.enqueueResponse(path, 403, null);
+      testAdapter.enqueueResponse(getPath(), 403, null);
 
       // Act
       final fetchedResponse = await fetcher.fetchConfiguration('');
@@ -395,6 +394,7 @@ void main() {
       expect(fetchedResponse.isFailed, isTrue);
       expect(fetchedResponse.isTransientError, isFalse);
       expect(fetchedResponse.entry.config, same(Config.empty));
+      expect(fetchedResponse.errorCode, RefreshErrorCode.invalidSdkKey);
 
       // Cleanup
       fetcher.close();
@@ -410,9 +410,8 @@ void main() {
       final testAdapter = HttpTestAdapter(fetcher.httpClient);
 
       // Arrange
-      final path =
-          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
-      testAdapter.enqueueResponse(path, 403, null, headers: {'CF-RAY': rayId});
+      testAdapter
+          .enqueueResponse(getPath(), 403, null, headers: {'CF-RAY': rayId});
 
       // Act
       final fetchedResponse = await fetcher.fetchConfiguration('');
@@ -427,6 +426,7 @@ void main() {
                   e.logLevel == LogLevel.error && e.message.contains(rayId))
               .length,
           1);
+      expect(fetchedResponse.errorCode, RefreshErrorCode.invalidSdkKey);
 
       // Cleanup
       fetcher.close();
@@ -442,9 +442,8 @@ void main() {
       final testAdapter = HttpTestAdapter(fetcher.httpClient);
 
       // Arrange
-      final path =
-          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
-      testAdapter.enqueueResponse(path, 304, null, headers: {'CF-RAY': rayId});
+      testAdapter
+          .enqueueResponse(getPath(), 304, null, headers: {'CF-RAY': rayId});
 
       // Act
       final fetchedResponse = await fetcher.fetchConfiguration(etag);
@@ -452,6 +451,7 @@ void main() {
       // Assert
       expect(fetchedResponse.isNotModified, isTrue);
       expect(fetchedResponse.cfRayId, rayId);
+      expect(fetchedResponse.errorCode, RefreshErrorCode.none);
 
       // Cleanup
       fetcher.close();
@@ -463,12 +463,10 @@ void main() {
       final testAdapter = HttpTestAdapter(fetcher.httpClient);
 
       // Arrange
-      final path =
-          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
-      testAdapter.enqueueResponse(path, 500, null,
+      testAdapter.enqueueResponse(getPath(), 500, null,
           exception: DioException(
             requestOptions: RequestOptions(
-              path: path,
+              path: getPath(),
             ),
           ));
 
@@ -479,6 +477,7 @@ void main() {
       expect(fetchedResponse.isFailed, isTrue);
       expect(fetchedResponse.isTransientError, isTrue);
       expect(fetchedResponse.entry.config, same(Config.empty));
+      expect(fetchedResponse.errorCode, RefreshErrorCode.httpRequestFailure);
 
       // Cleanup
       fetcher.close();
@@ -490,18 +489,16 @@ void main() {
       final testAdapter = HttpTestAdapter(fetcher.httpClient);
 
       // Arrange
-      final path =
-          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
-
-      testAdapter.enqueueResponse(path, 500, null,
+      testAdapter.enqueueResponse(getPath(), 500, null,
           exception: DioException(
               requestOptions: RequestOptions(
-                path: path,
+                path: getPath(),
               ),
               type: DioExceptionType.connectionTimeout));
 
       // Act
       final fetchedResponse = await fetcher.fetchConfiguration('');
+      expect(fetchedResponse.errorCode, RefreshErrorCode.httpRequestTimeout);
 
       // Assert
       expect(fetchedResponse.isFailed, isTrue);
@@ -518,9 +515,7 @@ void main() {
       final testAdapter = HttpTestAdapter(fetcher.httpClient);
 
       // Arrange
-      final path =
-          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
-      testAdapter.enqueueResponse(path, 200, null);
+      testAdapter.enqueueResponse(getPath(), 200, null);
 
       // Act
       final fetchedResponse = await fetcher.fetchConfiguration('');
@@ -529,6 +524,8 @@ void main() {
       expect(fetchedResponse.isFailed, isTrue);
       expect(fetchedResponse.isTransientError, isTrue);
       expect(fetchedResponse.entry.config, same(Config.empty));
+      expect(fetchedResponse.errorCode,
+          RefreshErrorCode.invalidHttpResponseContent);
 
       // Cleanup
       fetcher.close();
@@ -540,9 +537,7 @@ void main() {
       final testAdapter = HttpTestAdapter(fetcher.httpClient);
 
       // Arrange
-      final path =
-          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
-      testAdapter.enqueueResponse(path, 200, '');
+      testAdapter.enqueueResponse(getPath(), 200, '');
 
       // Act
       final fetchedResponse = await fetcher.fetchConfiguration('');
@@ -551,6 +546,8 @@ void main() {
       expect(fetchedResponse.isFailed, isTrue);
       expect(fetchedResponse.isTransientError, isTrue);
       expect(fetchedResponse.entry.config, same(Config.empty));
+      expect(fetchedResponse.errorCode,
+          RefreshErrorCode.invalidHttpResponseContent);
 
       // Cleanup
       fetcher.close();
@@ -566,9 +563,7 @@ void main() {
       final testAdapter = HttpTestAdapter(fetcher.httpClient);
 
       // Arrange
-      final path =
-          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
-      testAdapter.enqueueResponse(path, 200, 'invalid-json',
+      testAdapter.enqueueResponse(getPath(), 200, 'invalid-json',
           headers: {'CF-RAY': rayId});
 
       // Act
@@ -584,6 +579,8 @@ void main() {
                   e.logLevel == LogLevel.error && e.message.contains(rayId))
               .length,
           1);
+      expect(fetchedResponse.errorCode,
+          RefreshErrorCode.invalidHttpResponseContent);
 
       // Cleanup
       fetcher.close();
@@ -595,9 +592,7 @@ void main() {
       final testAdapter = HttpTestAdapter(fetcher.httpClient);
 
       // Arrange
-      final path =
-          sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
-      testAdapter.enqueueResponse(path, 201, null);
+      testAdapter.enqueueResponse(getPath(), 201, null);
 
       // Act
       final fetchedResponse = await fetcher.fetchConfiguration('');
@@ -606,6 +601,8 @@ void main() {
       expect(fetchedResponse.isFailed, isTrue);
       expect(fetchedResponse.isTransientError, isTrue);
       expect(fetchedResponse.entry.config, same(Config.empty));
+      expect(
+          fetchedResponse.errorCode, RefreshErrorCode.unexpectedHttpResponse);
 
       // Cleanup
       fetcher.close();
@@ -635,6 +632,7 @@ void main() {
 
       // Assert
       expect(notModifiedResponse.isNotModified, isTrue);
+      expect(fetchedResponse.errorCode, RefreshErrorCode.none);
 
       // Cleanup
       fetcher.close();

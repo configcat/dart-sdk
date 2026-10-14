@@ -35,8 +35,8 @@ void main() {
       {ConfigCatCache? customCache, bool offline = false}) {
     final hooks = Hooks();
     final errorReporter = ErrorReporter(logger, hooks);
-    final flagEvaluator = FlagEvaluator(
-        hooks, errorReporter, RolloutEvaluator(logger), LogLevel.info);
+    final flagEvaluator =
+        FlagEvaluator(hooks, RolloutEvaluator(logger), LogLevel.info);
     return ConfigService(
         sdkKey: testSdkKey,
         mode: pollingMode,
@@ -46,7 +46,7 @@ void main() {
         cache: customCache ?? cache,
         errorReporter: ErrorReporter(logger, Hooks()),
         snapshotBuilder:
-            SnapshotBuilder(flagEvaluator, null, errorReporter, null),
+            SnapshotBuilder(flagEvaluator, null, errorReporter, null, hooks),
         offline: offline);
   }
 

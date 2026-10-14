@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:configcat_client/configcat_client.dart';
 import 'package:configcat_client/src/fetch/config_fetcher.dart';
@@ -10,6 +11,15 @@ const urlTemplate = '%s/configuration-files/%s/$configJsonName';
 const testSdkKey =
     'configcat-sdk-1/TEST_KEY-0123456789012/1234567890123456789012';
 const etag = 'test-etag';
+const _chars = 'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz1234567890';
+
+String randomSdkKey() =>
+    "configcat-sdk-1/${_generateRandomString(22)}/${_generateRandomString(22)}";
+
+String _generateRandomString(int len) {
+  var r = Random();
+  return List.generate(len, (index) => _chars[r.nextInt(_chars.length)]).join();
+}
 
 Config createTestConfig(Map<String, Object> map) {
   return Config(Preferences(ConfigFetcher.globalBaseUrl, 0, "test-salt"),
@@ -76,8 +86,8 @@ String getPath({String sdkKey = testSdkKey}) {
   return sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, sdkKey]);
 }
 
-Future<Duration> until(
-    Future<bool> Function() predicate, Duration timeout) async {
+Future<Duration> until(Future<bool> Function() predicate,
+    [Duration timeout = const Duration(seconds: 2)]) async {
   final start = DateTime.now().toUtc();
   while (!await predicate()) {
     await Future.delayed(const Duration(milliseconds: 100));

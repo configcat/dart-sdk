@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:configcat_client/src/errors.dart';
 import 'package:configcat_client/src/platform_spec/request_builder.dart';
 import 'package:dio/dio.dart';
 
@@ -27,9 +28,11 @@ class FetchResponse {
   final String? error;
   final bool isTransientError;
   final String? cfRayId;
+  final RefreshErrorCode errorCode;
+  final Object? errorObject;
 
   FetchResponse._(this._status, this.entry, this.error, this.isTransientError,
-      this.cfRayId);
+      this.cfRayId, this.errorCode, this.errorObject);
 
   bool get isFetched {
     return _status == _Status.fetched;
@@ -44,18 +47,19 @@ class FetchResponse {
   }
 
   factory FetchResponse.success(Entry entry, String? cfRayId) {
-    return FetchResponse._(_Status.fetched, entry, null, false, cfRayId);
+    return FetchResponse._(_Status.fetched, entry, null, false, cfRayId,
+        RefreshErrorCode.none, null);
   }
 
-  factory FetchResponse.failure(
-      String error, bool isTransientError, String? cfRayId) {
-    return FetchResponse._(
-        _Status.failure, Entry.empty, error, isTransientError, cfRayId);
+  factory FetchResponse.failure(String error, bool isTransientError,
+      String? cfRayId, RefreshErrorCode errorCode, Object? errorObject) {
+    return FetchResponse._(_Status.failure, Entry.empty, error,
+        isTransientError, cfRayId, errorCode, errorObject);
   }
 
   factory FetchResponse.notModified(String? cfRayId) {
-    return FetchResponse._(
-        _Status.notModified, Entry.empty, null, false, cfRayId);
+    return FetchResponse._(_Status.notModified, Entry.empty, null, false,
+        cfRayId, RefreshErrorCode.none, null);
   }
 }
 
@@ -193,7 +197,8 @@ class ConfigFetcher implements Fetcher {
               ConfigCatLogMessages.getFetchReceived200WithInvalidBodyError(
                   cfRayId);
           _errorReporter.error(1105, error);
-          return FetchResponse.failure(error, true, cfRayId);
+          return FetchResponse.failure(error, true, cfRayId,
+              RefreshErrorCode.invalidHttpResponseContent, e);
         }
         _logger.debug('Fetch was successful: new config fetched.');
         return FetchResponse.success(
@@ -205,7 +210,8 @@ class ConfigFetcher implements Fetcher {
         final error =
             ConfigCatLogMessages.getFetchFailedDueToInvalidSDKKey(cfRayId);
         _errorReporter.error(1100, error);
-        return FetchResponse.failure(error, false, cfRayId);
+        return FetchResponse.failure(
+            error, false, cfRayId, RefreshErrorCode.invalidSdkKey, null);
       } else {
         final error =
             ConfigCatLogMessages.getFetchFailedDueToUnexpectedHttpResponse(
@@ -213,7 +219,8 @@ class ConfigFetcher implements Fetcher {
                 response.statusMessage.toString(),
                 cfRayId);
         _errorReporter.error(1101, error);
-        return FetchResponse.failure(error, true, cfRayId);
+        return FetchResponse.failure(error, true, cfRayId,
+            RefreshErrorCode.unexpectedHttpResponse, null);
       }
     } on DioException catch (e, s) {
       if (e.type == DioExceptionType.connectionTimeout ||
@@ -225,21 +232,24 @@ class ConfigFetcher implements Fetcher {
             _options.sendTimeout.inMilliseconds,
             cfRayId);
         _errorReporter.error(1102, error, e, s);
-        return FetchResponse.failure(error, true, cfRayId);
+        return FetchResponse.failure(
+            error, true, cfRayId, RefreshErrorCode.httpRequestTimeout, e);
       }
       _errorReporter.error(
           1103,
           ConfigCatLogMessages.getFetchFailedDueToUnexpectedError(cfRayId),
           e,
           s);
-      return FetchResponse.failure(e.toString(), true, cfRayId);
+      return FetchResponse.failure(
+          e.toString(), true, cfRayId, RefreshErrorCode.httpRequestFailure, e);
     } catch (e, s) {
       _errorReporter.error(
           1103,
           ConfigCatLogMessages.getFetchFailedDueToUnexpectedError(cfRayId),
           e,
           s);
-      return FetchResponse.failure(e.toString(), true, cfRayId);
+      return FetchResponse.failure(
+          e.toString(), true, cfRayId, RefreshErrorCode.httpRequestFailure, e);
     }
   }
 }

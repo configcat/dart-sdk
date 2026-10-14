@@ -3,6 +3,7 @@ import 'package:configcat_client/src/fetch/config_service.dart';
 import 'package:configcat_client/src/flag_evaluator.dart';
 import 'package:configcat_client/src/snapshot.dart';
 
+import 'configcat_options.dart';
 import 'configcat_user.dart';
 import 'constants.dart';
 import 'error_reporter.dart';
@@ -11,19 +12,20 @@ import 'override/behaviour.dart';
 import 'override/flag_overrides.dart';
 
 class SnapshotBuilder {
-  ConfigCatUser? user;
+  ConfigCatUser? defaultUser;
 
   final FlagOverrides? _flagOverrides;
   final FlagEvaluator _flagEvaluator;
   final ErrorReporter _errorReporter;
+  final Hooks _hooks;
 
-  SnapshotBuilder(
-      this._flagEvaluator, this._flagOverrides, this._errorReporter, this.user);
+  SnapshotBuilder(this._flagEvaluator, this._flagOverrides, this._errorReporter,
+      this.defaultUser, this._hooks);
 
   ConfigCatClientSnapshot buildSnapshot(InMemoryResult inMemoryResult) {
     final result = calcInMemoryResultWithOverrides(inMemoryResult);
-    return ConfigCatClientSnapshot(_flagEvaluator, result.settingResult, user,
-        result.cacheState, _errorReporter);
+    return ConfigCatClientSnapshot(_flagEvaluator, result.settingResult,
+        defaultUser, result.cacheState, _errorReporter, _hooks);
   }
 
   InMemoryResult calcInMemoryResultWithOverrides(

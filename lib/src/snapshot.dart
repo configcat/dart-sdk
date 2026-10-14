@@ -1,5 +1,6 @@
 import 'package:configcat_client/src/client_cache_state.dart';
 import 'package:configcat_client/src/error_reporter.dart';
+import 'package:configcat_client/src/errors.dart';
 import 'package:configcat_client/src/fetch/config_service.dart';
 import 'package:configcat_client/src/flag_evaluator.dart';
 
@@ -14,9 +15,15 @@ class ConfigCatClientSnapshot {
   final ConfigCatUser? _defaultUser;
   final ClientCacheState _clientCacheState;
   final ErrorReporter _errorReporter;
+  final Hooks _hooks;
 
-  ConfigCatClientSnapshot(this._flagEvaluator, this._settingResult,
-      this._defaultUser, this._clientCacheState, this._errorReporter);
+  ConfigCatClientSnapshot(
+      this._flagEvaluator,
+      this._settingResult,
+      this._defaultUser,
+      this._clientCacheState,
+      this._errorReporter,
+      this._hooks);
 
   /// The state of the internal cache at the time the snapshot was created.
   ClientCacheState get cacheState {
@@ -37,12 +44,40 @@ class ConfigCatClientSnapshot {
     if (key.isEmpty) {
       throw ArgumentError("'key' cannot be empty.");
     }
-    _flagEvaluator.validateReturnType();
+    FlagEvaluator.validateReturnType();
 
     final evalUser = user ?? _defaultUser;
-    return _flagEvaluator
-        .evaluate(key, evalUser, defaultValue, _settingResult)
-        .value;
+    try {
+      return _flagEvaluator
+          .evaluate(key, evalUser, defaultValue, _settingResult)
+          .value;
+    } on EvaluationError catch (e, s) {
+      _errorReporter.error(
+          e.eventId,
+          e.messageToLog ??
+              ConfigCatLogMessages.getSettingEvaluationErrorWithDefaultValue(
+                  "ConfigCatClientSnapshot.getValue",
+                  key,
+                  "defaultValue",
+                  defaultValue),
+          e,
+          s);
+      final details = EvaluationDetails.makeError(
+          key, defaultValue, e.message, e.errorCode, e, user);
+      _hooks.invokeFlagEvaluated(details);
+      return defaultValue;
+    } catch (e, s) {
+      final err =
+          ConfigCatLogMessages.getSettingEvaluationErrorWithDefaultValue(
+              "ConfigCatClientSnapshot.getValue",
+              key,
+              "defaultValue",
+              defaultValue);
+      _errorReporter.error(1002, err, e, s);
+      _hooks.invokeFlagEvaluated(EvaluationDetails.makeError(key, defaultValue,
+          e.toString(), EvaluationErrorCode.unexpectedError, e, evalUser));
+      return defaultValue;
+    }
   }
 
   /// Gets the value and evaluation details of a feature flag or setting identified by the given [key].
@@ -59,10 +94,40 @@ class ConfigCatClientSnapshot {
     if (key.isEmpty) {
       throw ArgumentError("'key' cannot be empty.");
     }
-    _flagEvaluator.validateReturnType();
-
+    FlagEvaluator.validateReturnType();
     final evalUser = user ?? _defaultUser;
-    return _flagEvaluator.evaluate(key, evalUser, defaultValue, _settingResult);
+
+    try {
+      return _flagEvaluator.evaluate(
+          key, evalUser, defaultValue, _settingResult);
+    } on EvaluationError catch (e, s) {
+      _errorReporter.error(
+          e.eventId,
+          e.messageToLog ??
+              ConfigCatLogMessages.getSettingEvaluationErrorWithDefaultValue(
+                  "ConfigCatClientSnapshot.getValueDetails",
+                  key,
+                  "defaultValue",
+                  defaultValue),
+          e,
+          s);
+      final details = EvaluationDetails.makeError(
+          key, defaultValue, e.message, e.errorCode, e, user);
+      _hooks.invokeFlagEvaluated(details);
+      return details;
+    } catch (e, s) {
+      final err =
+          ConfigCatLogMessages.getSettingEvaluationErrorWithDefaultValue(
+              "ConfigCatClientSnapshot.getValueDetails",
+              key,
+              "defaultValue",
+              defaultValue);
+      _errorReporter.error(1002, err, e, s);
+      final details = EvaluationDetails.makeError(key, defaultValue,
+          e.toString(), EvaluationErrorCode.unexpectedError, e, evalUser);
+      _hooks.invokeFlagEvaluated(details);
+      return details;
+    }
   }
 
   /// Gets a collection of all setting keys.
