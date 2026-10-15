@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 5.0.0 - 2026-10-14
+### Added
+- The concept of **Snapshots**. They are for capturing the actual state of the feature flag data used by the SDK. A snapshot allows synchronous operations on the captured context.
+  ```dart
+  final snapshot = client.snapshot();
+  final isMyFeatureEnabled = snapshot.getValue(key: 'isMyFeatureEnabled', defaultValue: false);
+  ```
+- New `onClientReadyWithSnapshot` hook which gets a `ConfigCatClientSnapshot` as parameter. It's called the same time when `onClientReady` is called.
+
+### Changed
+- The `onConfigChange` hook got a `ConfigCatClientSnapshot` second parameter.
+
 ## 4.2.1 - 2026-10-12
 ### Fixed
 - Missing ready hook invocation in case of local only overrides.

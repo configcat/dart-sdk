@@ -1,6 +1,6 @@
 import 'package:configcat_client/configcat_client.dart';
-import 'package:configcat_client/src/fetch/config_fetcher.dart';
-import 'package:configcat_client/src/pair.dart';
+import 'package:configcat_client/src/client_cache_state.dart';
+import 'package:configcat_client/src/constants.dart';
 import 'package:mockito/mockito.dart';
 import 'package:test/test.dart';
 
@@ -152,10 +152,11 @@ void main() {
     httpAdapter.enqueueResponse(getPath(), 500, null);
 
     // Act
-    await client.forceRefresh();
+    final result = await client.forceRefresh();
     final value = await client.getValue(key: 'boolValue', defaultValue: false);
 
     // Assert
+    expect(result.errorCode, RefreshErrorCode.unexpectedHttpResponse);
     expect(value, isFalse);
   });
 
@@ -432,15 +433,16 @@ void main() {
     // Arrange
     final body = createTestConfig({'stringValue': 'testValue'}).toJson();
 
+    final sdkKey = randomSdkKey();
     final localClient = ConfigCatClient.get(
-        sdkKey: 'configcat-sdk-1/TEST_KEY-01-0123456789/1234567890123456789012',
+        sdkKey: sdkKey,
         options: ConfigCatOptions(
             pollingMode: PollingMode.manualPoll(),
             cache: cache,
             offline: true));
     final localAdapter = HttpTestAdapter(localClient.httpClient);
 
-    localAdapter.enqueueResponse(getPath(), 200, body);
+    localAdapter.enqueueResponse(getPath(sdkKey: sdkKey), 200, body);
 
     // Act
     await localClient.forceRefresh();
@@ -462,9 +464,10 @@ void main() {
     // Arrange
     final body = createTestConfig({'stringValue': 'testValue'}).toJson();
 
+    final sdkKey = randomSdkKey();
     var ready = false;
     final localClient = ConfigCatClient.get(
-        sdkKey: 'configcat-sdk-1/TEST_KEY-02-0123456789/1234567890123456789012',
+        sdkKey: sdkKey,
         options: ConfigCatOptions(
             pollingMode: PollingMode.autoPoll(),
             cache: cache,
@@ -472,9 +475,9 @@ void main() {
             offline: true));
     final localAdapter = HttpTestAdapter(localClient.httpClient);
 
-    localAdapter.enqueueResponse(getPath(), 200, body);
+    localAdapter.enqueueResponse(getPath(sdkKey: sdkKey), 200, body);
 
-    await client.waitForReady();
+    await localClient.waitForReady();
 
     // Assert
     expect(localAdapter.capturedRequests.length, equals(0));
@@ -510,6 +513,33 @@ void main() {
         details.fetchTime.isAfter(
             DateTime.now().toUtc().subtract(const Duration(seconds: 1))),
         isTrue);
+  });
+
+  test('eval details failed', () async {
+    // Arrange
+    httpAdapter.enqueueResponse(getPath(), 500, "");
+
+    // Act
+    final result = await client.forceRefresh();
+    final details = await client.getValueDetails(
+        key: 'key1',
+        defaultValue: '',
+        user: ConfigCatUser(identifier: 'test@test2.com'));
+
+    // Assert
+    expect(result.errorCode, equals(RefreshErrorCode.unexpectedHttpResponse));
+    expect(
+        result.error,
+        equals(
+            "Unexpected HTTP response was received while trying to fetch config JSON: 500 null"));
+    expect(details.value, equals(''));
+    expect(details.isDefaultValue, isTrue);
+    expect(details.errorCode, EvaluationErrorCode.configJsonNotAvailable);
+    expect(
+        details.error,
+        equals(
+            "Config JSON is not present when evaluating setting 'key1'. Returning the `defaultValue` parameter that you specified in your application: ''."));
+    expect(details.errorObject, isNotNull);
   });
 
   test('test Special Characters Works', () async {
@@ -606,16 +636,78 @@ void main() {
             e.message ==
                 'Only the following types are supported: String, bool, int, double, Object (both nullable and non-nullable) and dynamic.')));
   });
-}
 
-Config createTestConfigWithVariationId(Map<String, Pair<int, String>> map) {
-  return Config(
-      Preferences(ConfigFetcher.globalBaseUrl, 0, "test-salt"),
-      map.map((key, value) => MapEntry(
-          key,
-          Setting(SettingValue(null, null, value.first, null), 2, [], [],
-              value.second, ""))),
-      List.empty());
+  test('offline refresh from cache', () async {
+    final customCache = CustomCache(
+        createTestEntryWithTime({'key': 'val1'}, distantPast).serialize());
+    final sdkKey = randomSdkKey();
+    client = ConfigCatClient.get(
+        sdkKey: sdkKey,
+        options: ConfigCatOptions(
+            pollingMode: PollingMode.autoPoll(
+                autoPollInterval: const Duration(milliseconds: 500)),
+            cache: customCache));
+    final adapter = HttpTestAdapter(client.httpClient);
+    adapter.enqueueResponse(getPath(sdkKey: sdkKey), 304, "");
+
+    await until(() async => Future.value(adapter.capturedRequests.length == 1),
+        const Duration(seconds: 2));
+
+    client.setOffline();
+    expect(client.isOffline(), isTrue);
+
+    final val = await client.getValue(key: 'key', defaultValue: '');
+    expect(val, equals('val1'));
+
+    await customCache.write('', createTestEntry({'key': 'val2'}).serialize());
+    final result = await client.forceRefresh();
+    expect(result.isSuccess, isTrue);
+    expect(result.errorCode, equals(RefreshErrorCode.none));
+    expect(result.error, isNull);
+    expect(result.errorObject, isNull);
+
+    final val2 = await client.getValue(key: 'key', defaultValue: '');
+    expect(val2, equals('val2'));
+    expect(adapter.capturedRequests.length, equals(1));
+
+    client.setOnline();
+    expect(client.isOffline(), isFalse);
+
+    await until(() async => Future.value(adapter.capturedRequests.length > 1),
+        const Duration(seconds: 2));
+  });
+
+  test('init offline refresh from cache', () async {
+    final customCache = CustomCache(
+        createTestEntryWithTime({'key': 'val1'}, distantPast).serialize());
+    final sdkKey = randomSdkKey();
+    client = ConfigCatClient.get(
+        sdkKey: sdkKey,
+        options: ConfigCatOptions(
+            pollingMode: PollingMode.autoPoll(
+                autoPollInterval: const Duration(milliseconds: 500)),
+            cache: customCache,
+            offline: true));
+    final adapter = HttpTestAdapter(client.httpClient);
+    adapter.enqueueResponse(getPath(sdkKey: sdkKey), 304, "");
+
+    final state = await client.waitForReady();
+    expect(state, equals(ClientCacheState.hasCachedFlagDataOnly));
+
+    final snapshot = client.snapshot();
+    final val = snapshot.getValue(key: 'key', defaultValue: '');
+    expect(val, equals('val1'));
+    expect(snapshot.cacheState, equals(ClientCacheState.hasCachedFlagDataOnly));
+
+    await customCache.write(
+        '', createTestEntryWithTime({'key': 'val2'}, distantPast).serialize());
+
+    await until(() async {
+      final snapshot = client.snapshot();
+      final val = snapshot.getValue(key: 'key', defaultValue: '');
+      return Future.value(val == 'val2');
+    });
+  });
 }
 
 class _KeepAliveConfigCatLogger extends ConfigCatLogger {

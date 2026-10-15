@@ -3,6 +3,9 @@ import 'package:configcat_client/src/constants.dart';
 import 'package:configcat_client/src/error_reporter.dart';
 import 'package:configcat_client/src/fetch/config_fetcher.dart';
 import 'package:configcat_client/src/fetch/config_service.dart';
+import 'package:configcat_client/src/flag_evaluator.dart';
+import 'package:configcat_client/src/rollout_evaluator.dart';
+import 'package:configcat_client/src/snapshot_builder.dart';
 import 'package:mockito/mockito.dart';
 import 'package:test/test.dart';
 
@@ -30,6 +33,10 @@ void main() {
 
   ConfigService createService(PollingMode pollingMode,
       {ConfigCatCache? customCache, bool offline = false}) {
+    final hooks = Hooks();
+    final errorReporter = ErrorReporter(logger, hooks);
+    final flagEvaluator =
+        FlagEvaluator(hooks, RolloutEvaluator(logger), LogLevel.info);
     return ConfigService(
         sdkKey: testSdkKey,
         mode: pollingMode,
@@ -38,6 +45,8 @@ void main() {
         logger: logger,
         cache: customCache ?? cache,
         errorReporter: ErrorReporter(logger, Hooks()),
+        snapshotBuilder:
+            SnapshotBuilder(flagEvaluator, null, errorReporter, null, hooks),
         offline: offline);
   }
 
@@ -308,6 +317,27 @@ void main() {
       // Assert
       expect(result2.isEmpty, isTrue);
       expect(testAdapter.capturedRequests.length, 1);
+
+      // Cleanup
+      service.close();
+    });
+
+    test('max wait time refresh', () async {
+      // Arrange
+      when(cache.read(any)).thenAnswer((_) => Future.value(''));
+
+      final service = createService(PollingMode.autoPoll(
+          maxInitWaitTime: const Duration(milliseconds: 100)));
+
+      testAdapter.enqueueResponse(
+          getPath(), 200, createTestConfig({'key': 'test1'}).toJson(),
+          delay: const Duration(seconds: 2));
+
+      // Act
+      final result = await service.refresh();
+
+      // Assert
+      expect(result.errorCode, RefreshErrorCode.clientInitTimeout);
 
       // Cleanup
       service.close();

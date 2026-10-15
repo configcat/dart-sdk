@@ -18,6 +18,8 @@ export 'src/configcat_client.dart';
 export 'src/configcat_options.dart';
 export 'src/configcat_user.dart';
 export 'src/data_governance.dart';
+export 'src/snapshot.dart';
+export 'src/errors.dart' show EvaluationErrorCode, RefreshErrorCode;
 
 // overrides
 export 'src/override/behaviour.dart';

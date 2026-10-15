@@ -2,11 +2,12 @@ import 'dart:async';
 
 import 'package:configcat_client/src/client_cache_state.dart';
 import 'package:configcat_client/src/constants.dart';
+import 'package:configcat_client/src/errors.dart';
 import 'package:configcat_client/src/fetch/refresh_result.dart';
-import 'package:configcat_client/src/json/setting_type.dart';
-import 'package:configcat_client/src/json/setting_value.dart';
+import 'package:configcat_client/src/flag_evaluator.dart';
 import 'package:configcat_client/src/log/logger.dart';
-import 'package:configcat_client/src/utils.dart';
+import 'package:configcat_client/src/snapshot.dart';
+import 'package:configcat_client/src/snapshot_builder.dart';
 import 'package:dio/dio.dart';
 
 import 'configcat_cache.dart';
@@ -14,7 +15,6 @@ import 'configcat_log_messages.dart';
 import 'configcat_options.dart';
 import 'configcat_user.dart';
 import 'error_reporter.dart';
-import 'evaluate_logger.dart';
 import 'fetch/config_fetcher.dart';
 import 'fetch/config_service.dart';
 import 'json/setting.dart';
@@ -33,7 +33,8 @@ class ConfigCatClient {
   late final FlagOverrides? _override;
   late final ErrorReporter _errorReporter;
   late final Hooks _hooks;
-  late ConfigCatUser? _defaultUser;
+  late final FlagEvaluator _flagEvaluator;
+  late final SnapshotBuilder _snapshotBuilder;
   static final Map<String, ConfigCatClient> _instanceRepository = {};
   bool _isClosed = false;
 
@@ -71,7 +72,6 @@ class ConfigCatClient {
     _logger = options.logger ?? ConfigCatLogger();
     _logLevel = _logger.getLogLevel();
     _override = options.override;
-    _defaultUser = options.defaultUser;
     _hooks = options.hooks ?? Hooks();
 
     final cache = options.cache ?? NullConfigCatCache();
@@ -84,10 +84,15 @@ class ConfigCatClient {
         options: options,
         errorReporter: _errorReporter);
 
+    _flagEvaluator = FlagEvaluator(_hooks, _rolloutEvaluator, _logLevel);
+    _snapshotBuilder = SnapshotBuilder(
+        _flagEvaluator, _override, _errorReporter, options.defaultUser, _hooks);
+
     if (_override != null &&
         _override!.behaviour == OverrideBehaviour.localOnly) {
       _configService = null;
-      _hooks.invokeOnReady(ClientCacheState.hasLocalOverrideFlagDataOnly);
+      _hooks.invokeOnReady(ClientCacheState.hasLocalOverrideFlagDataOnly,
+          _snapshotBuilder, InMemoryResult.empty);
     } else {
       _configService = ConfigService(
           sdkKey: sdkKey,
@@ -97,6 +102,7 @@ class ConfigCatClient {
           logger: _logger,
           cache: cache,
           errorReporter: _errorReporter,
+          snapshotBuilder: _snapshotBuilder,
           offline: options.offline);
     }
   }
@@ -115,41 +121,27 @@ class ConfigCatClient {
     if (key.isEmpty) {
       throw ArgumentError("'key' cannot be empty.");
     }
-    _validateReturnType<T>();
+    FlagEvaluator.validateReturnType<T>();
 
-    final evalUser = user ?? _defaultUser;
+    final evalUser = user ?? _snapshotBuilder.defaultUser;
+
     try {
       final result = await _getSettings();
-      if (result.isEmpty) {
-        final err =
-            ConfigCatLogMessages.getConfigJsonIsNotPresentedWithDefaultValue(
-                key, "defaultValue", defaultValue);
-        _errorReporter.error(1000, err);
-        hooks.invokeFlagEvaluated(
-            EvaluationDetails.makeError(key, defaultValue, err, evalUser));
-        return defaultValue;
-      }
-      final setting = result.settings[key];
-      if (setting == null) {
-        final err =
-            ConfigCatLogMessages.getSettingEvaluationFailedDueToMissingKey(key,
-                "defaultValue", defaultValue, result.settings.keys.toSet());
-        _errorReporter.error(1001, err);
-        hooks.invokeFlagEvaluated(
-            EvaluationDetails.makeError(key, defaultValue, err, evalUser));
-        return defaultValue;
-      }
-
-      return _evaluate<T>(
-              key, setting, evalUser, result.fetchTime, result.settings)
-          .value;
+      return _flagEvaluator.evaluate(key, evalUser, defaultValue, result).value;
     } catch (e, s) {
-      final err =
+      final evalError = e is EvaluationError ? e : null;
+      final messageToLog = evalError?.messageToLog ??
           ConfigCatLogMessages.getSettingEvaluationErrorWithDefaultValue(
               "getValue", key, "defaultValue", defaultValue);
-      _errorReporter.error(1002, err, e, s);
-      hooks.invokeFlagEvaluated(
-          EvaluationDetails.makeError(key, defaultValue, err, evalUser));
+      _errorReporter.error(evalError?.eventId ?? 1002, messageToLog, e, s);
+      final details = EvaluationDetails.makeError(
+          key,
+          defaultValue,
+          e is HasMessage ? e.message : messageToLog,
+          errorCodeFrom(e),
+          e,
+          evalUser);
+      _hooks.invokeFlagEvaluated(details);
       return defaultValue;
     }
   }
@@ -168,43 +160,26 @@ class ConfigCatClient {
     if (key.isEmpty) {
       throw ArgumentError("'key' cannot be empty.");
     }
-    _validateReturnType<T>();
+    FlagEvaluator.validateReturnType<T>();
 
-    final evalUser = user ?? _defaultUser;
+    final evalUser = user ?? _snapshotBuilder.defaultUser;
     try {
       final result = await _getSettings();
-      if (result.isEmpty) {
-        final err =
-            ConfigCatLogMessages.getConfigJsonIsNotPresentedWithDefaultValue(
-                key, "defaultValue", defaultValue);
-        _errorReporter.error(1000, err);
-        final details =
-            EvaluationDetails.makeError(key, defaultValue, err, evalUser);
-        hooks.invokeFlagEvaluated(details);
-        return details;
-      }
-      final setting = result.settings[key];
-      if (setting == null) {
-        final err =
-            ConfigCatLogMessages.getSettingEvaluationFailedDueToMissingKey(key,
-                "defaultValue", defaultValue, result.settings.keys.toSet());
-        _errorReporter.error(1001, err);
-        final details =
-            EvaluationDetails.makeError(key, defaultValue, err, evalUser);
-        hooks.invokeFlagEvaluated(details);
-        return details;
-      }
-
-      return _evaluate<T>(
-          key, setting, evalUser, result.fetchTime, result.settings);
+      return _flagEvaluator.evaluate(key, evalUser, defaultValue, result);
     } catch (e, s) {
-      final err =
+      final evalError = e is EvaluationError ? e : null;
+      final messageToLog = evalError?.messageToLog ??
           ConfigCatLogMessages.getSettingEvaluationErrorWithDefaultValue(
               "getValueDetails", key, "defaultValue", defaultValue);
-      _errorReporter.error(1002, err, e, s);
+      _errorReporter.error(evalError?.eventId ?? 1002, messageToLog, e, s);
       final details = EvaluationDetails.makeError(
-          key, defaultValue, e.toString(), evalUser);
-      hooks.invokeFlagEvaluated(details);
+          key,
+          defaultValue,
+          e is HasMessage ? e.message : messageToLog,
+          errorCodeFrom(e),
+          e,
+          evalUser);
+      _hooks.invokeFlagEvaluated(details);
       return details;
     }
   }
@@ -216,7 +191,7 @@ class ConfigCatClient {
   Future<List<EvaluationDetails>> getAllValueDetails({
     ConfigCatUser? user,
   }) async {
-    final evalUser = user ?? _defaultUser;
+    final evalUser = user ?? _snapshotBuilder.defaultUser;
     try {
       final result = await _getSettings();
       if (result.isEmpty) {
@@ -228,8 +203,8 @@ class ConfigCatClient {
       }
       final detailsResult = List<EvaluationDetails>.empty(growable: true);
       result.settings.forEach((key, value) {
-        detailsResult.add(
-            _evaluate(key, value, evalUser, result.fetchTime, result.settings));
+        detailsResult
+            .add(_flagEvaluator.evaluateSetting(key, value, evalUser, result));
       });
 
       return detailsResult;
@@ -284,8 +259,9 @@ class ConfigCatClient {
 
       final result = <String, dynamic>{};
       settingsResult.settings.forEach((key, value) {
-        result[key] = _evaluate(key, value, user ?? _defaultUser,
-                settingsResult.fetchTime, settingsResult.settings)
+        result[key] = _flagEvaluator
+            .evaluateSetting(key, value, user ?? _snapshotBuilder.defaultUser,
+                settingsResult)
             .value;
       });
 
@@ -306,7 +282,7 @@ class ConfigCatClient {
   /// [T] the type of the desired feature flag or setting. Only the following types are allowed: [String], [bool], [int], [double], [Object] (both nullable and non-nullable) and [dynamic].
   Future<MapEntry<String, T>?> getKeyAndValue<T>(
       {required String variationId}) async {
-    _validateReturnType<T>();
+    FlagEvaluator.validateReturnType<T>();
 
     try {
       final result = await _getSettings();
@@ -322,7 +298,7 @@ class ConfigCatClient {
         if (entry.value.variationId == variationId) {
           return MapEntry(
               entry.key,
-              _parseSettingValue<T>(
+              _flagEvaluator.parseSettingValue<T>(
                   entry.value.settingValue, entry.value.type));
         }
 
@@ -331,7 +307,8 @@ class ConfigCatClient {
             if (targetingRule.servedValue?.variationId == variationId) {
               return MapEntry(
                   entry.key,
-                  _parseSettingValue<T>(targetingRule.servedValue!.settingValue,
+                  _flagEvaluator.parseSettingValue<T>(
+                      targetingRule.servedValue!.settingValue,
                       entry.value.type));
             }
           } else {
@@ -341,12 +318,12 @@ class ConfigCatClient {
                 if (percentageOption.variationId == variationId) {
                   return MapEntry(
                       entry.key,
-                      _parseSettingValue<T>(
+                      _flagEvaluator.parseSettingValue<T>(
                           percentageOption.settingValue, entry.value.type));
                 }
               }
             } else {
-              throw UnsupportedError(
+              throw InvalidConfigModelError(
                   "Targeting rule THEN part is missing or invalid.");
             }
           }
@@ -356,7 +333,7 @@ class ConfigCatClient {
           if (percentageOption.variationId == variationId) {
             return MapEntry(
                 entry.key,
-                _parseSettingValue<T>(
+                _flagEvaluator.parseSettingValue<T>(
                     percentageOption.settingValue, entry.value.type));
           }
         }
@@ -388,11 +365,23 @@ class ConfigCatClient {
     return _hooks;
   }
 
-  /// Initiates a force refresh on the cached configuration.
+  /// Updates the internally cached config by synchronizing with the external cache (if any),
+  /// then by fetching the latest version from the ConfigCat CDN (provided that the client is online).
   Future<RefreshResult> forceRefresh() {
-    return _configService?.refresh() ??
-        Future.value(RefreshResult(false,
-            'The SDK uses the LOCAL_ONLY flag override behavior which prevents making HTTP requests.'));
+    try {
+      return _configService?.refresh() ??
+          Future.value(RefreshResult(
+              false,
+              'Client is configured to use the `localOnly` override behavior, which prevents synchronization with external cache and making HTTP requests.',
+              RefreshErrorCode.localOnlyClient));
+    } catch (e, s) {
+      _errorReporter.error(1003, ConfigCatLogMessages.forceRefreshError, e, s);
+      return Future.value(RefreshResult(
+          false,
+          "An error occurred during the refresh.",
+          RefreshErrorCode.unexpectedError,
+          e));
+    }
   }
 
   /// Sets defaultUser value.
@@ -401,12 +390,12 @@ class ConfigCatClient {
   ///
   /// [user] The new default user.
   void setDefaultUser(ConfigCatUser? user) {
-    _defaultUser = user;
+    _snapshotBuilder.defaultUser = user;
   }
 
   /// Sets the default user to null.
   void clearDefaultUser() {
-    _defaultUser = null;
+    _snapshotBuilder.defaultUser = null;
   }
 
   /// Set the client to offline mode. HTTP calls are not allowed.
@@ -460,6 +449,20 @@ class ConfigCatClient {
     return await completer.future;
   }
 
+  /// Captures the SDK's internally cached config data.
+  /// It does not attempt to update it by synchronizing with the external cache or by fetching
+  /// the latest version from the ConfigCat CDN.
+  ///
+  /// Therefore, it is recommended to use snapshots in conjunction with the Auto Polling mode,
+  /// where the SDK automatically updates the internal cache in the background.
+  ///
+  /// For other polling modes, you will need to manually initiate a cache
+  /// update by invoking [ConfigCatClient.forceRefresh].
+  ConfigCatClientSnapshot snapshot() {
+    final inMemory = _configService?.inMemory ?? InMemoryResult.empty;
+    return _snapshotBuilder.buildSnapshot(inMemory);
+  }
+
   /// Closes the underlying resources.
   void close() {
     _isClosed = true;
@@ -497,19 +500,19 @@ class ConfigCatClient {
     if (_override != null) {
       switch (_override!.behaviour) {
         case OverrideBehaviour.localOnly:
-          final local = await _override!.dataSource.getOverrides();
+          final local = _override!.dataSource.getOverrides();
           return SettingResult(settings: local, fetchTime: distantPast);
         case OverrideBehaviour.localOverRemote:
           final remote =
               await _configService?.getSettings() ?? SettingResult.empty;
-          final local = await _override!.dataSource.getOverrides();
+          final local = _override!.dataSource.getOverrides();
           return SettingResult(
               settings: Map<String, Setting>.of(remote.settings)..addAll(local),
               fetchTime: remote.fetchTime);
         case OverrideBehaviour.remoteOverLocal:
           final remote =
               await _configService?.getSettings() ?? SettingResult.empty;
-          final local = await _override!.dataSource.getOverrides();
+          final local = _override!.dataSource.getOverrides();
           return SettingResult(
               settings: Map<String, Setting>.of(local)..addAll(remote.settings),
               fetchTime: remote.fetchTime);
@@ -517,77 +520,5 @@ class ConfigCatClient {
     }
 
     return await _configService?.getSettings() ?? SettingResult.empty;
-  }
-
-  EvaluationDetails<T> _evaluate<T>(String key, Setting setting,
-      ConfigCatUser? user, DateTime fetchTime, Map<String, Setting> settings) {
-    EvaluateLogger? evaluateLogger;
-    if (_logLevel.index <= LogLevel.info.index) {
-      evaluateLogger = EvaluateLogger();
-    }
-    final eval = _rolloutEvaluator.evaluate(
-        setting, key, user, settings, evaluateLogger);
-    final details = EvaluationDetails<T>(
-        key: key,
-        variationId: eval.variationId,
-        user: user,
-        isDefaultValue: false,
-        error: null,
-        value: _parseSettingValue<T>(eval.value, setting.type),
-        fetchTime: fetchTime,
-        matchedTargetingRule: eval.matchedTargetingRule,
-        matchedPercentageOption: eval.matchedPercentageOption);
-
-    _hooks.invokeFlagEvaluated(details);
-    return details;
-  }
-
-  T _parseSettingValue<T>(SettingValue settingValue, int settingType) {
-    SettingType settingTypeEnum = SettingType.tryFrom(settingType) ??
-        (() => throw ArgumentError("Setting type is invalid."))();
-
-    bool allowsAnyType =
-        T == Object || Utils.typesEqual<T, Object?>() || T == dynamic;
-
-    if ((T == bool || Utils.typesEqual<T, bool?>() || allowsAnyType) &&
-        settingTypeEnum == SettingType.boolean &&
-        settingValue.booleanValue != null) {
-      return settingValue.booleanValue as T;
-    }
-    if ((T == String || Utils.typesEqual<T, String?>() || allowsAnyType) &&
-        settingTypeEnum == SettingType.string &&
-        settingValue.stringValue != null) {
-      return settingValue.stringValue as T;
-    }
-    if ((T == int || Utils.typesEqual<T, int?>() || allowsAnyType) &&
-        settingTypeEnum == SettingType.int &&
-        settingValue.intValue != null) {
-      return settingValue.intValue as T;
-    }
-    if ((T == double || Utils.typesEqual<T, double?>() || allowsAnyType) &&
-        settingTypeEnum == SettingType.double &&
-        settingValue.doubleValue != null) {
-      return settingValue.doubleValue as T;
-    }
-
-    throw ArgumentError(
-        "The type of a setting must match the type of the specified default value. Setting's type was ${settingTypeEnum.name} but the default value's type was $T. Please use a default value which corresponds to the setting type ${settingTypeEnum.name}. Learn more: https://configcat.com/docs/sdk-reference/dart/#setting-type-mapping");
-  }
-
-  void _validateReturnType<T>() {
-    if (T != bool &&
-        T != String &&
-        T != int &&
-        T != double &&
-        T != Object &&
-        !Utils.typesEqual<T, bool?>() &&
-        !Utils.typesEqual<T, String?>() &&
-        !Utils.typesEqual<T, int?>() &&
-        !Utils.typesEqual<T, double?>() &&
-        !Utils.typesEqual<T, Object?>() &&
-        T != dynamic) {
-      throw ArgumentError(
-          "Only the following types are supported: $String, $bool, $int, $double, $Object (both nullable and non-nullable) and $dynamic.");
-    }
   }
 }

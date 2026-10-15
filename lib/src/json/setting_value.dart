@@ -1,3 +1,4 @@
+import 'package:configcat_client/src/errors.dart';
 import 'package:configcat_client/src/json/setting_type.dart';
 import 'package:json_annotation/json_annotation.dart';
 
@@ -43,7 +44,7 @@ class SettingValue {
       if (settingType == SettingType.double) {
         return doubleValue == other.doubleValue;
       }
-      throw ArgumentError(
+      throw InvalidConfigModelError(
           "Setting is of an unsupported type (${settingType.name}).");
     }
     return false;
