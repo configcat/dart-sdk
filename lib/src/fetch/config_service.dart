@@ -208,12 +208,12 @@ class ConfigService with ContinuousFutureSynchronizer {
       // After the maxInitWaitTime timeout the client will be initialized and while
       // the config is not ready the default value will be returned.
       return await _fetchConfig().timeout(mode.maxInitWaitTime, onTimeout: () {
-        _logger.warning(
-            4200,
-            ConfigCatLogMessages.getAutoPollMaxInitWaitTimeReached(
-                mode.maxInitWaitTime.inSeconds));
+        final message = ConfigCatLogMessages.getAutoPollMaxInitWaitTimeReached(
+            mode.maxInitWaitTime.inSeconds);
+        _logger.warning(4200, message);
         _initializeAndReportCacheState();
-        return FetchResult(_cachedEntry);
+        return FetchResult(
+            _cachedEntry, message, RefreshErrorCode.clientInitTimeout);
       });
     }
     // The service is initialized, start fetch without timeout.

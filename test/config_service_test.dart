@@ -322,6 +322,27 @@ void main() {
       service.close();
     });
 
+    test('max wait time refresh', () async {
+      // Arrange
+      when(cache.read(any)).thenAnswer((_) => Future.value(''));
+
+      final service = createService(PollingMode.autoPoll(
+          maxInitWaitTime: const Duration(milliseconds: 100)));
+
+      testAdapter.enqueueResponse(
+          getPath(), 200, createTestConfig({'key': 'test1'}).toJson(),
+          delay: const Duration(seconds: 2));
+
+      // Act
+      final result = await service.refresh();
+
+      // Assert
+      expect(result.errorCode, RefreshErrorCode.clientInitTimeout);
+
+      // Cleanup
+      service.close();
+    });
+
     test('max wait time ignored when the cache is not expired yet', () async {
       // Arrange
       final cached = createTestEntry({'key': true}).serialize();
