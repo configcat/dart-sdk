@@ -98,7 +98,8 @@ class InvalidConfigModelError extends Error implements HasMessage {
 
 EvaluationErrorCode errorCodeFrom(Object e) {
   if (e is EvaluationError) return e.errorCode;
-  if (e is InvalidConfigModelError)
+  if (e is InvalidConfigModelError) {
     return EvaluationErrorCode.invalidConfigModel;
+  }
   return EvaluationErrorCode.unexpectedError;
 }
