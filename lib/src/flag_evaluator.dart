@@ -100,9 +100,7 @@ class FlagEvaluator {
   T parseSettingValue<T>(SettingValue settingValue, int settingType) {
     SettingType? settingTypeEnum = SettingType.tryFrom(settingType);
     if (settingTypeEnum == null) {
-      throw EvaluationError(
-          message: "Setting type is invalid.",
-          errorCode: EvaluationErrorCode.settingValueTypeMismatch);
+      throw InvalidConfigModelError("Setting type is invalid.");
     }
 
     bool allowsAnyType =
@@ -134,14 +132,4 @@ class FlagEvaluator {
             "The type of a setting must match the type of the specified default value. Setting's type was ${settingTypeEnum.name} but the default value's type was $T. Please use a default value which corresponds to the setting type ${settingTypeEnum.name}. Learn more: https://configcat.com/docs/sdk-reference/dart/#setting-type-mapping",
         errorCode: EvaluationErrorCode.settingValueTypeMismatch);
   }
-}
-
-class ParseResult<T> {
-  final T? value;
-  final String? error;
-
-  ParseResult(this.value, this.error);
-
-  factory ParseResult.ok(T value) => ParseResult(value, null);
-  factory ParseResult.error(String error) => ParseResult(null, error);
 }

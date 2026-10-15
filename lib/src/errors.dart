@@ -65,25 +65,40 @@ enum RefreshErrorCode {
   final int value;
 }
 
-class EvaluationError extends Error {
+abstract class HasMessage {
+  String get message;
+}
+
+class EvaluationError extends Error implements HasMessage {
+  @override
   final String message;
   final String? messageToLog;
   final EvaluationErrorCode errorCode;
-  final int eventId;
+  final int? eventId;
 
   EvaluationError(
       {required this.message,
       this.messageToLog,
-      this.errorCode = EvaluationErrorCode.unexpectedError,
-      this.eventId = 1002});
+      required this.errorCode,
+      this.eventId});
 
   @override
   String toString() => message;
 }
 
-class InvalidConfigModelError extends EvaluationError {
-  InvalidConfigModelError(String errorMessage)
-      : super(
-            message: errorMessage,
-            errorCode: EvaluationErrorCode.invalidConfigModel);
+class InvalidConfigModelError extends Error implements HasMessage {
+  @override
+  final String message;
+
+  InvalidConfigModelError(this.message);
+
+  @override
+  String toString() => message;
+}
+
+EvaluationErrorCode errorCodeFrom(Object e) {
+  if (e is EvaluationError) return e.errorCode;
+  if (e is InvalidConfigModelError)
+    return EvaluationErrorCode.invalidConfigModel;
+  return EvaluationErrorCode.unexpectedError;
 }

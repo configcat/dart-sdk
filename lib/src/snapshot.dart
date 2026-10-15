@@ -51,31 +51,23 @@ class ConfigCatClientSnapshot {
       return _flagEvaluator
           .evaluate(key, evalUser, defaultValue, _settingResult)
           .value;
-    } on EvaluationError catch (e, s) {
-      _errorReporter.error(
-          e.eventId,
-          e.messageToLog ??
-              ConfigCatLogMessages.getSettingEvaluationErrorWithDefaultValue(
-                  "ConfigCatClientSnapshot.getValue",
-                  key,
-                  "defaultValue",
-                  defaultValue),
-          e,
-          s);
-      final details = EvaluationDetails.makeError(
-          key, defaultValue, e.message, e.errorCode, e, user);
-      _hooks.invokeFlagEvaluated(details);
-      return defaultValue;
     } catch (e, s) {
-      final err =
+      final evalError = e is EvaluationError ? e : null;
+      final messageToLog = evalError?.messageToLog ??
           ConfigCatLogMessages.getSettingEvaluationErrorWithDefaultValue(
               "ConfigCatClientSnapshot.getValue",
               key,
               "defaultValue",
               defaultValue);
-      _errorReporter.error(1002, err, e, s);
-      _hooks.invokeFlagEvaluated(EvaluationDetails.makeError(key, defaultValue,
-          err, EvaluationErrorCode.unexpectedError, e, evalUser));
+      _errorReporter.error(evalError?.eventId ?? 1002, messageToLog, e, s);
+      final details = EvaluationDetails.makeError(
+          key,
+          defaultValue,
+          e is HasMessage ? e.message : messageToLog,
+          errorCodeFrom(e),
+          e,
+          evalUser);
+      _hooks.invokeFlagEvaluated(details);
       return defaultValue;
     }
   }
@@ -100,31 +92,22 @@ class ConfigCatClientSnapshot {
     try {
       return _flagEvaluator.evaluate(
           key, evalUser, defaultValue, _settingResult);
-    } on EvaluationError catch (e, s) {
-      _errorReporter.error(
-          e.eventId,
-          e.messageToLog ??
-              ConfigCatLogMessages.getSettingEvaluationErrorWithDefaultValue(
-                  "ConfigCatClientSnapshot.getValueDetails",
-                  key,
-                  "defaultValue",
-                  defaultValue),
-          e,
-          s);
-      final details = EvaluationDetails.makeError(
-          key, defaultValue, e.message, e.errorCode, e, user);
-      _hooks.invokeFlagEvaluated(details);
-      return details;
     } catch (e, s) {
-      final err =
+      final evalError = e is EvaluationError ? e : null;
+      final messageToLog = evalError?.messageToLog ??
           ConfigCatLogMessages.getSettingEvaluationErrorWithDefaultValue(
               "ConfigCatClientSnapshot.getValueDetails",
               key,
               "defaultValue",
               defaultValue);
-      _errorReporter.error(1002, err, e, s);
-      final details = EvaluationDetails.makeError(key, defaultValue, err,
-          EvaluationErrorCode.unexpectedError, e, evalUser);
+      _errorReporter.error(evalError?.eventId ?? 1002, messageToLog, e, s);
+      final details = EvaluationDetails.makeError(
+          key,
+          defaultValue,
+          e is HasMessage ? e.message : messageToLog,
+          errorCodeFrom(e),
+          e,
+          evalUser);
       _hooks.invokeFlagEvaluated(details);
       return details;
     }
