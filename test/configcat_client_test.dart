@@ -1,5 +1,4 @@
 import 'package:configcat_client/configcat_client.dart';
-import 'package:configcat_client/src/client_cache_state.dart';
 import 'package:configcat_client/src/constants.dart';
 import 'package:mockito/mockito.dart';
 import 'package:test/test.dart';
