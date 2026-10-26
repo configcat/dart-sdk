@@ -66,6 +66,7 @@ class EvaluationDetails<T> {
   }
 }
 
+/// Events fired by [ConfigCatClient].
 class Hooks {
   final List<Function(String, [dynamic error, StackTrace? stackTrace])>
       _onError = [];
