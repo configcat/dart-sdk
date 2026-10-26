@@ -129,7 +129,8 @@ void main() {
     final client = ConfigCatClient.get(
         sdkKey: testSdkKey,
         options: ConfigCatOptions(
-            hooks: Hooks(onConfigChanged: (_, snapshot) => sn = snapshot)));
+            hooks: (h) =>
+                h.addOnConfigChanged((_, snapshot) => sn = snapshot)));
     final testAdapter = HttpTestAdapter(client.httpClient);
     final body =
         createTestConfig({'enabled': true, 'something': 'some'}).toJson();
@@ -146,8 +147,8 @@ void main() {
     final client = ConfigCatClient.get(
         sdkKey: testSdkKey,
         options: ConfigCatOptions(
-            hooks:
-                Hooks(onClientReadyWithSnapshot: (snapshot) => sn = snapshot)));
+            hooks: (h) =>
+                h.addOnClientReadyWithSnapshot((snapshot) => sn = snapshot)));
     final testAdapter = HttpTestAdapter(client.httpClient);
     final body =
         createTestConfig({'enabled': true, 'something': 'some'}).toJson();
@@ -166,10 +167,10 @@ void main() {
     final client = ConfigCatClient.get(
         sdkKey: testSdkKey,
         options: ConfigCatOptions(
-            hooks: Hooks(
-              onConfigChanged: (_, snapshot) => sn2 = snapshot,
-              onClientReadyWithSnapshot: (snapshot) => sn1 = snapshot,
-            ),
+            hooks: (h) {
+              h.addOnConfigChanged((_, snapshot) => sn2 = snapshot);
+              h.addOnClientReadyWithSnapshot((snapshot) => sn1 = snapshot);
+            },
             cache: cache));
     final testAdapter = HttpTestAdapter(client.httpClient);
     testAdapter.enqueueResponse(getPath(), 200, "");
@@ -191,10 +192,10 @@ void main() {
     final client = ConfigCatClient.get(
         sdkKey: testSdkKey,
         options: ConfigCatOptions(
-            hooks: Hooks(
-              onConfigChanged: (_, snapshot) => sn2 = snapshot,
-              onClientReadyWithSnapshot: (snapshot) => sn1 = snapshot,
-            ),
+            hooks: (h) {
+              h.addOnConfigChanged((_, snapshot) => sn2 = snapshot);
+              h.addOnClientReadyWithSnapshot((snapshot) => sn1 = snapshot);
+            },
             cache: cache));
     final testAdapter = HttpTestAdapter(client.httpClient);
     testAdapter.enqueueResponse(getPath(), 200, "");

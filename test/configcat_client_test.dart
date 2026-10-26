@@ -470,7 +470,7 @@ void main() {
         options: ConfigCatOptions(
             pollingMode: PollingMode.autoPoll(),
             cache: cache,
-            hooks: Hooks(onClientReady: (_) => ready = true),
+            hooks: (h) => h.addOnClientReady((_) => ready = true),
             offline: true));
     final localAdapter = HttpTestAdapter(localClient.httpClient);
 
@@ -481,6 +481,90 @@ void main() {
     // Assert
     expect(localAdapter.capturedRequests.length, equals(0));
     expect(ready, isTrue);
+  });
+
+  test('init shared options manual poll', () async {
+    // Arrange
+    var readyCount = 0;
+
+    final opts = ConfigCatOptions(
+        pollingMode: PollingMode.manualPoll(),
+        hooks: (h) => h.addOnClientReady((p0) => readyCount++));
+
+    final sdkKey1 = randomSdkKey();
+    final sdkKey2 = randomSdkKey();
+    final localClient1 = ConfigCatClient.get(sdkKey: sdkKey1, options: opts);
+    final localClient2 = ConfigCatClient.get(sdkKey: sdkKey2, options: opts);
+
+    // Act
+    await localClient1.waitForReady();
+    await localClient2.waitForReady();
+
+    // Assert
+    expect(readyCount, equals(2));
+  });
+
+  test('init shared options auto poll', () async {
+    // Arrange
+    final body = createTestConfig({'stringValue': 'testValue'}).toJson();
+    var readyCount = 0;
+
+    final opts = ConfigCatOptions(
+        pollingMode: PollingMode.autoPoll(),
+        hooks: (h) => h.addOnClientReady((p0) => readyCount++));
+
+    final sdkKey1 = randomSdkKey();
+    final sdkKey2 = randomSdkKey();
+    final localClient1 = ConfigCatClient.get(sdkKey: sdkKey1, options: opts);
+    final localClient2 = ConfigCatClient.get(sdkKey: sdkKey2, options: opts);
+    final localAdapter1 = HttpTestAdapter(localClient1.httpClient);
+    final localAdapter2 = HttpTestAdapter(localClient2.httpClient);
+
+    localAdapter1.enqueueResponse(getPath(sdkKey: sdkKey1), 200, body);
+    localAdapter2.enqueueResponse(getPath(sdkKey: sdkKey2), 200, body);
+
+    // Act
+    await localClient1.waitForReady();
+    await localClient2.waitForReady();
+
+    // Assert
+    expect(readyCount, equals(2));
+  });
+
+  test('options hook chaining works', () async {
+    // Arrange
+    final body = createTestConfig({'stringValue': 'testValue'}).toJson();
+    var readyCount = 0;
+    var configChangeCount = 0;
+
+    final base = ConfigCatOptions(
+        pollingMode: PollingMode.autoPoll(),
+        hooks: (h) => h.addOnClientReady((p0) => readyCount++));
+
+    final opts = ConfigCatOptions(
+        pollingMode: base.pollingMode,
+        hooks: (h) {
+          base.hooks?.call(h);
+          h.addOnConfigChanged((_, __) => configChangeCount++);
+        });
+
+    final sdkKey1 = randomSdkKey();
+    final sdkKey2 = randomSdkKey();
+    final localClient1 = ConfigCatClient.get(sdkKey: sdkKey1, options: opts);
+    final localClient2 = ConfigCatClient.get(sdkKey: sdkKey2, options: opts);
+    final localAdapter1 = HttpTestAdapter(localClient1.httpClient);
+    final localAdapter2 = HttpTestAdapter(localClient2.httpClient);
+
+    localAdapter1.enqueueResponse(getPath(sdkKey: sdkKey1), 200, body);
+    localAdapter2.enqueueResponse(getPath(sdkKey: sdkKey2), 200, body);
+
+    // Act
+    await localClient1.waitForReady();
+    await localClient2.waitForReady();
+
+    // Assert
+    expect(readyCount, equals(2));
+    expect(configChangeCount, equals(2));
   });
 
   test('eval details', () async {

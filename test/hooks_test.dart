@@ -17,10 +17,11 @@ void main() {
           sdkKey: testSdkKey,
           options: ConfigCatOptions(
               pollingMode: PollingMode.manualPoll(),
-              hooks: Hooks(
-                  onConfigChanged: (map, _) => configChanged = true,
-                  onClientReady: (_) => ready = true,
-                  onFlagEvaluated: (ctx) => eval = true)));
+              hooks: (h) {
+                h.addOnConfigChanged((map, _) => configChanged = true);
+                h.addOnClientReady((_) => ready = true);
+                h.addOnFlagEvaluated((ctx) => eval = true);
+              }));
       final testAdapter = HttpTestAdapter(client.httpClient);
 
       final body = createTestConfig({'stringValue': 'testValue'}).toJson();

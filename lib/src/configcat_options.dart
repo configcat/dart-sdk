@@ -77,21 +77,6 @@ class Hooks {
   final List<Function(ConfigCatClientSnapshot)> _onClientReadyWithSnapshot = [];
   ClientCacheState? _clientCacheState;
 
-  Hooks(
-      {Function(String, [dynamic error, StackTrace? stackTrace])? onError,
-      Function(Map<String, Setting>, ConfigCatClientSnapshot)? onConfigChanged,
-      Function(EvaluationDetails)? onFlagEvaluated,
-      Function(ClientCacheState)? onClientReady,
-      Function(ConfigCatClientSnapshot)? onClientReadyWithSnapshot}) {
-    if (onError != null) _onError.add(onError);
-    if (onConfigChanged != null) _onConfigChanged.add(onConfigChanged);
-    if (onFlagEvaluated != null) _onFlagEvaluated.add(onFlagEvaluated);
-    if (onClientReady != null) _onClientReady.add(onClientReady);
-    if (onClientReadyWithSnapshot != null) {
-      _onClientReadyWithSnapshot.add(onClientReadyWithSnapshot);
-    }
-  }
-
   void addOnError(
       Function(String, [dynamic error, StackTrace? stackTrace]) onError) {
     _onError.add(onError);
@@ -178,7 +163,7 @@ class ConfigCatOptions {
   final FlagOverrides? override;
   final HttpClientAdapter? httpClientAdapter;
   final ConfigCatUser? defaultUser;
-  final Hooks? hooks;
+  final Function(Hooks)? hooks;
   final bool offline;
 
   const ConfigCatOptions({
