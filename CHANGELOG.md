@@ -6,9 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 5.1.0 - 2026-10-26
 ### Fixed
-- When a single `ConfigCatOptions` instance was shared between different clients, they also shared the same `Hooks` instance. This resulted in an inconsistent ready state handling.
+- When a single `ConfigCatOptions` instance was shared between different clients, they also shared the same `Hooks` instance. This resulted in inconsistent ready-state handling.
   The type of the `ConfigCatOptions`'s `hooks` parameter is now a `Function(Hooks)` instead of `Hooks`. 
-  Now, each `ConfigCatClient` creation creates a new `Hooks` instance which is passed to the function set on the options.
+  Now, each `ConfigCatClient` creation creates a new `Hooks` instance, which is passed to the function set on the options.
 
 ### Breaking changes
 - The type of the `ConfigCatOptions`'s `hooks` parameter is changed to `Function(Hooks)`.
