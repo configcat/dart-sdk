@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 5.1.0 - 2026-10-26
+### Fixed
+- When a single `ConfigCatOptions` instance was shared between different clients, they also shared the same `Hooks` instance. This resulted in an inconsistent ready state handling.
+  The type of the `ConfigCatOptions`'s `hooks` parameter is now a `Function(Hooks)` instead of `Hooks`. 
+  Now, each `ConfigCatClient` creation creates a new `Hooks` instance which is passed to the function set on the options.
+
+### Breaking changes
+- The type of the `ConfigCatOptions`'s `hooks` parameter is changed to `Function(Hooks)`.
+  
+  Usage is changed from:
+  ```dart
+  final opts = ConfigCatOptions(
+    hooks: Hooks(onFlagEvaluated: (details) => /* handle the event */),
+  );
+  ```
+  to:
+  ```dart
+  final opts = ConfigCatOptions(
+    hooks: (h) => h.addOnFlagEvaluated((details) => /* handle the event */),
+  );
+  ```
+
 ## 5.0.1 - 2026-10-19
 ### Changed
 - Export the `ClientCacheState` type.

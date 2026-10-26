@@ -72,7 +72,8 @@ class ConfigCatClient {
     _logger = options.logger ?? ConfigCatLogger();
     _logLevel = _logger.getLogLevel();
     _override = options.override;
-    _hooks = options.hooks ?? Hooks();
+    _hooks = Hooks();
+    options.hooks?.call(_hooks);
 
     final cache = options.cache ?? NullConfigCatCache();
 
