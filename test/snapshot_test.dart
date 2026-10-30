@@ -6,13 +6,20 @@ import 'helpers.dart';
 import 'http_adapter.dart';
 
 void main() {
+  late HttpTestAdapter testAdapter;
+
+  setUp(() {
+    testAdapter = HttpTestAdapter();
+  });
+
   tearDown(() {
+    testAdapter.close();
     ConfigCatClient.closeAll();
   });
 
   test('get', () async {
-    final client = ConfigCatClient.get(sdkKey: testSdkKey);
-    final testAdapter = HttpTestAdapter(client.httpClient);
+    final client = ConfigCatClient.get(
+        sdkKey: testSdkKey, options: ConfigCatOptions(httpClient: testAdapter));
     final body = createTestConfig({'enabled': true}).toJson();
     testAdapter.enqueueResponse(getPath(), 200, body);
 
@@ -24,8 +31,8 @@ void main() {
   });
 
   test('get all keys', () async {
-    final client = ConfigCatClient.get(sdkKey: testSdkKey);
-    final testAdapter = HttpTestAdapter(client.httpClient);
+    final client = ConfigCatClient.get(
+        sdkKey: testSdkKey, options: ConfigCatOptions(httpClient: testAdapter));
     final body =
         createTestConfig({'enabled': true, 'something': 'some'}).toJson();
     testAdapter.enqueueResponse(getPath(), 200, body);
@@ -38,8 +45,8 @@ void main() {
   });
 
   test('get all keys empty', () async {
-    final client = ConfigCatClient.get(sdkKey: testSdkKey);
-    final testAdapter = HttpTestAdapter(client.httpClient);
+    final client = ConfigCatClient.get(
+        sdkKey: testSdkKey, options: ConfigCatOptions(httpClient: testAdapter));
     testAdapter.enqueueResponse(getPath(), 200, "");
 
     await client.waitForReady();
@@ -50,8 +57,8 @@ void main() {
   });
 
   test('get details', () async {
-    final client = ConfigCatClient.get(sdkKey: testSdkKey);
-    final testAdapter = HttpTestAdapter(client.httpClient);
+    final client = ConfigCatClient.get(
+        sdkKey: testSdkKey, options: ConfigCatOptions(httpClient: testAdapter));
     final body =
         createTestConfig({'enabled': true, 'something': 'some'}).toJson();
     testAdapter.enqueueResponse(getPath(), 200, body);
@@ -67,8 +74,8 @@ void main() {
   });
 
   test('wait multiple', () async {
-    final client = ConfigCatClient.get(sdkKey: testSdkKey);
-    final testAdapter = HttpTestAdapter(client.httpClient);
+    final client = ConfigCatClient.get(
+        sdkKey: testSdkKey, options: ConfigCatOptions(httpClient: testAdapter));
     final body =
         createTestConfig({'enabled': true, 'something': 'some'}).toJson();
     testAdapter.enqueueResponse(getPath(), 200, body);
@@ -88,9 +95,9 @@ void main() {
     final client = ConfigCatClient.get(
         sdkKey: testSdkKey,
         options: ConfigCatOptions(
+            httpClient: testAdapter,
             pollingMode: PollingMode.autoPoll(
                 autoPollInterval: const Duration(seconds: 1))));
-    final testAdapter = HttpTestAdapter(client.httpClient);
     final body =
         createTestConfig({'enabled': true, 'something': 'some'}).toJson();
     testAdapter.enqueueResponse(getPath(), 200, "");
@@ -107,8 +114,8 @@ void main() {
   });
 
   test('type mismatch', () async {
-    final client = ConfigCatClient.get(sdkKey: testSdkKey);
-    final testAdapter = HttpTestAdapter(client.httpClient);
+    final client = ConfigCatClient.get(
+        sdkKey: testSdkKey, options: ConfigCatOptions(httpClient: testAdapter));
     final body =
         createTestConfig({'enabled': true, 'something': 'some'}).toJson();
     testAdapter.enqueueResponse(getPath(), 200, body);
@@ -129,9 +136,8 @@ void main() {
     final client = ConfigCatClient.get(
         sdkKey: testSdkKey,
         options: ConfigCatOptions(
-            hooks: (h) =>
-                h.addOnConfigChanged((_, snapshot) => sn = snapshot)));
-    final testAdapter = HttpTestAdapter(client.httpClient);
+            hooks: (h) => h.addOnConfigChanged((_, snapshot) => sn = snapshot),
+            httpClient: testAdapter));
     final body =
         createTestConfig({'enabled': true, 'something': 'some'}).toJson();
     testAdapter.enqueueResponse(getPath(), 200, body);
@@ -148,8 +154,8 @@ void main() {
         sdkKey: testSdkKey,
         options: ConfigCatOptions(
             hooks: (h) =>
-                h.addOnClientReadyWithSnapshot((snapshot) => sn = snapshot)));
-    final testAdapter = HttpTestAdapter(client.httpClient);
+                h.addOnClientReadyWithSnapshot((snapshot) => sn = snapshot),
+            httpClient: testAdapter));
     final body =
         createTestConfig({'enabled': true, 'something': 'some'}).toJson();
     testAdapter.enqueueResponse(getPath(), 200, body);
@@ -171,8 +177,8 @@ void main() {
               h.addOnConfigChanged((_, snapshot) => sn2 = snapshot);
               h.addOnClientReadyWithSnapshot((snapshot) => sn1 = snapshot);
             },
-            cache: cache));
-    final testAdapter = HttpTestAdapter(client.httpClient);
+            cache: cache,
+            httpClient: testAdapter));
     testAdapter.enqueueResponse(getPath(), 200, "");
 
     final state = await client.waitForReady();
@@ -196,8 +202,8 @@ void main() {
               h.addOnConfigChanged((_, snapshot) => sn2 = snapshot);
               h.addOnClientReadyWithSnapshot((snapshot) => sn1 = snapshot);
             },
-            cache: cache));
-    final testAdapter = HttpTestAdapter(client.httpClient);
+            cache: cache,
+            httpClient: testAdapter));
     testAdapter.enqueueResponse(getPath(), 200, "");
 
     final state = await client.waitForReady();
@@ -213,11 +219,11 @@ void main() {
     final client = ConfigCatClient.get(
         sdkKey: testSdkKey,
         options: ConfigCatOptions(
+            httpClient: testAdapter,
             override: FlagOverrides(
                 dataSource: OverrideDataSource.map(
                     {'enabled': true, 'local-only': true}),
                 behaviour: OverrideBehaviour.localOnly)));
-    final testAdapter = HttpTestAdapter(client.httpClient);
     final body = createTestConfig({'enabled': false, 'remote': 'rem'}).toJson();
     testAdapter.enqueueResponse(getPath(), 200, body);
 
@@ -238,11 +244,11 @@ void main() {
     final client = ConfigCatClient.get(
         sdkKey: testSdkKey,
         options: ConfigCatOptions(
+            httpClient: testAdapter,
             override: FlagOverrides(
                 dataSource: OverrideDataSource.map(
                     {'enabled': true, 'local-only': true}),
                 behaviour: OverrideBehaviour.localOverRemote)));
-    final testAdapter = HttpTestAdapter(client.httpClient);
     final body = createTestConfig({'enabled': false, 'remote': 'rem'}).toJson();
     testAdapter.enqueueResponse(getPath(), 200, body);
 
@@ -262,11 +268,11 @@ void main() {
     final client = ConfigCatClient.get(
         sdkKey: testSdkKey,
         options: ConfigCatOptions(
+            httpClient: testAdapter,
             override: FlagOverrides(
                 dataSource: OverrideDataSource.map(
                     {'enabled': true, 'local-only': true}),
                 behaviour: OverrideBehaviour.remoteOverLocal)));
-    final testAdapter = HttpTestAdapter(client.httpClient);
     final body = createTestConfig({'enabled': false, 'remote': 'rem'}).toJson();
     testAdapter.enqueueResponse(getPath(), 200, body);
 

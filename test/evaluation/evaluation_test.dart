@@ -55,23 +55,30 @@ Future<void> _runTest(String testCaseName) async {
   }
   final testLogger = EvaluationTestLogger();
 
-  final client = ConfigCatClient.get(
-      sdkKey: sdkKey,
-      options: ConfigCatOptions(
-        logger:
-            ConfigCatLogger(internalLogger: testLogger, level: LogLevel.info),
-        pollingMode: PollingMode.manualPoll(),
-      ));
-
   var jsonOverride = dataSet.jsonOverride;
+  late final ConfigCatClient client;
 
   if (jsonOverride != null && jsonOverride.isNotEmpty) {
+    final testAdapter = HttpTestAdapter();
+    client = ConfigCatClient.get(
+        sdkKey: sdkKey,
+        options: ConfigCatOptions(
+            logger: ConfigCatLogger(
+                internalLogger: testLogger, level: LogLevel.info),
+            pollingMode: PollingMode.manualPoll(),
+            httpClient: testAdapter));
     var jsonOverrideFile =
         await File("$testSetPath$testCaseName/$jsonOverride").readAsString();
     final decoded = jsonDecode(jsonOverrideFile);
     Config config = Config.fromJson(decoded);
-    final testAdapter = HttpTestAdapter(client.httpClient);
     testAdapter.enqueueResponse(getPath(sdkKey: sdkKey), 200, config);
+  } else {
+    client = ConfigCatClient.get(
+        sdkKey: sdkKey,
+        options: ConfigCatOptions(
+            logger: ConfigCatLogger(
+                internalLogger: testLogger, level: LogLevel.info),
+            pollingMode: PollingMode.manualPoll()));
   }
 
   await client.forceRefresh();

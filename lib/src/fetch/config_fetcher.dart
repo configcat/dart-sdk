@@ -1,8 +1,7 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:configcat_client/src/errors.dart';
 import 'package:configcat_client/src/platform_spec/request_builder.dart';
-import 'package:dio/dio.dart';
+import 'package:http/http.dart' as http;
 
 import '../utils.dart';
 import '../error_reporter.dart';
@@ -30,9 +29,10 @@ class FetchResponse {
   final String? cfRayId;
   final RefreshErrorCode errorCode;
   final Object? errorObject;
+  final bool shouldRetry;
 
   FetchResponse._(this._status, this.entry, this.error, this.isTransientError,
-      this.cfRayId, this.errorCode, this.errorObject);
+      this.cfRayId, this.errorCode, this.errorObject, this.shouldRetry);
 
   bool get isFetched {
     return _status == _Status.fetched;
@@ -48,33 +48,30 @@ class FetchResponse {
 
   factory FetchResponse.success(Entry entry, String? cfRayId) {
     return FetchResponse._(_Status.fetched, entry, null, false, cfRayId,
-        RefreshErrorCode.none, null);
+        RefreshErrorCode.none, null, false);
   }
 
-  factory FetchResponse.failure(String error, bool isTransientError,
-      String? cfRayId, RefreshErrorCode errorCode, Object? errorObject) {
+  factory FetchResponse.failure(
+      String error,
+      bool isTransientError,
+      String? cfRayId,
+      RefreshErrorCode errorCode,
+      Object? errorObject,
+      bool shouldRetry) {
     return FetchResponse._(_Status.failure, Entry.empty, error,
-        isTransientError, cfRayId, errorCode, errorObject);
+        isTransientError, cfRayId, errorCode, errorObject, shouldRetry);
   }
 
   factory FetchResponse.notModified(String? cfRayId) {
     return FetchResponse._(_Status.notModified, Entry.empty, null, false,
-        cfRayId, RefreshErrorCode.none, null);
+        cfRayId, RefreshErrorCode.none, null, false);
   }
 }
 
-abstract class Fetcher {
-  Dio get httpClient;
-
-  Future<FetchResponse> fetchConfiguration(String eTag);
-
-  void close();
-}
-
-class ConfigFetcher implements Fetcher {
+class ConfigFetcher {
   static const globalBaseUrl = 'https://cdn-global.configcat.com';
   static const euOnlyBaseUrl = 'https://cdn-eu.configcat.com';
-  static const _eTagHeaderName = 'Etag';
+  static const _retryDelay = Duration(milliseconds: 50);
 
   late final ConfigCatLogger _logger;
   late final ConfigCatOptions _options;
@@ -82,7 +79,7 @@ class ConfigFetcher implements Fetcher {
   late final String _sdkKey;
 
   late final bool _urlIsCustom;
-  late final Dio _httpClient;
+  late final http.Client _httpClient;
   late String _url;
 
   ConfigFetcher(
@@ -102,39 +99,21 @@ class ConfigFetcher implements Fetcher {
             ? globalBaseUrl
             : euOnlyBaseUrl;
 
-    _httpClient = Dio(BaseOptions(
-        connectTimeout: options.connectTimeout,
-        receiveTimeout: options.receiveTimeout,
-        sendTimeout: options.sendTimeout,
-        responseType: ResponseType.stream,
-        validateStatus: (status) =>
-            status != null && (status >= 200 && status < 600)));
-
-    if (options.httpClientAdapter != null) {
-      _httpClient.httpClientAdapter = options.httpClientAdapter!;
-    }
-  }
-
-  /// Gets the underlying [Dio] HTTP client.
-  @override
-  Dio get httpClient {
-    return _httpClient;
+    _httpClient = options.httpClient ?? http.Client();
   }
 
   /// Fetches the current ConfigCat configuration json.
-  @override
   Future<FetchResponse> fetchConfiguration(String eTag) {
     return _executeFetch(2, eTag);
   }
 
   /// Closes the underlying http connection.
-  @override
   void close() {
     _httpClient.close();
   }
 
   Future<FetchResponse> _executeFetch(int executionCount, String eTag) async {
-    final response = await _doFetch(eTag);
+    final response = await _doFetchWithRetry(eTag);
 
     final preferences = response.entry.config.preferences;
 
@@ -170,25 +149,32 @@ class ConfigFetcher implements Fetcher {
     return response;
   }
 
+  Future<FetchResponse> _doFetchWithRetry(String eTag) async {
+    final response = await _doFetch(eTag);
+    if (response.shouldRetry) {
+      await Future.delayed(_retryDelay);
+      return await _doFetch(eTag);
+    }
+    return response;
+  }
+
   Future<FetchResponse> _doFetch(String eTag) async {
     String? cfRayId;
     try {
       final request = RequestBuilder.build(
           'ConfigCat-Dart/${_options.pollingMode.getPollingIdentifier()}-$version',
           eTag);
-      final response = await _httpClient.get(
-          '$_url/configuration-files/$_sdkKey/$configJsonName',
-          queryParameters: request.queryParameters,
-          options: Options(headers: request.headers));
-      cfRayId = response.headers.value("CF-RAY");
+      final url =
+          Uri.parse('$_url/configuration-files/$_sdkKey/$configJsonName')
+              .replace(queryParameters: request.queryParams);
+      final response = await _httpClient
+          .get(url, headers: request.headers)
+          .timeout(_options.requestTimeout);
+      cfRayId = response.headers[cfRayHeaderName];
 
       if (response.statusCode == 200) {
-        final eTag = response.headers.value(_eTagHeaderName) ?? '';
-        final responseData = response.data;
-        var configJson = '';
-        if (responseData is ResponseBody) {
-          configJson = await utf8.decoder.bind(responseData.stream).join();
-        }
+        final eTag = response.headers[eTagHeaderName] ?? '';
+        final configJson = response.body;
         Config config;
         try {
           config = Utils.deserializeConfig(configJson);
@@ -198,7 +184,7 @@ class ConfigFetcher implements Fetcher {
                   cfRayId);
           _errorReporter.error(1105, error);
           return FetchResponse.failure(error, true, cfRayId,
-              RefreshErrorCode.invalidHttpResponseContent, e);
+              RefreshErrorCode.invalidHttpResponseContent, e, false);
         }
         _logger.debug('Fetch was successful: new config fetched.');
         return FetchResponse.success(
@@ -211,45 +197,29 @@ class ConfigFetcher implements Fetcher {
             ConfigCatLogMessages.getFetchFailedDueToInvalidSDKKey(cfRayId);
         _errorReporter.error(1100, error);
         return FetchResponse.failure(
-            error, false, cfRayId, RefreshErrorCode.invalidSdkKey, null);
+            error, false, cfRayId, RefreshErrorCode.invalidSdkKey, null, false);
       } else {
         final error =
             ConfigCatLogMessages.getFetchFailedDueToUnexpectedHttpResponse(
-                response.statusCode ?? 0,
-                response.statusMessage.toString(),
-                cfRayId);
+                response.statusCode, response.reasonPhrase, cfRayId);
         _errorReporter.error(1101, error);
         return FetchResponse.failure(error, true, cfRayId,
-            RefreshErrorCode.unexpectedHttpResponse, null);
+            RefreshErrorCode.unexpectedHttpResponse, null, true);
       }
-    } on DioException catch (e, s) {
-      if (e.type == DioExceptionType.connectionTimeout ||
-          e.type == DioExceptionType.receiveTimeout ||
-          e.type == DioExceptionType.sendTimeout) {
-        final error = ConfigCatLogMessages.getFetchFailedDueToRequestTimeout(
-            _options.connectTimeout.inMilliseconds,
-            _options.receiveTimeout.inMilliseconds,
-            _options.sendTimeout.inMilliseconds,
-            cfRayId);
-        _errorReporter.error(1102, error, e, s);
-        return FetchResponse.failure(
-            error, true, cfRayId, RefreshErrorCode.httpRequestTimeout, e);
-      }
-      _errorReporter.error(
-          1103,
-          ConfigCatLogMessages.getFetchFailedDueToUnexpectedError(cfRayId),
-          e,
-          s);
+    } on TimeoutException catch (e, s) {
+      final error = ConfigCatLogMessages.getFetchFailedDueToRequestTimeout(
+          _options.requestTimeout.inMilliseconds, cfRayId);
+      _errorReporter.error(1102, error, e, s);
       return FetchResponse.failure(
-          e.toString(), true, cfRayId, RefreshErrorCode.httpRequestFailure, e);
+          error, true, cfRayId, RefreshErrorCode.httpRequestTimeout, e, true);
     } catch (e, s) {
       _errorReporter.error(
           1103,
           ConfigCatLogMessages.getFetchFailedDueToUnexpectedError(cfRayId),
           e,
           s);
-      return FetchResponse.failure(
-          e.toString(), true, cfRayId, RefreshErrorCode.httpRequestFailure, e);
+      return FetchResponse.failure(e.toString(), true, cfRayId,
+          RefreshErrorCode.httpRequestFailure, e, true);
     }
   }
 }

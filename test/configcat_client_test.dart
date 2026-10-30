@@ -14,13 +14,15 @@ void main() {
   late MockConfigCatCache cache;
 
   setUp(() {
+    httpAdapter = HttpTestAdapter();
     cache = MockConfigCatCache();
     when(cache.read(any)).thenAnswer((_) => Future.value(''));
     client = ConfigCatClient.get(
         sdkKey: testSdkKey,
         options: ConfigCatOptions(
-            pollingMode: PollingMode.manualPoll(), cache: cache));
-    httpAdapter = HttpTestAdapter(client.httpClient);
+            pollingMode: PollingMode.manualPoll(),
+            cache: cache,
+            httpClient: httpAdapter));
   });
   tearDown(() {
     ConfigCatClient.closeAll();
@@ -176,7 +178,8 @@ void main() {
     final body1 = createTestConfig({'value': 42}).toJson();
     final body2 = createTestConfig({'value': 69}).toJson();
 
-    httpAdapter.enqueueResponse(getPath(), 200, body1, headers: {'Etag': etag});
+    httpAdapter.enqueueResponse(getPath(), 200, body1,
+        headers: {eTagHeaderName: etag});
     httpAdapter.enqueueResponse(getPath(), 200, body2);
 
     // Act
@@ -192,14 +195,16 @@ void main() {
 
     // Assert
     expect(value2, equals(69));
-    expect(httpAdapter.capturedRequests.last.headers['If-None-Match'], etag);
+    expect(
+        httpAdapter.capturedRequests.last.headers[ifNoneMatchHeaderName], etag);
   });
 
   test('returns cached value on failed latest fetch', () async {
     // Arrange
     final body1 = createTestConfig({'value': 42}).toJson();
 
-    httpAdapter.enqueueResponse(getPath(), 200, body1, headers: {'Etag': etag});
+    httpAdapter.enqueueResponse(getPath(), 200, body1,
+        headers: {eTagHeaderName: etag});
     httpAdapter.enqueueResponse(getPath(), 500, null);
 
     // Act
@@ -215,13 +220,15 @@ void main() {
 
     // Assert
     expect(value2, equals(42));
-    expect(httpAdapter.capturedRequests.last.headers['If-None-Match'], etag);
+    expect(
+        httpAdapter.capturedRequests.last.headers[ifNoneMatchHeaderName], etag);
   });
 
   test('returns cached value on failed latest fetch', () async {
     // Arrange
     final body1 = createTestConfig({'value': 42}).toJson();
-    httpAdapter.enqueueResponse(getPath(), 200, body1, headers: {'Etag': etag});
+    httpAdapter.enqueueResponse(getPath(), 200, body1,
+        headers: {eTagHeaderName: etag});
     httpAdapter.enqueueResponse(getPath(), 500, null);
 
     // Act
@@ -237,7 +244,8 @@ void main() {
 
     // Assert
     expect(value2, equals(42));
-    expect(httpAdapter.capturedRequests.last.headers['If-None-Match'], etag);
+    expect(
+        httpAdapter.capturedRequests.last.headers[ifNoneMatchHeaderName], etag);
   });
 
   test('returns cached value on failure', () async {
@@ -431,6 +439,7 @@ void main() {
   test('init offline', () async {
     // Arrange
     final body = createTestConfig({'stringValue': 'testValue'}).toJson();
+    final testAdapter = HttpTestAdapter();
 
     final sdkKey = randomSdkKey();
     final localClient = ConfigCatClient.get(
@@ -438,16 +447,16 @@ void main() {
         options: ConfigCatOptions(
             pollingMode: PollingMode.manualPoll(),
             cache: cache,
+            httpClient: testAdapter,
             offline: true));
-    final localAdapter = HttpTestAdapter(localClient.httpClient);
 
-    localAdapter.enqueueResponse(getPath(sdkKey: sdkKey), 200, body);
+    testAdapter.enqueueResponse(getPath(sdkKey: sdkKey), 200, body);
 
     // Act
     await localClient.forceRefresh();
 
     // Assert
-    expect(localAdapter.capturedRequests.length, equals(0));
+    expect(testAdapter.capturedRequests.length, equals(0));
     expect(localClient.isOffline(), isTrue);
 
     // Act
@@ -455,13 +464,14 @@ void main() {
     await localClient.forceRefresh();
 
     // Assert
-    expect(localAdapter.capturedRequests.length, equals(1));
+    expect(testAdapter.capturedRequests.length, equals(1));
     expect(localClient.isOffline(), isFalse);
   });
 
   test('init offline on ready hook called', () async {
     // Arrange
     final body = createTestConfig({'stringValue': 'testValue'}).toJson();
+    final testAdapter = HttpTestAdapter();
 
     final sdkKey = randomSdkKey();
     var ready = false;
@@ -470,16 +480,16 @@ void main() {
         options: ConfigCatOptions(
             pollingMode: PollingMode.autoPoll(),
             cache: cache,
+            httpClient: testAdapter,
             hooks: (h) => h.addOnClientReady((_) => ready = true),
             offline: true));
-    final localAdapter = HttpTestAdapter(localClient.httpClient);
 
-    localAdapter.enqueueResponse(getPath(sdkKey: sdkKey), 200, body);
+    testAdapter.enqueueResponse(getPath(sdkKey: sdkKey), 200, body);
 
     await localClient.waitForReady();
 
     // Assert
-    expect(localAdapter.capturedRequests.length, equals(0));
+    expect(testAdapter.capturedRequests.length, equals(0));
     expect(ready, isTrue);
   });
 
@@ -508,20 +518,20 @@ void main() {
     // Arrange
     final body = createTestConfig({'stringValue': 'testValue'}).toJson();
     var readyCount = 0;
+    final testAdapter = HttpTestAdapter();
 
     final opts = ConfigCatOptions(
         pollingMode: PollingMode.autoPoll(),
+        httpClient: testAdapter,
         hooks: (h) => h.addOnClientReady((p0) => readyCount++));
 
     final sdkKey1 = randomSdkKey();
     final sdkKey2 = randomSdkKey();
     final localClient1 = ConfigCatClient.get(sdkKey: sdkKey1, options: opts);
     final localClient2 = ConfigCatClient.get(sdkKey: sdkKey2, options: opts);
-    final localAdapter1 = HttpTestAdapter(localClient1.httpClient);
-    final localAdapter2 = HttpTestAdapter(localClient2.httpClient);
 
-    localAdapter1.enqueueResponse(getPath(sdkKey: sdkKey1), 200, body);
-    localAdapter2.enqueueResponse(getPath(sdkKey: sdkKey2), 200, body);
+    testAdapter.enqueueResponse(getPath(sdkKey: sdkKey1), 200, body);
+    testAdapter.enqueueResponse(getPath(sdkKey: sdkKey2), 200, body);
 
     // Act
     await localClient1.waitForReady();
@@ -536,13 +546,16 @@ void main() {
     final body = createTestConfig({'stringValue': 'testValue'}).toJson();
     var readyCount = 0;
     var configChangeCount = 0;
+    final testAdapter = HttpTestAdapter();
 
     final base = ConfigCatOptions(
         pollingMode: PollingMode.autoPoll(),
+        httpClient: testAdapter,
         hooks: (h) => h.addOnClientReady((p0) => readyCount++));
 
     final opts = ConfigCatOptions(
         pollingMode: base.pollingMode,
+        httpClient: testAdapter,
         hooks: (h) {
           base.hooks?.call(h);
           h.addOnConfigChanged((_, __) => configChangeCount++);
@@ -552,11 +565,9 @@ void main() {
     final sdkKey2 = randomSdkKey();
     final localClient1 = ConfigCatClient.get(sdkKey: sdkKey1, options: opts);
     final localClient2 = ConfigCatClient.get(sdkKey: sdkKey2, options: opts);
-    final localAdapter1 = HttpTestAdapter(localClient1.httpClient);
-    final localAdapter2 = HttpTestAdapter(localClient2.httpClient);
 
-    localAdapter1.enqueueResponse(getPath(sdkKey: sdkKey1), 200, body);
-    localAdapter2.enqueueResponse(getPath(sdkKey: sdkKey2), 200, body);
+    testAdapter.enqueueResponse(getPath(sdkKey: sdkKey1), 200, body);
+    testAdapter.enqueueResponse(getPath(sdkKey: sdkKey2), 200, body);
 
     // Act
     await localClient1.waitForReady();
@@ -721,6 +732,7 @@ void main() {
   });
 
   test('offline refresh from cache', () async {
+    final adapter = HttpTestAdapter();
     final customCache = CustomCache(
         createTestEntryWithTime({'key': 'val1'}, distantPast).serialize());
     final sdkKey = randomSdkKey();
@@ -729,8 +741,8 @@ void main() {
         options: ConfigCatOptions(
             pollingMode: PollingMode.autoPoll(
                 autoPollInterval: const Duration(milliseconds: 500)),
-            cache: customCache));
-    final adapter = HttpTestAdapter(client.httpClient);
+            cache: customCache,
+            httpClient: adapter));
     adapter.enqueueResponse(getPath(sdkKey: sdkKey), 304, "");
 
     await until(() async => Future.value(adapter.capturedRequests.length == 1),
@@ -761,6 +773,7 @@ void main() {
   });
 
   test('init offline refresh from cache', () async {
+    final adapter = HttpTestAdapter();
     final customCache = CustomCache(
         createTestEntryWithTime({'key': 'val1'}, distantPast).serialize());
     final sdkKey = randomSdkKey();
@@ -770,8 +783,8 @@ void main() {
             pollingMode: PollingMode.autoPoll(
                 autoPollInterval: const Duration(milliseconds: 500)),
             cache: customCache,
-            offline: true));
-    final adapter = HttpTestAdapter(client.httpClient);
+            offline: true,
+            httpClient: adapter));
     adapter.enqueueResponse(getPath(sdkKey: sdkKey), 304, "");
 
     final state = await client.waitForReady();

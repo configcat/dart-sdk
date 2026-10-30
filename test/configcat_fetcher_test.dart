@@ -1,8 +1,10 @@
+import 'dart:async';
+
 import 'package:configcat_client/configcat_client.dart';
+import 'package:configcat_client/src/constants.dart';
 import 'package:configcat_client/src/error_reporter.dart';
 import 'package:configcat_client/src/fetch/config_fetcher.dart';
 import 'package:configcat_client/src/entry.dart';
-import 'package:dio/dio.dart';
 import 'package:sprintf/sprintf.dart';
 import 'package:test/test.dart';
 import 'evaluation/evaluation_test_logger.dart';
@@ -12,8 +14,9 @@ import 'http_adapter.dart';
 void main() {
   group('Data Governance Tests', () {
     test('should stay on given url', () async {
-      final fetcher = _createFetcher();
-      final testAdapter = HttpTestAdapter(fetcher.httpClient);
+      final testAdapter = HttpTestAdapter();
+      final fetcher =
+          _createFetcher(options: ConfigCatOptions(httpClient: testAdapter));
 
       // Arrange
       final body = _createTestConfig(ConfigFetcher.globalBaseUrl, 0);
@@ -30,7 +33,7 @@ void main() {
       expect(response.entry.config.preferences.redirect, equals(0));
       expect(
           testAdapter.capturedRequests
-              .where((element) => element.path == path)
+              .where((element) => element.url.toString() == path)
               .length,
           1);
 
@@ -40,8 +43,9 @@ void main() {
     });
 
     test('should stay on same url', () async {
-      final fetcher = _createFetcher();
-      final testAdapter = HttpTestAdapter(fetcher.httpClient);
+      final testAdapter = HttpTestAdapter();
+      final fetcher =
+          _createFetcher(options: ConfigCatOptions(httpClient: testAdapter));
 
       // Arrange
       final body = _createTestConfig(ConfigFetcher.globalBaseUrl, 1);
@@ -58,7 +62,7 @@ void main() {
       expect(response.entry.config.preferences.redirect, equals(1));
       expect(
           testAdapter.capturedRequests
-              .where((element) => element.path == path)
+              .where((element) => element.url.toString() == path)
               .length,
           1);
 
@@ -68,8 +72,9 @@ void main() {
     });
 
     test('should stay on same url even with force', () async {
-      final fetcher = _createFetcher();
-      final testAdapter = HttpTestAdapter(fetcher.httpClient);
+      final testAdapter = HttpTestAdapter();
+      final fetcher =
+          _createFetcher(options: ConfigCatOptions(httpClient: testAdapter));
 
       // Arrange
       final body = _createTestConfig(ConfigFetcher.globalBaseUrl, 2);
@@ -86,7 +91,7 @@ void main() {
       expect(response.entry.config.preferences.redirect, equals(2));
       expect(
           testAdapter.capturedRequests
-              .where((element) => element.path == path)
+              .where((element) => element.url.toString() == path)
               .length,
           1);
 
@@ -96,8 +101,9 @@ void main() {
     });
 
     test('should redirect to another', () async {
-      final fetcher = _createFetcher();
-      final testAdapter = HttpTestAdapter(fetcher.httpClient);
+      final testAdapter = HttpTestAdapter();
+      final fetcher =
+          _createFetcher(options: ConfigCatOptions(httpClient: testAdapter));
 
       // Arrange
       final firstBody = _createTestConfig(ConfigFetcher.euOnlyBaseUrl, 1);
@@ -118,12 +124,12 @@ void main() {
       expect(response.entry.config.preferences.redirect, equals(0));
       expect(
           testAdapter.capturedRequests
-              .where((element) => element.path == firstPath)
+              .where((element) => element.url.toString() == firstPath)
               .length,
           1);
       expect(
           testAdapter.capturedRequests
-              .where((element) => element.path == secondPath)
+              .where((element) => element.url.toString() == secondPath)
               .length,
           1);
 
@@ -133,8 +139,9 @@ void main() {
     });
 
     test('should redirect to another when forced', () async {
-      final fetcher = _createFetcher();
-      final testAdapter = HttpTestAdapter(fetcher.httpClient);
+      final testAdapter = HttpTestAdapter();
+      final fetcher =
+          _createFetcher(options: ConfigCatOptions(httpClient: testAdapter));
 
       // Arrange
       final firstBody = _createTestConfig(ConfigFetcher.euOnlyBaseUrl, 2);
@@ -155,12 +162,12 @@ void main() {
       expect(response.entry.config.preferences.redirect, equals(0));
       expect(
           testAdapter.capturedRequests
-              .where((element) => element.path == firstPath)
+              .where((element) => element.url.toString() == firstPath)
               .length,
           1);
       expect(
           testAdapter.capturedRequests
-              .where((element) => element.path == secondPath)
+              .where((element) => element.url.toString() == secondPath)
               .length,
           1);
 
@@ -170,8 +177,9 @@ void main() {
     });
 
     test('should break redirect loop', () async {
-      final fetcher = _createFetcher();
-      final testAdapter = HttpTestAdapter(fetcher.httpClient);
+      final testAdapter = HttpTestAdapter();
+      final fetcher =
+          _createFetcher(options: ConfigCatOptions(httpClient: testAdapter));
 
       // Arrange
       final firstBody = _createTestConfig(ConfigFetcher.euOnlyBaseUrl, 1);
@@ -192,12 +200,12 @@ void main() {
       expect(response.entry.config.preferences.redirect, equals(1));
       expect(
           testAdapter.capturedRequests
-              .where((element) => element.path == firstPath)
+              .where((element) => element.url.toString() == firstPath)
               .length,
           2);
       expect(
           testAdapter.capturedRequests
-              .where((element) => element.path == secondPath)
+              .where((element) => element.url.toString() == secondPath)
               .length,
           1);
 
@@ -207,10 +215,11 @@ void main() {
     });
 
     test('should respect custom url', () async {
-      final customUrl = "https://custom";
-      final fetcher =
-          _createFetcher(options: ConfigCatOptions(baseUrl: customUrl));
-      final testAdapter = HttpTestAdapter(fetcher.httpClient);
+      final customUrl = "custom";
+      final testAdapter = HttpTestAdapter();
+      final fetcher = _createFetcher(
+          options:
+              ConfigCatOptions(baseUrl: customUrl, httpClient: testAdapter));
 
       // Arrange
       final firstBody = _createTestConfig(ConfigFetcher.globalBaseUrl, 1);
@@ -230,12 +239,12 @@ void main() {
       expect(response.entry.config.preferences.redirect, equals(1));
       expect(
           testAdapter.capturedRequests
-              .where((element) => element.path == firstPath)
+              .where((element) => element.url.toString() == firstPath)
               .length,
           1);
       expect(
           testAdapter.capturedRequests
-              .where((element) => element.path == secondPath)
+              .where((element) => element.url.toString() == secondPath)
               .length,
           0);
 
@@ -248,12 +257,12 @@ void main() {
       expect(response.entry.config.preferences.redirect, equals(1));
       expect(
           testAdapter.capturedRequests
-              .where((element) => element.path == firstPath)
+              .where((element) => element.url.toString() == firstPath)
               .length,
           2);
       expect(
           testAdapter.capturedRequests
-              .where((element) => element.path == secondPath)
+              .where((element) => element.url.toString() == secondPath)
               .length,
           0);
 
@@ -263,10 +272,11 @@ void main() {
     });
 
     test('should not respect custom url when forced', () async {
-      final customUrl = "https://custom";
-      final fetcher =
-          _createFetcher(options: ConfigCatOptions(baseUrl: customUrl));
-      final testAdapter = HttpTestAdapter(fetcher.httpClient);
+      final customUrl = "custom";
+      final testAdapter = HttpTestAdapter();
+      final fetcher = _createFetcher(
+          options:
+              ConfigCatOptions(baseUrl: customUrl, httpClient: testAdapter));
 
       // Arrange
       final firstBody = _createTestConfig(ConfigFetcher.globalBaseUrl, 2);
@@ -286,12 +296,12 @@ void main() {
       expect(response.entry.config.preferences.redirect, equals(0));
       expect(
           testAdapter.capturedRequests
-              .where((element) => element.path == firstPath)
+              .where((element) => element.url.toString() == firstPath)
               .length,
           1);
       expect(
           testAdapter.capturedRequests
-              .where((element) => element.path == secondPath)
+              .where((element) => element.url.toString() == secondPath)
               .length,
           1);
 
@@ -304,13 +314,14 @@ void main() {
   group('Fetcher Tests', () {
     test('etag works', () async {
       final etag = 'test-etag';
-      final fetcher = _createFetcher();
-      final testAdapter = HttpTestAdapter(fetcher.httpClient);
+      final testAdapter = HttpTestAdapter();
+      final fetcher =
+          _createFetcher(options: ConfigCatOptions(httpClient: testAdapter));
 
       // Arrange
       final body = _createTestConfig(ConfigFetcher.globalBaseUrl, 0).toJson();
-      testAdapter
-          .enqueueResponse(getPath(), 200, body, headers: {'Etag': etag});
+      testAdapter.enqueueResponse(getPath(), 200, body,
+          headers: {eTagHeaderName: etag});
       testAdapter.enqueueResponse(getPath(), 304, null);
 
       // Act
@@ -329,7 +340,8 @@ void main() {
       expect(notModifiedResponse.isNotModified, isTrue);
       expect(notModifiedResponse.entry.config, same(Config.empty));
       expect(notModifiedResponse.errorCode, RefreshErrorCode.none);
-      expect(testAdapter.capturedRequests.last.headers['If-None-Match'], etag);
+      expect(testAdapter.capturedRequests.last.headers[ifNoneMatchHeaderName],
+          etag);
 
       // Cleanup
       fetcher.close();
@@ -337,8 +349,9 @@ void main() {
     });
 
     test('failed fetch response', () async {
-      final fetcher = _createFetcher();
-      final testAdapter = HttpTestAdapter(fetcher.httpClient);
+      final testAdapter = HttpTestAdapter();
+      final fetcher =
+          _createFetcher(options: ConfigCatOptions(httpClient: testAdapter));
 
       // Arrange
       testAdapter.enqueueResponse(getPath(), 500, null);
@@ -359,8 +372,9 @@ void main() {
     });
 
     test('404 failed fetch response', () async {
-      final fetcher = _createFetcher();
-      final testAdapter = HttpTestAdapter(fetcher.httpClient);
+      final testAdapter = HttpTestAdapter();
+      final fetcher =
+          _createFetcher(options: ConfigCatOptions(httpClient: testAdapter));
 
       // Arrange
       final path =
@@ -381,8 +395,9 @@ void main() {
     });
 
     test('403 failed fetch response', () async {
-      final fetcher = _createFetcher();
-      final testAdapter = HttpTestAdapter(fetcher.httpClient);
+      final testAdapter = HttpTestAdapter();
+      final fetcher =
+          _createFetcher(options: ConfigCatOptions(httpClient: testAdapter));
 
       // Arrange
       testAdapter.enqueueResponse(getPath(), 403, null);
@@ -404,14 +419,15 @@ void main() {
     test('testFetchForbiddenLogContainsCfRayId', () async {
       const rayId = 'forbidden-ray-id';
       final testLogger = EvaluationTestLogger();
+      final testAdapter = HttpTestAdapter();
       final fetcher = _createFetcher(
           logger: ConfigCatLogger(
-              internalLogger: testLogger, level: LogLevel.debug));
-      final testAdapter = HttpTestAdapter(fetcher.httpClient);
+              internalLogger: testLogger, level: LogLevel.debug),
+          options: ConfigCatOptions(httpClient: testAdapter));
 
       // Arrange
-      testAdapter
-          .enqueueResponse(getPath(), 403, null, headers: {'CF-RAY': rayId});
+      testAdapter.enqueueResponse(getPath(), 403, null,
+          headers: {cfRayHeaderName: rayId});
 
       // Act
       final fetchedResponse = await fetcher.fetchConfiguration('');
@@ -436,14 +452,15 @@ void main() {
     test('testFetchNotModifiedLogContainsCfRayId', () async {
       const rayId = 'not-modified-ray-id';
       final testLogger = EvaluationTestLogger();
+      final testAdapter = HttpTestAdapter();
       final fetcher = _createFetcher(
           logger: ConfigCatLogger(
-              internalLogger: testLogger, level: LogLevel.debug));
-      final testAdapter = HttpTestAdapter(fetcher.httpClient);
+              internalLogger: testLogger, level: LogLevel.debug),
+          options: ConfigCatOptions(httpClient: testAdapter));
 
       // Arrange
-      testAdapter
-          .enqueueResponse(getPath(), 304, null, headers: {'CF-RAY': rayId});
+      testAdapter.enqueueResponse(getPath(), 304, null,
+          headers: {cfRayHeaderName: rayId});
 
       // Act
       final fetchedResponse = await fetcher.fetchConfiguration(etag);
@@ -459,16 +476,13 @@ void main() {
     });
 
     test('exception on fetch', () async {
-      final fetcher = _createFetcher();
-      final testAdapter = HttpTestAdapter(fetcher.httpClient);
+      final testAdapter = HttpTestAdapter();
+      final fetcher =
+          _createFetcher(options: ConfigCatOptions(httpClient: testAdapter));
 
       // Arrange
       testAdapter.enqueueResponse(getPath(), 500, null,
-          exception: DioException(
-            requestOptions: RequestOptions(
-              path: getPath(),
-            ),
-          ));
+          exception: Exception('test exception'));
 
       // Act
       final fetchedResponse = await fetcher.fetchConfiguration('');
@@ -485,16 +499,13 @@ void main() {
     });
 
     test('timeout error', () async {
-      final fetcher = _createFetcher();
-      final testAdapter = HttpTestAdapter(fetcher.httpClient);
+      final testAdapter = HttpTestAdapter();
+      final fetcher =
+          _createFetcher(options: ConfigCatOptions(httpClient: testAdapter));
 
       // Arrange
       testAdapter.enqueueResponse(getPath(), 500, null,
-          exception: DioException(
-              requestOptions: RequestOptions(
-                path: getPath(),
-              ),
-              type: DioExceptionType.connectionTimeout));
+          exception: TimeoutException('test timeout exception'));
 
       // Act
       final fetchedResponse = await fetcher.fetchConfiguration('');
@@ -511,8 +522,9 @@ void main() {
     });
 
     test('fetch with null body returns failure', () async {
-      final fetcher = _createFetcher();
-      final testAdapter = HttpTestAdapter(fetcher.httpClient);
+      final testAdapter = HttpTestAdapter();
+      final fetcher =
+          _createFetcher(options: ConfigCatOptions(httpClient: testAdapter));
 
       // Arrange
       testAdapter.enqueueResponse(getPath(), 200, null);
@@ -533,8 +545,9 @@ void main() {
     });
 
     test('fetch with blank body returns failure', () async {
-      final fetcher = _createFetcher();
-      final testAdapter = HttpTestAdapter(fetcher.httpClient);
+      final testAdapter = HttpTestAdapter();
+      final fetcher =
+          _createFetcher(options: ConfigCatOptions(httpClient: testAdapter));
 
       // Arrange
       testAdapter.enqueueResponse(getPath(), 200, '');
@@ -557,14 +570,15 @@ void main() {
     test('testFetchOkInvalidBodyLogContainsCfRayId', () async {
       const rayId = 'invalid-body-ray-id';
       final testLogger = EvaluationTestLogger();
+      final testAdapter = HttpTestAdapter();
       final fetcher = _createFetcher(
           logger: ConfigCatLogger(
-              internalLogger: testLogger, level: LogLevel.debug));
-      final testAdapter = HttpTestAdapter(fetcher.httpClient);
+              internalLogger: testLogger, level: LogLevel.debug),
+          options: ConfigCatOptions(httpClient: testAdapter));
 
       // Arrange
       testAdapter.enqueueResponse(getPath(), 200, 'invalid-json',
-          headers: {'CF-RAY': rayId});
+          headers: {cfRayHeaderName: rayId});
 
       // Act
       final fetchedResponse = await fetcher.fetchConfiguration('');
@@ -588,8 +602,9 @@ void main() {
     });
 
     test('201 status code returns transient failure', () async {
-      final fetcher = _createFetcher();
-      final testAdapter = HttpTestAdapter(fetcher.httpClient);
+      final testAdapter = HttpTestAdapter();
+      final fetcher =
+          _createFetcher(options: ConfigCatOptions(httpClient: testAdapter));
 
       // Arrange
       testAdapter.enqueueResponse(getPath(), 201, null);
@@ -633,6 +648,171 @@ void main() {
       // Assert
       expect(notModifiedResponse.isNotModified, isTrue);
       expect(fetchedResponse.errorCode, RefreshErrorCode.none);
+
+      // Cleanup
+      fetcher.close();
+    });
+  });
+
+  group('Retry', () {
+    late HttpTestAdapter testAdapter;
+    setUp(() {
+      testAdapter = HttpTestAdapter();
+    });
+
+    tearDown(() {
+      testAdapter.close();
+    });
+
+    test('on invalid status', () async {
+      // Arrange
+      final fetcher =
+          _createFetcher(options: ConfigCatOptions(httpClient: testAdapter));
+      final body = _createTestConfig(ConfigFetcher.globalBaseUrl, 0).toJson();
+      testAdapter.enqueueResponse(getPath(), 500, null);
+      testAdapter.enqueueResponse(getPath(), 200, body);
+
+      // Act
+      final fetchedResponse = await fetcher.fetchConfiguration('');
+
+      // Assert
+      expect(fetchedResponse.isFetched, isTrue);
+      expect(fetchedResponse.isTransientError, isFalse);
+      expect(fetchedResponse.entry.config.isEmpty, isFalse);
+      expect(testAdapter.capturedRequests.length, 2);
+
+      // Cleanup
+      fetcher.close();
+    });
+
+    test('on timeout', () async {
+      final fetcher = _createFetcher(
+          options: ConfigCatOptions(
+              httpClient: testAdapter,
+              requestTimeout: const Duration(milliseconds: 50)));
+
+      // Arrange
+      final body = _createTestConfig(ConfigFetcher.globalBaseUrl, 0).toJson();
+      testAdapter.enqueueResponse(getPath(), 200, body,
+          delay: const Duration(milliseconds: 100));
+      testAdapter.enqueueResponse(getPath(), 200, body);
+
+      // Act
+      final fetchedResponse = await fetcher.fetchConfiguration('');
+
+      // Assert
+      expect(fetchedResponse.isFetched, isTrue);
+      expect(fetchedResponse.isTransientError, isFalse);
+      expect(fetchedResponse.entry.config.isEmpty, isFalse);
+      expect(testAdapter.capturedRequests.length, 2);
+
+      // Cleanup
+      fetcher.close();
+    });
+
+    test('on timeout', () async {
+      final fetcher = _createFetcher(
+          options: ConfigCatOptions(
+              httpClient: testAdapter,
+              requestTimeout: const Duration(milliseconds: 50)));
+
+      // Arrange
+      final body = _createTestConfig(ConfigFetcher.globalBaseUrl, 0).toJson();
+      testAdapter.enqueueResponse(getPath(), 200, body,
+          delay: const Duration(milliseconds: 100));
+      testAdapter.enqueueResponse(getPath(), 200, body);
+
+      // Act
+      final fetchedResponse = await fetcher.fetchConfiguration('');
+
+      // Assert
+      expect(fetchedResponse.isFetched, isTrue);
+      expect(fetchedResponse.isTransientError, isFalse);
+      expect(fetchedResponse.entry.config.isEmpty, isFalse);
+      expect(testAdapter.capturedRequests.length, 2);
+
+      // Cleanup
+      fetcher.close();
+    });
+
+    test('on error', () async {
+      final fetcher = _createFetcher(
+          options: ConfigCatOptions(
+              httpClient: testAdapter,
+              requestTimeout: const Duration(milliseconds: 50)));
+
+      // Arrange
+      final body = _createTestConfig(ConfigFetcher.globalBaseUrl, 0).toJson();
+      testAdapter.enqueueResponse(getPath(), 200, body,
+          exception: Exception('test exception'));
+      testAdapter.enqueueResponse(getPath(), 200, body);
+
+      // Act
+      final fetchedResponse = await fetcher.fetchConfiguration('');
+
+      // Assert
+      expect(fetchedResponse.isFetched, isTrue);
+      expect(fetchedResponse.isTransientError, isFalse);
+      expect(fetchedResponse.entry.config.isEmpty, isFalse);
+      expect(testAdapter.capturedRequests.length, 2);
+
+      // Cleanup
+      fetcher.close();
+    });
+
+    test('all request fails', () async {
+      final fetcher = _createFetcher(
+          options: ConfigCatOptions(
+              httpClient: testAdapter,
+              requestTimeout: const Duration(milliseconds: 50)));
+
+      // Arrange
+      testAdapter.enqueueResponse(getPath(), 500, null);
+      testAdapter.enqueueResponse(getPath(), 500, null);
+
+      // Act
+      final fetchedResponse = await fetcher.fetchConfiguration('');
+
+      // Assert
+      expect(fetchedResponse.isFailed, isTrue);
+      expect(fetchedResponse.isTransientError, isTrue);
+      expect(fetchedResponse.entry.config.isEmpty, isTrue);
+      expect(testAdapter.capturedRequests.length, 2);
+
+      // Cleanup
+      fetcher.close();
+    });
+
+    test('no retry on 403/404', () async {
+      final fetcher = _createFetcher(
+          options: ConfigCatOptions(
+              httpClient: testAdapter,
+              requestTimeout: const Duration(milliseconds: 50)));
+
+      // Arrange
+      testAdapter.enqueueResponse(getPath(), 403, null);
+
+      // Act
+      final fetchedResponse = await fetcher.fetchConfiguration('');
+
+      // Assert
+      expect(fetchedResponse.isFailed, isTrue);
+      expect(fetchedResponse.isTransientError, isFalse);
+      expect(fetchedResponse.entry.config.isEmpty, isTrue);
+      expect(testAdapter.capturedRequests.length, 1);
+
+      // Arrange
+      testAdapter.clearRequests();
+      testAdapter.enqueueResponse(getPath(), 404, null);
+
+      // Act
+      final fetchedResponseNotFound = await fetcher.fetchConfiguration('');
+
+      // Assert
+      expect(fetchedResponseNotFound.isFailed, isTrue);
+      expect(fetchedResponseNotFound.isTransientError, isFalse);
+      expect(fetchedResponseNotFound.entry.config.isEmpty, isTrue);
+      expect(testAdapter.capturedRequests.length, 1);
 
       // Cleanup
       fetcher.close();

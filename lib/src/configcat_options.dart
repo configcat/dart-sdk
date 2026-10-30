@@ -4,7 +4,7 @@ import 'package:configcat_client/src/json/percentage_option.dart';
 import 'package:configcat_client/src/json/targeting_rule.dart';
 import 'package:configcat_client/src/snapshot.dart';
 import 'package:configcat_client/src/snapshot_builder.dart';
-import 'package:dio/dio.dart';
+import 'package:http/http.dart' as http;
 
 import 'client_cache_state.dart';
 import 'configcat_cache.dart';
@@ -154,14 +154,12 @@ class Hooks {
 class ConfigCatOptions {
   final String baseUrl;
   final DataGovernance dataGovernance;
-  final Duration connectTimeout;
-  final Duration receiveTimeout;
-  final Duration sendTimeout;
+  final Duration requestTimeout;
   final PollingMode pollingMode;
   final ConfigCatCache? cache;
   final ConfigCatLogger? logger;
   final FlagOverrides? override;
-  final HttpClientAdapter? httpClientAdapter;
+  final http.Client? httpClient;
   final ConfigCatUser? defaultUser;
   final Function(Hooks)? hooks;
   final bool offline;
@@ -172,10 +170,8 @@ class ConfigCatOptions {
     this.pollingMode = PollingMode.defaultMode,
     this.cache,
     this.logger,
-    this.connectTimeout = const Duration(seconds: 10),
-    this.receiveTimeout = const Duration(seconds: 20),
-    this.sendTimeout = const Duration(seconds: 20),
-    this.httpClientAdapter,
+    this.requestTimeout = const Duration(seconds: 30),
+    this.httpClient,
     this.override,
     this.defaultUser,
     this.hooks,

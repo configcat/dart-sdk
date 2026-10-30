@@ -20,13 +20,15 @@ void main() {
   late MockConfigCatCache cache;
 
   setUp(() {
+    httpAdapter = HttpTestAdapter();
     cache = MockConfigCatCache();
     when(cache.read(any)).thenAnswer((_) => Future.value(''));
     client = ConfigCatClient.get(
         sdkKey: testSdkKey,
         options: ConfigCatOptions(
-            pollingMode: PollingMode.manualPoll(), cache: cache));
-    httpAdapter = HttpTestAdapter(client.httpClient);
+            pollingMode: PollingMode.manualPoll(),
+            cache: cache,
+            httpClient: httpAdapter));
   });
   tearDown(() {
     ConfigCatClient.closeAll();

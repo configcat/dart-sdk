@@ -87,20 +87,20 @@ class ConfigCatLogMessages {
 
   /// Log message for Fetch Failed Due To Unexpected Http Response error. The log eventId is 1101.
   static String getFetchFailedDueToUnexpectedHttpResponse(
-      int responseCode, String responseMessage, String? cfRayId) {
+      int responseCode, String? reasonPhrase, String? cfRayId) {
     if (cfRayId != null) {
-      return "Unexpected HTTP response was received while trying to fetch config JSON: $responseCode $responseMessage ${_getCFRayIdPostFix(cfRayId)}";
+      return "Unexpected HTTP response was received while trying to fetch config JSON: $responseCode $reasonPhrase ${_getCFRayIdPostFix(cfRayId)}";
     }
-    return "Unexpected HTTP response was received while trying to fetch config JSON: $responseCode $responseMessage";
+    return "Unexpected HTTP response was received while trying to fetch config JSON: $responseCode $reasonPhrase";
   }
 
   /// Log message for Fetch Failed Due To Request Timeout error. The log eventId is 1102.
-  static String getFetchFailedDueToRequestTimeout(int connectTimeoutMillis,
-      int readTimeoutMillis, int writeTimeoutMillis, String? cfRayId) {
+  static String getFetchFailedDueToRequestTimeout(
+      int requestTimeoutMillis, String? cfRayId) {
     if (cfRayId != null) {
-      return "Request timed out while trying to fetch config JSON. Timeout values: [connect: ${connectTimeoutMillis}ms, read: ${readTimeoutMillis}ms, write: ${writeTimeoutMillis}ms] ${_getCFRayIdPostFix(cfRayId)}";
+      return "Request timed out while trying to fetch config JSON. Timeout: ${requestTimeoutMillis}ms ${_getCFRayIdPostFix(cfRayId)}";
     }
-    return "Request timed out while trying to fetch config JSON. Timeout values: [connect: ${connectTimeoutMillis}ms, read: ${readTimeoutMillis}ms, write: ${writeTimeoutMillis}ms]";
+    return "Request timed out while trying to fetch config JSON. Timeout: ${requestTimeoutMillis}ms";
   }
 
   /// Log message for Fetch Failed Due To Unexpected error. The log eventId is 1103.

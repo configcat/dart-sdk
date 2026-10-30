@@ -130,11 +130,12 @@ ConfigCatUser _createTestUser(String identifier, String country, String version,
 Future<void> _trimValueTest(
     String key, String expectedValue, ConfigCatUser user, Config config) async {
   String sdkKey = "configcat-sdk-test-key/0000000000000000000000";
+  final testAdapter = HttpTestAdapter();
   final client = ConfigCatClient.get(
       sdkKey: sdkKey,
-      options: ConfigCatOptions(pollingMode: PollingMode.manualPoll()));
+      options: ConfigCatOptions(
+          pollingMode: PollingMode.manualPoll(), httpClient: testAdapter));
 
-  final testAdapter = HttpTestAdapter(client.httpClient);
   testAdapter.enqueueResponse(getPath(sdkKey: sdkKey), 200, config);
 
   await client.forceRefresh();

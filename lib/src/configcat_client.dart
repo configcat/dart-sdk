@@ -8,7 +8,6 @@ import 'package:configcat_client/src/flag_evaluator.dart';
 import 'package:configcat_client/src/log/logger.dart';
 import 'package:configcat_client/src/snapshot.dart';
 import 'package:configcat_client/src/snapshot_builder.dart';
-import 'package:dio/dio.dart';
 
 import 'configcat_cache.dart';
 import 'configcat_log_messages.dart';
@@ -29,7 +28,6 @@ class ConfigCatClient {
   late final LogLevel _logLevel;
   late final ConfigService? _configService;
   late final RolloutEvaluator _rolloutEvaluator;
-  late final Fetcher _fetcher;
   late final FlagOverrides? _override;
   late final ErrorReporter _errorReporter;
   late final Hooks _hooks;
@@ -79,7 +77,7 @@ class ConfigCatClient {
 
     _rolloutEvaluator = RolloutEvaluator(_logger);
     _errorReporter = ErrorReporter(_logger, _hooks);
-    _fetcher = ConfigFetcher(
+    final fetcher = ConfigFetcher(
         logger: _logger,
         sdkKey: sdkKey,
         options: options,
@@ -99,7 +97,7 @@ class ConfigCatClient {
           sdkKey: sdkKey,
           mode: options.pollingMode,
           hooks: _hooks,
-          fetcher: _fetcher,
+          fetcher: fetcher,
           logger: _logger,
           cache: cache,
           errorReporter: _errorReporter,
@@ -354,11 +352,6 @@ class ConfigCatClient {
           s);
       return null;
     }
-  }
-
-  /// Gets the underlying [Dio] HTTP client.
-  Dio get httpClient {
-    return _fetcher.httpClient;
   }
 
   /// Gets the [Hooks] object for subscribing events.

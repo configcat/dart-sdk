@@ -8,10 +8,11 @@ void main() {
   late ConfigCatClient client;
   late HttpTestAdapter testAdapter;
   setUp(() {
+    testAdapter = HttpTestAdapter();
     client = ConfigCatClient.get(
         sdkKey: testSdkKey,
-        options: ConfigCatOptions(pollingMode: PollingMode.manualPoll()));
-    testAdapter = HttpTestAdapter(client.httpClient);
+        options: ConfigCatOptions(
+            pollingMode: PollingMode.manualPoll(), httpClient: testAdapter));
   });
   tearDown(() {
     ConfigCatClient.closeAll();
