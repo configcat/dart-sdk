@@ -283,13 +283,11 @@ class ConfigService with ContinuousFutureSynchronizer {
     }
 
     if (_mode is AutoPollingMode) {
-      final autoPollMode = _mode as AutoPollingMode;
-      if (_cachedEntry.isExpired(autoPollMode.autoPollInterval)) {
+      if (_cachedEntry.isExpired(_mode.autoPollInterval)) {
         return ClientCacheState.hasCachedFlagDataOnly;
       }
     } else if (_mode is LazyLoadingMode) {
-      final lazyLoadingMode = _mode as LazyLoadingMode;
-      if (_cachedEntry.isExpired(lazyLoadingMode.cacheRefreshInterval)) {
+      if (_cachedEntry.isExpired(_mode.cacheRefreshInterval)) {
         return ClientCacheState.hasCachedFlagDataOnly;
       }
     } else {

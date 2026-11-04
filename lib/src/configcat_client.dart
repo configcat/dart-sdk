@@ -88,7 +88,7 @@ class ConfigCatClient {
         _flagEvaluator, _override, _errorReporter, options.defaultUser, _hooks);
 
     if (_override != null &&
-        _override!.behaviour == OverrideBehaviour.localOnly) {
+        _override.behaviour == OverrideBehaviour.localOnly) {
       _configService = null;
       _hooks.invokeOnReady(ClientCacheState.hasLocalOverrideFlagDataOnly,
           _snapshotBuilder, InMemoryResult.empty);
@@ -395,7 +395,7 @@ class ConfigCatClient {
   /// Set the client to offline mode. HTTP calls are not allowed.
   void setOffline() {
     if (_configService != null && !_isClosed) {
-      _configService!.offline();
+      _configService.offline();
     } else {
       _logger.warning(
           3201,
@@ -408,7 +408,7 @@ class ConfigCatClient {
   /// Set the client to online mode. HTTP calls are allowed.
   void setOnline() {
     if (_configService != null && !_isClosed) {
-      _configService?.online();
+      _configService.online();
     } else {
       _logger.warning(
           3201,
@@ -492,21 +492,21 @@ class ConfigCatClient {
 
   Future<SettingResult> _getSettings() async {
     if (_override != null) {
-      switch (_override!.behaviour) {
+      switch (_override.behaviour) {
         case OverrideBehaviour.localOnly:
-          final local = _override!.dataSource.getOverrides();
+          final local = _override.dataSource.getOverrides();
           return SettingResult(settings: local, fetchTime: distantPast);
         case OverrideBehaviour.localOverRemote:
           final remote =
               await _configService?.getSettings() ?? SettingResult.empty;
-          final local = _override!.dataSource.getOverrides();
+          final local = _override.dataSource.getOverrides();
           return SettingResult(
               settings: Map<String, Setting>.of(remote.settings)..addAll(local),
               fetchTime: remote.fetchTime);
         case OverrideBehaviour.remoteOverLocal:
           final remote =
               await _configService?.getSettings() ?? SettingResult.empty;
-          final local = _override!.dataSource.getOverrides();
+          final local = _override.dataSource.getOverrides();
           return SettingResult(
               settings: Map<String, Setting>.of(local)..addAll(remote.settings),
               fetchTime: remote.fetchTime);

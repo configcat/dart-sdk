@@ -1,4 +1,4 @@
-const version = '5.1.0';
+const version = '6.0.0';
 const configJsonCacheVersion = 'v2';
 const configJsonName = 'config_v6.json';
 const eTagHeaderName = 'etag';
