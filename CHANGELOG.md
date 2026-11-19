@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The SDK now retries failed HTTP requests one time (on unexpected status code, timeout or request error).
 - Bumped the minimum Dart SDK version to `^3.4.0`.
 
+### Breaking changes
+- The `ConfigCatOptions`'s `httpClient` parameter type is changed from `Dio` to `http.Client`. If not provided, the SDK will create a new `http.Client` instance internally.
+- The `ConfigCatOptions`'s `connectTimeout`, `receiveTimeout`, and `sendTimeout` parameters are replaced with a single `requestTimeout`.
+- The `ConfigCatClient`'s `httpClient` property is removed.
+
 ## 5.1.0 - 2026-10-26
 ### Fixed
 - When a single `ConfigCatOptions` instance was shared between different clients, they also shared the same `Hooks` instance. This resulted in inconsistent ready-state handling.
