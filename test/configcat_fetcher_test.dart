@@ -215,7 +215,7 @@ void main() {
     });
 
     test('should respect custom url', () async {
-      final customUrl = "custom";
+      const customUrl = "custom";
       final testAdapter = HttpTestAdapter();
       final fetcher = _createFetcher(
           options:
@@ -272,7 +272,7 @@ void main() {
     });
 
     test('should not respect custom url when forced', () async {
-      final customUrl = "custom";
+      const customUrl = "custom";
       final testAdapter = HttpTestAdapter();
       final fetcher = _createFetcher(
           options:
