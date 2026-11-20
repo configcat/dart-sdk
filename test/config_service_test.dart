@@ -20,12 +20,12 @@ void main() {
   late HttpTestAdapter testAdapter;
   setUp(() {
     cache = MockConfigCatCache();
+    testAdapter = HttpTestAdapter();
     fetcher = ConfigFetcher(
         logger: logger,
         sdkKey: testSdkKey,
-        options: const ConfigCatOptions(),
+        options: ConfigCatOptions(httpClient: testAdapter),
         errorReporter: ErrorReporter(logger, Hooks()));
-    testAdapter = HttpTestAdapter(fetcher.httpClient);
   });
   tearDown(() {
     testAdapter.close();
@@ -84,7 +84,7 @@ void main() {
 
       testAdapter.enqueueResponse(
           getPath(), 200, createTestConfig({'key': 'test1'}).toJson(),
-          headers: {'Etag': 'tag1'});
+          headers: {eTagHeaderName: 'tag1'});
       testAdapter.enqueueResponse(
           getPath(), 200, createTestConfig({'key': 'test2'}).toJson());
 
@@ -103,8 +103,8 @@ void main() {
       expect(settings2.settings['key']?.settingValue.stringValue, 'test2');
       verify(cache.write(any, any)).called(equals(2));
       expect(testAdapter.capturedRequests.length, 2);
-      expect(
-          testAdapter.capturedRequests.last.headers['If-None-Match'], 'tag1');
+      expect(testAdapter.capturedRequests.last.headers[ifNoneMatchHeaderName],
+          'tag1');
 
       // Cleanup
       service.close();
@@ -119,10 +119,10 @@ void main() {
 
       testAdapter.enqueueResponse(
           getPath(), 200, createTestConfig({'key': 'test1'}).toJson(),
-          headers: {'Etag': 'tag1'});
+          headers: {eTagHeaderName: 'tag1'});
       testAdapter.enqueueResponse(
           getPath(), 200, createTestConfig({'key': 'test2'}).toJson(),
-          headers: {'Etag': 'tag2'});
+          headers: {eTagHeaderName: 'tag2'});
 
       // Act
       final settings1 = await service.getSettings();
@@ -145,8 +145,8 @@ void main() {
       }, const Duration(milliseconds: 2500));
 
       expect(testAdapter.capturedRequests.length, 2);
-      expect(
-          testAdapter.capturedRequests.last.headers['If-None-Match'], 'tag1');
+      expect(testAdapter.capturedRequests.last.headers[ifNoneMatchHeaderName],
+          'tag1');
       verify(cache.write(any, argThat(contains("tag2")))).called(1);
 
       // Cleanup
@@ -166,7 +166,7 @@ void main() {
       await service.getSettings();
 
       // Assert
-      expect(testAdapter.capturedRequests.length, 1);
+      expect(testAdapter.capturedRequests.length, 2 /* retried */);
 
       // Cleanup
       service.close();
@@ -268,7 +268,7 @@ void main() {
 
       testAdapter.enqueueResponse(
           getPath(), 200, createTestConfig({'key': 'test1'}).toJson(),
-          headers: {'Etag': 'tag1'});
+          headers: {eTagHeaderName: 'tag1'});
       testAdapter.enqueueResponse(getPath(), 500, {});
 
       // Act
@@ -284,8 +284,8 @@ void main() {
       // Assert
       expect(settings2.settings['key']?.settingValue.stringValue, 'test1');
       verify(cache.write(any, any)).called(greaterThanOrEqualTo(1));
-      expect(
-          testAdapter.capturedRequests.last.headers['If-None-Match'], 'tag1');
+      expect(testAdapter.capturedRequests.last.headers[ifNoneMatchHeaderName],
+          'tag1');
 
       // Cleanup
       service.close();
@@ -437,7 +437,7 @@ void main() {
 
       testAdapter.enqueueResponse(
           getPath(), 200, createTestConfig({'key': 'test1'}).toJson(),
-          headers: {'Etag': 'tag1'});
+          headers: {eTagHeaderName: 'tag1'});
       testAdapter.enqueueResponse(
           getPath(), 200, createTestConfig({'key': 'test2'}).toJson());
 
@@ -456,8 +456,8 @@ void main() {
       expect(settings2.settings['key']?.settingValue.stringValue, 'test2');
       verify(cache.write(any, any)).called(2);
       expect(testAdapter.capturedRequests.length, 2);
-      expect(
-          testAdapter.capturedRequests.last.headers['If-None-Match'], 'tag1');
+      expect(testAdapter.capturedRequests.last.headers[ifNoneMatchHeaderName],
+          'tag1');
 
       // Cleanup
       service.close();
@@ -471,7 +471,7 @@ void main() {
 
       testAdapter.enqueueResponse(
           getPath(), 200, createTestConfig({'key': 'test1'}).toJson(),
-          headers: {'Etag': 'tag1'});
+          headers: {eTagHeaderName: 'tag1'});
       testAdapter.enqueueResponse(
           getPath(), 200, createTestConfig({'key': 'test2'}).toJson());
 
@@ -488,8 +488,8 @@ void main() {
 
       verify(cache.write(any, any)).called(2);
       expect(testAdapter.capturedRequests.length, 2);
-      expect(
-          testAdapter.capturedRequests.last.headers['If-None-Match'], 'tag1');
+      expect(testAdapter.capturedRequests.last.headers[ifNoneMatchHeaderName],
+          'tag1');
 
       // Cleanup
       service.close();
@@ -603,7 +603,7 @@ void main() {
 
       testAdapter.enqueueResponse(
           getPath(), 200, createTestConfig({'key': 'test1'}).toJson(),
-          headers: {'Etag': 'tag1'});
+          headers: {eTagHeaderName: 'tag1'});
       testAdapter.enqueueResponse(
           getPath(), 200, createTestConfig({'key': 'test2'}).toJson());
 
@@ -624,8 +624,8 @@ void main() {
       expect(settings2.settings['key']?.settingValue.stringValue, 'test2');
       verify(cache.write(any, any)).called(2);
       expect(testAdapter.capturedRequests.length, 2);
-      expect(
-          testAdapter.capturedRequests.last.headers['If-None-Match'], 'tag1');
+      expect(testAdapter.capturedRequests.last.headers[ifNoneMatchHeaderName],
+          'tag1');
 
       // Cleanup
       service.close();
@@ -651,7 +651,7 @@ void main() {
       expect(settings1.settings, isEmpty);
 
       verifyNever(cache.write(any, any));
-      expect(testAdapter.capturedRequests.length, 1);
+      expect(testAdapter.capturedRequests.length, 2 /* retried */);
 
       // Cleanup
       service.close();

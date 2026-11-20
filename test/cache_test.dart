@@ -23,9 +23,10 @@ void main() {
     when(cache.write(any, any)).thenThrow(Exception());
     when(cache.read(any)).thenThrow(Exception());
 
+    final testAdapter = HttpTestAdapter();
     final client = ConfigCatClient.get(
-        sdkKey: testSdkKey, options: ConfigCatOptions(cache: cache));
-    final testAdapter = HttpTestAdapter(client.httpClient);
+        sdkKey: testSdkKey,
+        options: ConfigCatOptions(cache: cache, httpClient: testAdapter));
     testAdapter.enqueueResponse(
         getPath(), 200, createTestConfig({'value': 'test'}).toJson());
 
@@ -42,9 +43,10 @@ void main() {
     when(cache.read(any)).thenAnswer(
         (_) => Future.value(createTestEntry({'value': 'test'}).serialize()));
 
+    final testAdapter = HttpTestAdapter();
     final client = ConfigCatClient.get(
-        sdkKey: testSdkKey, options: ConfigCatOptions(cache: cache));
-    final testAdapter = HttpTestAdapter(client.httpClient);
+        sdkKey: testSdkKey,
+        options: ConfigCatOptions(cache: cache, httpClient: testAdapter));
     testAdapter.enqueueResponse(getPath(), 500, null);
 
     // Act
@@ -69,9 +71,10 @@ void main() {
         when(cache.read(any)).thenAnswer((_) => Future.value(''));
         when(cache.write(any, any)).thenAnswer((_) => Future.value());
 
+        final testAdapter = HttpTestAdapter();
         final client = ConfigCatClient.get(
-            sdkKey: sdkKey, options: ConfigCatOptions(cache: cache));
-        final testAdapter = HttpTestAdapter(client.httpClient);
+            sdkKey: sdkKey,
+            options: ConfigCatOptions(cache: cache, httpClient: testAdapter));
         testAdapter.enqueueResponse(getPath(sdkKey: sdkKey), 200,
             createTestConfig({'value': 'test2'}).toJson());
 

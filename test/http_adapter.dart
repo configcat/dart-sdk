@@ -1,55 +1,24 @@
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
-import 'package:dio/dio.dart';
+import 'package:http/http.dart';
 
-class HttpTestAdapter implements HttpClientAdapter {
+class HttpTestAdapter extends BaseClient {
   bool _closed = false;
-  final List<RequestOptions> _capturedRequests = [];
+  final List<BaseRequest> _capturedRequests = [];
   final Map<String, Queue<_Response>> _responseQueue = {};
-  List<RequestOptions> get capturedRequests {
+
+  List<BaseRequest> get capturedRequests {
     return List.unmodifiable(_capturedRequests);
   }
 
-  HttpTestAdapter(Dio dio) {
-    dio.httpClientAdapter = this;
-  }
-
   @override
-  void close({bool force = false}) {
+  void close() {
     _responseQueue.clear();
     _capturedRequests.clear();
     _closed = true;
-  }
-
-  @override
-  Future<ResponseBody> fetch(RequestOptions options,
-      Stream<Uint8List>? requestStream, Future<void>? cancelFuture) async {
-    if (_closed) {
-      throw HttpException("Test adapter closed.");
-    }
-
-    _capturedRequests.add(options);
-    final next = _next(options.path);
-    if (next == null) {
-      throw HttpException("Response not found for path: ${options.path}.");
-    }
-    if (next.delay != null) {
-      await Future.delayed(next.delay!);
-    }
-    if (next.exception != null) {
-      throw next.exception!;
-    }
-
-    return ResponseBody(
-        Stream.fromIterable(utf8
-            .encode(next.body)
-            .map((e) => Uint8List.fromList([e]))
-            .toList()),
-        next.statusCode,
-        headers: next.headers?.map((key, value) => MapEntry(key, [value])));
+    super.close();
   }
 
   void enqueueResponse(String path, int statusCode, dynamic body,
@@ -68,12 +37,46 @@ class HttpTestAdapter implements HttpClientAdapter {
     }
   }
 
+  void clearRequests() {
+    _capturedRequests.clear();
+  }
+
   _Response? _next(String path) {
     final nextEntry = _responseQueue[path];
     if (nextEntry == null) {
       return null;
     }
     return nextEntry.length == 1 ? nextEntry.first : nextEntry.removeFirst();
+  }
+
+  @override
+  Future<StreamedResponse> send(BaseRequest request) async {
+    if (_closed) {
+      throw HttpException("Test adapter closed.");
+    }
+
+    _capturedRequests.add(request);
+    final next = _next(request.url.toString());
+    if (next == null) {
+      throw HttpException(
+          "Response not found for path: ${request.url.toString()}.");
+    }
+    if (next.delay != null) {
+      await Future.delayed(next.delay!);
+    }
+    if (next.exception != null) {
+      throw next.exception!;
+    }
+
+    return StreamedResponse(
+      ByteStream.fromBytes(utf8.encode(next.body)),
+      next.statusCode,
+      headers: {
+        HttpHeaders.contentTypeHeader: 'application/json',
+        ...(next.headers ?? {})
+      },
+      request: request,
+    );
   }
 }
 

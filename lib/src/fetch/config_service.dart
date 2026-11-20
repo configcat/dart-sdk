@@ -56,7 +56,7 @@ class ConfigService with ContinuousFutureSynchronizer {
   late final String _cacheKey;
   late final PollingMode _mode;
   late final Hooks _hooks;
-  late final Fetcher _fetcher;
+  late final ConfigFetcher _fetcher;
   late final ConfigCatLogger _logger;
   late final ConfigCatCache _cache;
   late final ErrorReporter _errorReporter;
@@ -72,7 +72,7 @@ class ConfigService with ContinuousFutureSynchronizer {
       {required String sdkKey,
       required PollingMode mode,
       required Hooks hooks,
-      required Fetcher fetcher,
+      required ConfigFetcher fetcher,
       required ConfigCatLogger logger,
       required ConfigCatCache cache,
       required ErrorReporter errorReporter,
@@ -283,13 +283,11 @@ class ConfigService with ContinuousFutureSynchronizer {
     }
 
     if (_mode is AutoPollingMode) {
-      final autoPollMode = _mode as AutoPollingMode;
-      if (_cachedEntry.isExpired(autoPollMode.autoPollInterval)) {
+      if (_cachedEntry.isExpired(_mode.autoPollInterval)) {
         return ClientCacheState.hasCachedFlagDataOnly;
       }
     } else if (_mode is LazyLoadingMode) {
-      final lazyLoadingMode = _mode as LazyLoadingMode;
-      if (_cachedEntry.isExpired(lazyLoadingMode.cacheRefreshInterval)) {
+      if (_cachedEntry.isExpired(_mode.cacheRefreshInterval)) {
         return ClientCacheState.hasCachedFlagDataOnly;
       }
     } else {

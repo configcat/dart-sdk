@@ -13,16 +13,17 @@ void main() {
       var configChanged = false;
       var eval = false;
       var ready = false;
+      final testAdapter = HttpTestAdapter();
       final client = ConfigCatClient.get(
           sdkKey: testSdkKey,
           options: ConfigCatOptions(
               pollingMode: PollingMode.manualPoll(),
+              httpClient: testAdapter,
               hooks: (h) {
                 h.addOnConfigChanged((map, _) => configChanged = true);
                 h.addOnClientReady((_) => ready = true);
                 h.addOnFlagEvaluated((ctx) => eval = true);
               }));
-      final testAdapter = HttpTestAdapter(client.httpClient);
 
       final body = createTestConfig({'stringValue': 'testValue'}).toJson();
       testAdapter.enqueueResponse(getPath(), 200, body);
@@ -46,10 +47,11 @@ void main() {
       // Arrange
       var configChanged = false;
       var eval = false;
+      final testAdapter = HttpTestAdapter();
       final client = ConfigCatClient.get(
           sdkKey: testSdkKey,
-          options: ConfigCatOptions(pollingMode: PollingMode.manualPoll()));
-      final testAdapter = HttpTestAdapter(client.httpClient);
+          options: ConfigCatOptions(
+              pollingMode: PollingMode.manualPoll(), httpClient: testAdapter));
 
       final body = createTestConfig({'stringValue': 'testValue'}).toJson();
       testAdapter.enqueueResponse(getPath(), 200, body);
@@ -74,10 +76,11 @@ void main() {
     test('evaluation', () async {
       // Arrange
       var eval = false;
+      final testAdapter = HttpTestAdapter();
       final client = ConfigCatClient.get(
           sdkKey: testSdkKey,
-          options: ConfigCatOptions(pollingMode: PollingMode.manualPoll()));
-      final testAdapter = HttpTestAdapter(client.httpClient);
+          options: ConfigCatOptions(
+              pollingMode: PollingMode.manualPoll(), httpClient: testAdapter));
 
       testAdapter.enqueueResponse(getPath(), 200, createTestConfigWithRules());
 
@@ -120,8 +123,10 @@ void main() {
 
   group("wait for ready", () {
     test("auto poll", () async {
-      final client = ConfigCatClient.get(sdkKey: testSdkKey);
-      final testAdapter = HttpTestAdapter(client.httpClient);
+      final testAdapter = HttpTestAdapter();
+      final client = ConfigCatClient.get(
+          sdkKey: testSdkKey,
+          options: ConfigCatOptions(httpClient: testAdapter));
 
       final body = createTestConfig({'a': true}).toJson();
       testAdapter.enqueueResponse(getPath(), 200, body);
@@ -137,8 +142,10 @@ void main() {
     });
 
     test("auto poll error", () async {
-      final client = ConfigCatClient.get(sdkKey: testSdkKey);
-      final testAdapter = HttpTestAdapter(client.httpClient);
+      final testAdapter = HttpTestAdapter();
+      final client = ConfigCatClient.get(
+          sdkKey: testSdkKey,
+          options: ConfigCatOptions(httpClient: testAdapter));
 
       final body = createTestConfig({'a': true}).toJson();
       testAdapter.enqueueResponse(getPath(), 400, body);
@@ -170,10 +177,11 @@ void main() {
     });
 
     test("lazy poll error", () async {
+      final testAdapter = HttpTestAdapter();
       final client = ConfigCatClient.get(
           sdkKey: testSdkKey,
-          options: ConfigCatOptions(pollingMode: PollingMode.lazyLoad()));
-      final testAdapter = HttpTestAdapter(client.httpClient);
+          options: ConfigCatOptions(
+              pollingMode: PollingMode.lazyLoad(), httpClient: testAdapter));
 
       final body = createTestConfig({'a': true}).toJson();
       testAdapter.enqueueResponse(getPath(), 400, body);

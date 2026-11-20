@@ -257,17 +257,18 @@ Future<void> _runMatchedEvaluationRuleAndPercentageOptionTest(
 
 Future<void> _prerequisiteFlagCircularDependencyTest(
     String key, String dependencyCycle) async {
+  final testAdapter = HttpTestAdapter();
   final client = ConfigCatClient.get(
       sdkKey: testSdkKey,
       options: ConfigCatOptions(
         pollingMode: PollingMode.manualPoll(),
+        httpClient: testAdapter,
       ));
 
   var jsonOverrideFile =
       await File("test/fixtures/test_circulardependency.json").readAsString();
   final decoded = jsonDecode(jsonOverrideFile);
   Config config = Config.fromJson(decoded);
-  final testAdapter = HttpTestAdapter(client.httpClient);
   testAdapter.enqueueResponse(getPath(sdkKey: testSdkKey), 200, config);
 
   await client.forceRefresh();
@@ -354,17 +355,18 @@ Future<void> _prerequisiteFlagOverrideTest(
 
 Future<void> _comparisonAttributeConversionToCanonicalStringRepresentationTest(
     String key, Object customAttributeValue, String expectedValue) async {
+  final testAdapter = HttpTestAdapter();
   final client = ConfigCatClient.get(
       sdkKey: testSdkKey,
       options: ConfigCatOptions(
         pollingMode: PollingMode.manualPoll(),
+        httpClient: testAdapter,
       ));
   var jsonOverrideFile =
       await File("test/fixtures/comparison_attribute_conversion.json")
           .readAsString();
   final decoded = jsonDecode(jsonOverrideFile);
   Config config = Config.fromJson(decoded);
-  final testAdapter = HttpTestAdapter(client.httpClient);
   testAdapter.enqueueResponse(getPath(sdkKey: testSdkKey), 200, config);
 
   ConfigCatUser user = ConfigCatUser(

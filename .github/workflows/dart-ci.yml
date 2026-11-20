@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        sdk-version: [ stable, beta, dev, 2.19.0 ]
+        sdk-version: [ stable, beta, dev, 3.4.0 ]
     steps:
       - uses: actions/checkout@v7
 
@@ -79,7 +79,7 @@ jobs:
           dart pub global run coverage:test_with_coverage
 
       - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@e805d875275f728fac1885b413934be6d7c63f65 # v8.4.1
+        uses: SonarSource/sonarqube-scan-action@59202af334b4ba7b5db01b701b8e79f8b3bef0f4 # v8.5.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 

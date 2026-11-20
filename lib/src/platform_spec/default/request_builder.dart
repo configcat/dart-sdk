@@ -1,17 +1,13 @@
-import 'package:dio/dio.dart';
+import '../../constants.dart';
+import '../request_builder.dart';
 
 class ActualRequestBuilder {
-  static const _userAgentHeaderName = 'X-ConfigCat-UserAgent';
-  static const _ifNoneMatchHeaderName = 'If-None-Match';
-
   ActualRequestBuilder._();
 
   static RequestOptions build(String sdkInfo, String etag) {
-    Map<String, String> headers = {
-      _userAgentHeaderName: sdkInfo,
-      if (etag.isNotEmpty) _ifNoneMatchHeaderName: etag
-    };
-
-    return RequestOptions(headers: headers);
+    return RequestOptions(headers: {
+      userAgentHeaderName: sdkInfo,
+      if (etag.isNotEmpty) ifNoneMatchHeaderName: etag
+    });
   }
 }

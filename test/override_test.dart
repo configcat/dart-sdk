@@ -13,14 +13,15 @@ void main() {
 
   test('local only', () async {
     // Arrange
+    final testAdapter = HttpTestAdapter();
     final client = ConfigCatClient.get(
         sdkKey: testSdkKey,
         options: ConfigCatOptions(
+            httpClient: testAdapter,
             override: FlagOverrides(
                 dataSource: OverrideDataSource.map(
                     {'enabled': true, 'local-only': true}),
                 behaviour: OverrideBehaviour.localOnly)));
-    final testAdapter = HttpTestAdapter(client.httpClient);
     final body = createTestConfig({'enabled': false, 'remote': 'rem'}).toJson();
     final path =
         sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, 'localhost']);
@@ -41,14 +42,15 @@ void main() {
 
   test('local over remote', () async {
     // Arrange
+    final testAdapter = HttpTestAdapter();
     final client = ConfigCatClient.get(
         sdkKey: testSdkKey,
         options: ConfigCatOptions(
+            httpClient: testAdapter,
             override: FlagOverrides(
                 dataSource: OverrideDataSource.map(
                     {'enabled': true, 'local-only': true}),
                 behaviour: OverrideBehaviour.localOverRemote)));
-    final testAdapter = HttpTestAdapter(client.httpClient);
     final body = createTestConfig({'enabled': false, 'remote': 'rem'}).toJson();
     final path =
         sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
@@ -68,14 +70,15 @@ void main() {
 
   test('remote over local', () async {
     // Arrange
+    final testAdapter = HttpTestAdapter();
     final client = ConfigCatClient.get(
         sdkKey: testSdkKey,
         options: ConfigCatOptions(
+            httpClient: testAdapter,
             override: FlagOverrides(
                 dataSource: OverrideDataSource.map(
                     {'enabled': true, 'local-only': true}),
                 behaviour: OverrideBehaviour.remoteOverLocal)));
-    final testAdapter = HttpTestAdapter(client.httpClient);
     final body = createTestConfig({'enabled': false, 'remote': 'rem'}).toJson();
     final path =
         sprintf(urlTemplate, [ConfigFetcher.globalBaseUrl, testSdkKey]);
